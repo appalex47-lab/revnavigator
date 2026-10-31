@@ -134,14 +134,29 @@
       { title: 'Ubicación', html: FKEYS.filter((k) => !['category', 'subcategory', 'product'].includes(k)).map(sel).join('') }] })}</div>`;
   }
 
+  /** «¿Cuánto vale reactivar?»: tamaño del grupo, lo que volvió antes y los clientes que más valen. Escenario, no promesa. */
+  function reactBlock(rx, res, hasF) {
+    if (!rx) return '';
+    const grp = (g) => (g === 'lost' ? '<b>Perdido</b>' : 'En riesgo');
+    const pot = rx.rate !== null && rx.potentialRevenue !== null;
+    const kp = [kpi('En riesgo', n0(rx.risk), 'Último pedido hace 91 a 180 días'), kpi('Perdidos', rx.lostOk ? n0(rx.lost) : NA, rx.lostOk ? 'Más de 180 días sin pedidos' : 'Sin 180 días de historia'),
+      kpi('Volvieron antes', rx.rate !== null ? p1(rx.rate) : NA, rx.rate !== null ? `${n0(rx.returned)} de ${n0(rx.base)} en ${rx.windowDays} días` : 'Aún no se puede medir', 'De los clientes que hace 180 días llevaban más de 90 sin comprar, qué % volvió a pedir en los 180 días siguientes.'),
+      kpi('Venta si se repite', pot ? K1(rx.potentialRevenue) : NA, pot ? (rx.ordersPct !== null ? `≈ ${n0(rx.potentialOrders)} pedidos (${(rx.ordersPct * 100).toFixed(1)} % más)` : `≈ ${n0(rx.potentialOrders)} pedidos`) : '', 'Clientes en riesgo o perdidos × lo que volvió antes × la venta de cada cliente que volvió. Es un escenario, no una promesa.')].join('');
+    const rows = rx.top.slice(0, 5).map((q) => `<tr><th>${esc(q.id)}</th><td>${grp(q.group)}</td><td class="num">${esc(q.last)}</td><td class="num">${n0(q.days)}</td><td class="num">${n0(q.orders)}</td><td class="num">${M0(q.revenue)}</td><td>${esc(CH(q.channel))}</td></tr>`).join('');
+    const tbl = rows ? `<div class="tw"><table class="dtab" id="cu-top"><thead><tr><th>Cliente</th><th>Grupo</th><th>Último pedido</th><th>Días sin comprar</th><th>Pedidos</th><th>Venta acumulada</th><th>Último canal</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="cap">Los 5 que más valen, de ${n0(rx.group)} en riesgo${rx.lostOk ? ' o perdidos' : ''}. IDs anonimizados, tal como vienen en tu archivo.${hasF ? '' : ` <button type="button" class="lk" data-action="cu-export-lapsed">Descargar la lista completa (CSV)</button>`}</p>` : '';
+    const note = rx.rate === null ? `<p class="cap">Para saber cuántos suelen volver hacen falta ${rx.windowDays * 2} días de historia y al menos ${rx.minBase} clientes en la base de comparación${rx.history ? ` (hoy hay ${n0(rx.history)} días)` : ''}.</p>` : '';
+    return sec('s-v', '¿Cuánto vale reactivar?', 'Clientes en riesgo o perdidos y lo que volvió antes de grupos parecidos.', `<div class="kpis" id="cu-react-kpis">${kp}</div>${note}${tbl}`, res.lec.v);
+  }
+
   /** «¿Qué hago con esto?»: enlaces con contexto; ninguno guarda ni ejecuta nada. Solo aparecen los que la regla respalda. */
   function actionsBlock(res) {
     const A = res.actions || [];
     if (!A.length) return '';
-    const go = { dx: 'cu-to-dx', cross: 'cu-to-cross', prod: 'cu-to-prod' };
+    const go = { dx: 'cu-to-dx', cross: 'cu-to-cross', prod: 'cu-to-prod', csv: 'cu-export-lapsed', sim: 'cu-to-recovery' };
     const card = (a) => `<div><b>${esc(a.title)}</b><span>${esc(a.desc)}</span>${a.why ? `<span class="cap"><b>No disponible.</b> ${esc(a.why)}</span>` : `<button type="button" class="lk" data-action="${go[a.id]}"${a.month ? ` data-month="${esc(a.month)}"` : ''}>Abrir →</button>`}</div>`;
     return `<section class="blk" id="cu-q"><div class="blk__h"><h3>¿Qué hago con esto?</h3><span class="cap">De los clientes a la acción: lo que sigue en el flujo, con el mismo canal.</span></div><div class="act">${A.map(card).join('')}</div>
-      <p class="cap">Llegas con el contexto puesto. Nada se guarda ni se ejecuta desde aquí. Todavía no hay una acción para reactivar clientes que no regresaron: se pueden ver y diagnosticar, pero no hay a dónde enviarlos.</p></section>`;
+      <p class="cap">Llegas con el contexto puesto. Nada se guarda ni se ejecuta desde aquí: la descarga se genera en tu navegador y el escenario de Recuperar lo revisas y guardas tú.</p></section>`;
   }
 
   function render(state) {
@@ -208,6 +223,7 @@
       ${sec('s-c', 'Por canal del primer pedido', 'Los clientes se cuentan en el canal donde hicieron su primer pedido.', chTable(r), res.lec.c)}
       ${sec('s-x', 'Entre canales', 'Clientes que compran en varios canales y cómo migran de su canal de entrada al actual.', chanBlock(x.channels, cfg), res.lec.x)}
       ${cc ? sec('s-p', 'Concentración del valor', `Qué parte de la venta viene de los clientes que más compran. ${PX().tip('Se ordenan los clientes de mayor a menor venta acumulada y se suma lo que aporta cada grupo.')}`, concBlock(cc), res.lec.p) : ''}
+      ${reactBlock(res.rx, res, hasF)}
       ${actionsBlock(res)}
       <section class="blk foot"><span class="mu">Venta por producto con id_cliente · ${esc2(fmtD(r.minDay))} a ${esc2(fmtD(r.maxDay))} · ${res.insuf ? 'histórico corto' : 'histórico suficiente'}</span></section>
       <details class="meth" id="cu-meth"${ux.meth ? ' open' : ''}><summary>Método y definiciones</summary><div class="meth__b"><section class="dsec"><h4>Definiciones</h4><dl class="defs">${defs.map((d) => `<div><dt>${esc2(d[0])}</dt><dd>${esc2(d[1])}</dd></div>`).join('')}</dl><p class="cap">Las compras sin ID de cliente válido (vacío, 0, null, invitado) y las líneas sin ID de pedido no entran aquí, pero sí cuentan en Productos. El ID de cliente se toma tal cual del archivo: si un mismo cliente tiene IDs distintos por canal, se contará como dos.</p></section>

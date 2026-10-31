@@ -677,7 +677,8 @@
           multiShare: 0.10, migrateShare: 0.20, migrateMinRow: 30,  // entre canales: ≥ 10 % multicanal o ≥ 20 % de una fila de ≥ 30 migrado
           topShare: 0.50, topChangePp: 3,    // concentración: el 10 % que más compra aporta ≥ 50 %, o cambia ≥ 3 pp en 6 meses
           idsMinShare: 0.95,                 // IDs válidos: se avisa por debajo de 95 %
-          actActiveMin: 100, actRepeatMin: 0.10  // «Crecer con quienes ya compran»: ≥ 100 clientes activos y ≥ 10 % que repite
+          actActiveMin: 100, actRepeatMin: 0.10,  // «Crecer con quienes ya compran»: ≥ 100 clientes activos y ≥ 10 % que repite
+          reactMinGroup: 100                 // «Reactivación»: se muestra con ≥ 100 clientes en riesgo o perdidos (la base mínima para medir la tasa, 30 clientes, es del motor)
         },
       },
       /** Cross-sell (productos que se compran juntos). PROVISIONALES: criterios propuestos, no benchmarks; ajústalos con tu historial. */

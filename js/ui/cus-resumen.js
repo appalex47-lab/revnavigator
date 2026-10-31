@@ -156,6 +156,15 @@
       if (chGap >= c.channelQualityPct) S.push(['Canal', `${B(CH(chBest.channel))} trae mejores clientes que ${CH(chWorst.channel)} (${pc(chGap)} de LTV).`,
         `${B(CH(chBest.channel))} trae mejores clientes: su LTV a 180 días es ${pc(chGap)} contra ${CH(chWorst.channel)}, considerando el canal del primer pedido.`]);
     }
+    /* Reactivación: tamaño del grupo y, si hay historia, cuánto volvió antes (escenario, no promesa). */
+    const rx = x.reactivation, rxOn = Boolean(rx) && rx.group >= c.reactMinGroup;
+    if (rxOn) {
+      const g = B(n0(rx.group)), pot = rx.rate !== null && rx.potentialRevenue !== null;
+      S.push(['Reactivación', pot ? `${g} clientes en riesgo o perdidos; si volviera ${B(p1(rx.rate))} (como antes), serían ${B(n0(rx.potentialCustomers))} y ${B(K1(rx.potentialRevenue))}.`
+        : `${g} clientes en riesgo o perdidos${rx.rate === null ? '; todavía no hay historia para saber cuántos suelen volver.' : '; de los parecidos de hace 180 días ninguno volvió.'}`,
+      `${g} clientes están en riesgo${rx.lostOk ? ' o perdidos' : ''} (${n0(rx.risk)}${rx.lostOk ? ` y ${n0(rx.lost)}` : ''}). ${rx.rate !== null ? `Hace ${rx.windowDays} días ${n0(rx.base)} clientes llevaban más de 90 sin comprar y ${n0(rx.returned)} volvieron (${p1(rx.rate)}).${pot ? ` Si se repitiera, volverían unos ${n0(rx.potentialCustomers)} clientes con ${K1(rx.potentialRevenue)} de venta. Es un escenario, no una promesa.` : ''}`
+        : `Para medir cuántos suelen volver hacen falta al menos ${rx.windowDays * 2} días de historia y ${rx.minBase} clientes en la base de comparación.`}`]);
+    }
     const mg = migration(ch);
     const multiOk = ch && fin(ch.multiShare) && ch.multiShare >= c.multiShare;
     if (multiOk || mg) {
@@ -176,11 +185,11 @@
     if (r.cohorts.length && !r.cohorts.some((q) => q.windows[2] && q.windows[2].mature > 0)) { w.push('Sin cohortes maduras para LTV'); wl.push('Todavía no hay cohortes con 90 o 180 días de vida: el LTV y la retención aún no se pueden medir'); }
     if (isOpen(r)) wl.push(`${cap1(labF(monthly[nm - 1].key))} sigue en curso: sus cifras todavía pueden cambiar y no se comparan arriba`);
     if (w.length || wl.length) S.push(['Ojo', w.length ? `${w.join('. ')}.` : '', `${wl.join('. ')}.`]);
-    const ORD = ['Tamaño y repetición', 'Base activa', 'Mezcla del mes', 'Venta por tipo', 'Retención', 'LTV', 'Canal', 'Entre canales', 'Concentración', 'Ojo'];
+    const ORD = ['Tamaño y repetición', 'Base activa', 'Reactivación', 'Mezcla del mes', 'Venta por tipo', 'Retención', 'LTV', 'Canal', 'Entre canales', 'Concentración', 'Ojo'];
     S.sort((a, b) => ORD.indexOf(a[0]) - ORD.indexOf(b[0]));
 
     /* ---- Una línea de lectura por sección (solo si hay algo que decir) ---- */
-    const L = { a: '', m: '', l: '', r: '', c: '', x: '', p: '' };
+    const L = { a: '', m: '', l: '', r: '', c: '', x: '', p: '', v: '' };
     if (rec) { if (!rec.lostOk) L.a = `Con menos de ${c.riskDays} días de historia todavía no se puede separar a los perdidos.`; else if (dpp !== null && Math.abs(dpp) >= c.activeChangePp) L.a = `Los activos ${dpp < 0 ? 'bajan' : 'suben'} ${B(`${Math.abs(dpp).toFixed(0)} pp`)} contra hace ${c.activeDays} días.`; }
     if (mx && big.length) { const q = big.slice().sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0]; L.m = `${B(lab(mx.m1))}: ${q.n.toLowerCase()} ${n0(q.p)} → ${n0(q.c)} (${pc(q.r)}) contra ${lab(mx.m0)}.`; }
     if (lp) L.l = Math.abs(ltvCh) >= c.ltvChangePct ? `${B(lab(lp[0].key))} vale ${M(lp[0].windows[3].ltv)} a 180 días, ${pc(ltvCh)} contra ${lab(lp[1].key)}.` : '';
@@ -195,6 +204,8 @@
     if (mg) L.x = `${B(`${Math.round(mg.pp * 100)} %`)} de quienes entraron por ${mg.from} hoy compra por ${mg.to}.`;
     if (cc && fin(cc.top10)) { if (cc.top10 >= c.topShare) L.p = 'Hay alta dependencia: perder a unos pocos clientes grandes movería mucho la venta.'; else if (cdiff !== null && Math.abs(cdiff) >= c.topChangePp) L.p = `La concentración ${cdiff > 0 ? 'sube' : 'baja'} ${B(`${Math.abs(cdiff).toFixed(0)} pp`)} en 6 meses.`; }
 
+    if (rx && rx.group > 0) L.v = rx.rate !== null ? `De ${B(n0(rx.base))} clientes que hace ${rx.windowDays} días llevaban más de 90 sin comprar, volvió ${B(p1(rx.rate))}.` : `Con ${rx.history} días de historia todavía no se puede medir cuántos suelen volver.`;
+
     /* ---- ¿Qué hago con esto? Solo aparecen las acciones que la regla respalda; ninguna guarda ni ejecuta nada ---- */
     const A = [];
     if (mx && big.length) A.push({ id: 'dx', title: 'Diagnosticar la venta del mes', month: mx.m1, desc: `La mezcla de clientes cambió en ${labF(mx.m1)} contra ${labF(mx.m0)}. Abre Diagnóstico con ese mes, el mismo canal y la comparación contra el mes anterior, para ver si los clientes explican el cambio de la venta.` });
@@ -202,7 +213,14 @@
     if (!insuf && rec) A.push({ id: 'cross', title: 'Crecer con quienes ya compran', why: repOk ? '' : `Hace falta al menos ${c.actActiveMin} clientes activos y ${Math.round(c.actRepeatMin * 100)} % que compre más de una vez.`, desc: 'Abre Cross-sell para ver qué productos suelen comprarse juntos y proponerlos a los clientes que repiten. Son las mismas canastas, no una lista de clientes.' });
     const hiConc = cc && fin(cc.top10) && cc.top10 >= c.topShare, ltvMove = ltvCh !== null && Math.abs(ltvCh) >= c.ltvChangePct;
     if (hiConc || ltvMove) A.push({ id: 'prod', title: 'Ver qué compran los clientes que más valen', desc: `${hiConc ? 'La venta depende de pocos clientes' : 'El valor por cliente cambió entre cohortes'}. Abre Producto y evolución con el mismo canal y el último mes cerrado, para ver qué productos sostienen esa venta.`, month: two ? two[0].key : (mx ? mx.m1 : '') });
-    return { verdict, chips, rows: S, lec: L, insuf, warm, nm, ids, mig: mg, open: isOpen(r), actions: A, channel: ctx && ctx.channel };
+    if (rx && rx.group > 0) {
+      const filt = Boolean(r.filtered), pot = rx.ordersPct !== null && rx.potentialOrders !== null;
+      A.push({ id: 'csv', title: 'Llevar la lista a tu CRM', why: filt ? 'Con un filtro de producto o sucursal la lista no se arma; quita el filtro para descargar a todos los clientes en riesgo y perdidos.' : '',
+        desc: `Descarga en CSV a los ${n0(rx.group)} clientes en riesgo${rx.lostOk ? ' y perdidos' : ''}: ID, último pedido, días sin comprar, pedidos, venta y último canal. Para contactarlos desde tu sistema.` });
+      A.push({ id: 'sim', title: 'Simular la reactivación en Recuperar', why: pot ? '' : 'Sin una tasa observada no hay con qué dimensionarla (hacen falta 360 días de historia y 30 clientes en la base de comparación).', pct: pot ? rx.ordersPct : null,
+        desc: pot ? `Abre Recuperar con «Reactivación de clientes»: unos ${n0(rx.potentialOrders)} pedidos, ${(rx.ordersPct * 100).toFixed(1)} % más que los de los últimos ${rx.windowDays} días. Tú lo revisas y lo guardas.` : 'Abre Recuperar con «Reactivación de clientes» cargada.' });
+    }
+    return { verdict, chips, rows: S, lec: L, insuf, warm, nm, ids, mig: mg, open: isOpen(r), actions: A, channel: ctx && ctx.channel, rx: rx && rx.group > 0 ? rx : null };
   }
 
   FP.cusResumen = { build, mixChanges, lastTwoClosed, migration, idsShare, lab, labF, n0, M, K1, p1, pc, CH };

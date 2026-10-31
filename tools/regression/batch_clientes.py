@@ -49,7 +49,7 @@ async def main():
         t1 = await q.evaluate("document.getElementById('cus-body').innerText")
         chk('K7 la vista muestra KPIs, mensual, LTV, retención y canal', all(x in t1 for x in ('Clientes', 'Compran más de una vez', 'Nuevos, recurrentes y recuperados por mes', 'Valor del cliente (LTV) por cohorte', 'Retención por mes', 'Por canal del primer pedido')), t1[:200])
         chk('K8 avisa de histórico insuficiente al inicio de la serie', 'histórico insuficiente' in t1)
-        chk('K7b la página nueva: veredicto, 4 chips de confiabilidad, 6 KPIs y resumen general con filas por reglas', await q.locator('#cus-body .px-verdict h2').count() == 1 and await q.locator('#cus-body .px-tchip').count() == 4 and await q.locator('#cus-body .px-kpi').count() == 6 and await q.locator('[data-cus-summary] .px-sum__r').count() >= 2, t1[:300])
+        chk('K7b la página nueva: veredicto, 4 chips de confiabilidad, 6 KPIs y resumen general con filas por reglas', await q.locator('#cus-body .px-verdict h2').count() == 1 and await q.locator('#cus-body .px-tchip').count() == 4 and await q.locator('#cus-body .px-verdict .px-kpi').count() == 6 and await q.locator('[data-cus-summary] .px-sum__r').count() >= 2, t1[:300])
         chk('K7c todas las secciones: ¿Cuántos siguen comprando?, Entre canales, Concentración, y el método viene cerrado', all(x in t1 for x in ('¿Cuántos siguen comprando?', 'Entre canales', 'Concentración del valor', 'Método y definiciones')) and await q.evaluate("!document.getElementById('cu-meth').open"))
         short = await q.evaluate("document.querySelector('[data-cus-summary]').innerText")
         await q.click('#cu-md [data-v=l]'); await q.wait_for_timeout(300)

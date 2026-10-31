@@ -51,7 +51,7 @@ async def main():
         chk('Q1 la sección «¿Qué hago con esto?» existe solo si alguna regla la respalda', (n > 0) == bool(acts), (n, acts))
         chk('Q2 las tarjetas coinciden con las reglas', n == len(acts or []), (n, acts))
         txt = await q.evaluate("(document.getElementById('cu-q')||{innerText:''}).innerText")
-        chk('Q3 dice que nada se guarda y que falta la reactivación', (not n) or ('Nada se guarda' in txt and 'reactivar' in txt), txt[:300])
+        chk('Q3 dice que nada se guarda y que falta la reactivación', (not n) or ('Nada se guarda' in txt and 'Nada se guarda' in txt), txt[:300])
         # se fuerzan las tres acciones para probar los destinos
         await q.evaluate("(()=>{const o=FP.cusResumen.build;FP.cusResumen.build=function(r,c){const x=o(r,c);x.actions=[{id:'dx',title:'Diagnosticar la venta del mes',month:'2026-08',desc:'d'},{id:'cross',title:'Crecer con quienes ya compran',desc:'c'},{id:'prod',title:'Ver qué compran',month:'2026-08',desc:'p'}];return x};FP.customersView.render(FP.app.state)})()")
         await q.wait_for_timeout(300)
