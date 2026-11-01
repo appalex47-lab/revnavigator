@@ -95,7 +95,7 @@
     },
     // Fase 8.1: Categoría → Producto (resultados en memoria; datos en IndexedDB)
     pkg: { busy: false, last: null },
-    rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false }, filter: null, sig: null, at: null },   // «Presentación (PDF)»
+    rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false, thresholds: { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null } }, filter: null, sig: null, at: null },   // «Presentación (PDF)»
     pa: { from: null, to: null, comparison: 'previous', channel: 'total', viewBy: 'category', drill: [], next: null, geo: {}, topN: 20, page: 1, result: null, loading: false, key: null,
       trace: null, counts: null, estimate: null, tests: null, testing: false, note: null },
     // Análisis 1: evolución histórica y patrones. La serie se calcula desde IndexedDB.
@@ -1409,6 +1409,7 @@
       backtest: run && state.fc.backtest && state.fc.backtest.stamp === run.generatedAt ? state.fc.backtest.data : null,
       quality: FP.coverage.summarize(state.store), lastActual: lastActualDate(), filters, recovery,
       options: { showTags: state.rp.options.showTags, showBusinessName: state.rp.options.showBusinessName },
+      thresholds: { ...state.rp.options.thresholds },
       businessName: state.rp.options.showBusinessName && C.business ? C.business.name : null
     };
     // Los formatos con bloques propios (p. ej. Operativo) agregan sus páginas al reporte; con el reporte actual no se agrega nada.
@@ -4725,6 +4726,11 @@
     },
     'rp-filter'(el) { const f = FP.productFilter.cascade(state.rp.filter || {}, el.dataset.key, el.value); state.rp.filter = Object.keys(f).length ? f : null; render(); },
     'rp-filter-clear'() { state.rp.filter = null; render(); },
+    'rp-threshold'(el) {   // sensibilidad del formato Operativo (en %); vacío = valor por defecto de la configuración
+      const raw = String(el.value).trim().replace(',', '.'), v = raw === '' ? null : Number(raw) / 100, ok = v === null || (Number.isFinite(v) && v >= 0.001 && v <= 0.2);
+      if (!ok) { FP.ui.toast('Escribe un porcentaje entre 0.1 y 20.'); render(); return; }
+      state.rp.options.thresholds[el.dataset.key] = v; render();
+    },
     'rp-option'(el) { state.rp.options[el.dataset.key] = Boolean(el.checked); render(); },
     async 'pkg-download'() {
       const pkg = FP.packageView.setBusy(true);

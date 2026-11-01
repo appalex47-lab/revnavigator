@@ -3,7 +3,7 @@
 const fs = require('fs'), vm = require('vm');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, Error }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/composer.js']
+['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/composer.js', 'js/analytics/funnelEngine.js']
   .forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const FP = ctx.FP, O = FP.reportOperativo, B = FP.reportBlocks, P = FP.reportProfiles, C = FP.reportComposer;
 
@@ -24,7 +24,7 @@ const src = (o) => ({ run: run(), selection: { periodType: 'month', periodKey: '
 /* ---------- registro de bloques ---------- */
 t('el perfil «operativo» está registrado, habilitado y sirve a la audiencia operativo', (() => { const p = P.get('operativo'); return p && p.status === 'enabled' && p.audience === 'operativo' && p.presentationTypes.join() === 'desempeno'; })());
 t('el catálogo habilita Operativo (solo desempeño) y deja gerencial y directivo sin habilitar', (() => { const K = FP.reportCatalog; return K.audiences().filter((a) => a.enabled).map((a) => a.id).join() === 'actual,operativo' && K.resolve('operativo', 'desempeno').id === 'operativo' && K.resolve('gerencial', 'desempeno') === null && K.types('operativo').filter((x) => x.enabled).map((x) => x.id).join() === 'desempeno'; })());
-t('los 3 bloques nuevos están registrados; un id repetido lanza', B.list().join() === 'channelPacing,evolution,actions' && (() => { try { B.register('evolution', () => null); return false; } catch (e) { return /Ya existe/.test(e.message); } })());
+t('los 4 bloques nuevos están registrados; un id repetido lanza', B.list().join() === 'channelPacing,evolution,funnel,actions' && (() => { try { B.register('evolution', () => null); return false; } catch (e) { return /Ya existe/.test(e.message); } })());
 t('las 3 profundidades de Operativo van de menor a mayor; la lámina de pacing por canal y la de acciones entran desde «Resumen»', (() => { const p = P.get('operativo'), d = (b) => p.slots.find((s) => s.block === b).depth; return p.depths.map((x) => x.id).join() === 'resumen,ejecutivo,detallado' && d('channelPacing') === 'resumen' && d('actions') === 'resumen' && d('evolution') === 'ejecutivo' && d('categories') === 'detallado'; })());
 t('Operativo reutiliza los bloques del reporte actual: cada slot es un bloque del reporte o uno registrado', P.get('operativo').slots.every((s) => P.get('legacy').slots.some((x) => x.block === s.block) || B.has(s.block)));
 
@@ -40,6 +40,15 @@ t('Pacing por canal: con un canal elegido se omite con motivo', (() => { const p
 t('Pacing por canal: sin canal con venta real y plan se omite con motivo', (() => { const r = run(); r.channels[c0].months[0].toDate.revenue = blk(null, null); r.channels[c1].months[0].toDate.revenue = blk(null, null); const p = O.channelPacing(src({ run: r })); return p.status === 'omitted' && /Ningún canal/.test(p.reason); })());
 t('Pacing por canal: el umbral viene de FP.config.reports.operativo (provisional, congelado)', FP.config.reports.operativo.belowPlanPct === 0.005 && Object.isFrozen(FP.config.reports.operativo));
 
+/* ---------- Umbrales editables ---------- */
+t('Umbrales: sin valores de la persona rige el provisional; con valores válidos cambia qué se marca', (() => {
+  const base = O.channelPacing(src()), strict = O.channelPacing(src({ thresholds: { belowPlanPct: 0.5 } })), lax = O.channelPacing(src({ thresholds: { belowPlanPct: null } }));
+  return base.review.length === 1 && /pedidos/.test(base.review[0]) && /ningún indicador/.test(strict.review[0]) && lax.review[0] === base.review[0];
+})());
+t('Umbrales: un valor inválido (0, negativo, texto) se ignora y rige el provisional', ['x', 0, -1, NaN].every((v) => O.channelPacing(src({ thresholds: { belowPlanPct: v } })).review[0] === O.channelPacing(src()).review[0]));
+t('Umbrales: el de «más floja» decide si la semana se nombra o las semanas quedan «en línea»', (() => { const e = O.evolution(src({ thresholds: { weakPct: 0.5 } })); return /en línea con su plan/.test(e.conclusion) && /^La semana 37 fue la más floja/.test(O.evolution(src({ thresholds: { weakPct: 0.05 } })).conclusion); })());
+t('Umbrales: la gráfica marca en rojo según el umbral vigente', O.evolution(src({ thresholds: { weakPct: 0.5 } })).charts[0].items.every((i) => !i.bad));
+
 /* ---------- Evolución ---------- */
 const ev = O.evolution(src());
 t('Evolución (mes): agrupa por semana y suma solo los días contados; real y plan de los mismos días', ev.status === 'included' && ev.unit === 'week' && ev.rows.length === 4 && ev.rows[1].revenue.actual === 1800 && ev.rows[1].revenue.plan === 2000, ev.rows && ev.rows.map((r) => [r.key, r.revenue]));
@@ -52,13 +61,25 @@ t('Evolución: año agrupa por mes; semana, por día', (() => { const r = run(),
 t('Evolución: con menos de 2 grupos con venta contada se omite con motivo', (() => { const r = run(); r.total.days = days.slice(0, 2); const p = O.evolution(src({ run: r })); return p.status === 'omitted' && /menos de 2 semanas/.test(p.reason); })());
 t('Evolución: sin plan en un grupo la variación es null, nunca 0', (() => { const r = run(); r.total.days = days.map((d) => ({ ...d, plan: { revenue: null, orders: null } })); const p = O.evolution(src({ run: r })); return p.status === 'included' && p.rows.every((x) => x.revenue.deltaPct === null && x.revenue.plan === null); })());
 
+/* ---------- Embudo ---------- */
+const M = (v, c, k, p, r) => ({ views: { value: v }, addToCart: { value: c }, beginCheckout: { value: k }, purchasesGa4: { value: p }, revenue: { value: r } });
+const prod = (o) => ({ level: 'category', period: { from: '2026-09-01', to: '2026-09-30' }, baseline: { label: 'Agosto 2026' }, total: { current: M(10000, 1000, 500, 100, 50000), baseline: M(10000, 1000, 600, 120, 60000) },
+  rows: [{ key: 'Zapatos', current: M(5000, 500, 200, 30, 1), baseline: M(5000, 500, 250, 50, 1) }, { key: 'Bolsas', current: M(5000, 500, 300, 70, 1), baseline: M(5000, 500, 350, 70, 1) }, { key: 'Sin base', current: M(10, 1, 1, 1, 1), baseline: null }], ...o });
+const fu = O.funnel(src({ product: prod() }));
+t('Embudo: 4 pasos con las tasas del motor existente (carrito 10 %, checkout 50 %, compra 20 %) y el periodo contra su referencia', fu.status === 'included' && fu.steps.map((x) => x.id).join() === 'views,cart,checkout,purchase' && Math.abs(fu.steps[1].rateCur - 0.1) < 1e-12 && Math.abs(fu.steps[2].rateCur - 0.5) < 1e-12 && Math.abs(fu.steps[3].rateCur - 0.2) < 1e-12, fu.steps);
+t('Embudo: marca el paso más débil (carrito → checkout cae 10 pp) y lo dice en el titular', fu.weakest === 'Carrito → checkout' && /Carrito → checkout/.test(fu.conclusion) && /10\.00 pp/.test(fu.conclusion), [fu.weakest, fu.conclusion]);
+t('Embudo: los grupos van de la mayor a la menor caída de conversión de ficha y omiten los que no tienen referencia completa', fu.groups.map((g) => g.key).join() === 'Zapatos,Bolsas' || fu.groups.map((g) => g.key).join() === 'Zapatos', fu.groups.map((g) => g.key));
+t('Embudo: aclara que las compras son de GA4 y no pedidos', fu.notes.some((n) => /no pedidos/.test(n)));
+t('Embudo: sin referencia muestra las tasas del periodo sin comparar y lo avisa (no inventa cambio)', (() => { const p = O.funnel(src({ product: prod({ total: { current: M(10000, 1000, 500, 100, 5), baseline: null } }) })); return p.status === 'included' && p.steps.every((x) => x.deltaPp === null) && p.cr.deltaPp === null && p.notes.some((n) => /Sin referencia/.test(n)); })());
+t('Embudo: sin datos de embudo, o con un paso faltante, se omite con motivo', (() => { const a = O.funnel(src()), b = O.funnel(src({ product: prod({ total: { current: { views: { value: 10 }, addToCart: { value: null } }, baseline: null } }) })); return a.status === 'omitted' && /No hay datos de embudo/.test(a.reason) && b.status === 'omitted' && /no está completo/.test(b.reason); })());
+
 /* ---------- Acciones ---------- */
 const act = (o) => ({ actionId: 'ACT_1', title: 'Recuperar tráfico', channel: c0, period: { start: '2026-09-01', end: '2026-09-22', label: 'x' }, owner: null, status: 'proposed', priority: { simulatedImpact: 'alto', exposure: 'media', urgency: 'alta', evidence: 'n/d' }, expectedImpact: { incrementalValue: 5000, recoveryPercent: 0.4 }, measurement: { metric: 'revenue', windowDays: 14 }, startDate: '2026-09-01', endDate: '2026-09-22', ...o });
 const ac = O.actions(src({ recovery: { actions: [act(), act({ actionId: 'ACT_2', owner: 'Ana', period: { start: '2026-12-01', end: '2026-12-10' } })] } }));
 t('Acciones: solo las que se cruzan con el periodo; sin responsable queda «Por asignar» (owner null), no un nombre inventado', ac.status === 'included' && ac.rows.length === 1 && ac.rows[0].owner === null && /todavía no tiene responsable/.test(ac.conclusion), ac.rows);
 t('Acciones: el impacto simulado se rotula Estimado y no se suma entre acciones', ac.tags.some((x) => /stim/i.test(JSON.stringify(x))) && ac.notes.some((n) => /no se suman/.test(n)));
 t('Acciones: con responsable el titular lo dice; sin acciones se omite con motivo', (() => { const a = O.actions(src({ recovery: { actions: [act({ owner: 'Ana' })] } })), z = O.actions(src()); return /con responsable/.test(a.conclusion) && z.status === 'omitted' && /No hay acciones registradas/.test(z.reason); })());
-t('Acciones: lleva el impacto simulado tal como lo guardó Recuperar (5000), sin derivar otra cifra', ac.rows[0].impact.value === 5000);
+t('Acciones: lleva el impacto simulado y su recuperación de la brecha tal como los guardó Recuperar (5000 y 0.4 = fracción de la brecha), sin derivar otra cifra', ac.rows[0].impact.value === 5000 && ac.rows[0].impact.recoveryPct === 0.4);
 t('Acciones: un impacto ausente es «sin escenario» (null), no cero', O.actions(src({ recovery: { actions: [act({ expectedImpact: null })] } })).rows[0].impact === null);
 t('Acciones: filtra por canal elegido (acciones de otro canal quedan fuera)', O.actions(src({ channel: c1, recovery: { actions: [act()] } })).status === 'omitted');
 
@@ -76,7 +97,7 @@ t('Acciones: filtra por canal elegido (acciones de otro canal quedan fuera)', O.
 /* ---------- extend(): integración y LEGACY intacto ---------- */
 const rep = () => ({ schema: 'executive_report', schemaVersion: '1.0.0', pages: [{ id: 'cover', title: 'Portada', status: 'included', number: 1 }, { id: 'pacing', title: 'Pacing', status: 'included', number: 2 }, { id: 'annex', title: 'Anexo', status: 'included', number: 3, omitted: [] }], included: ['cover', 'pacing', 'annex'], omitted: [], total: 3 });
 t('extend con perfil LEGACY devuelve el mismo reporte sin tocarlo (idéntico campo a campo)', (() => { const r = rep(), before = JSON.stringify(r), out = B.extend(r, src(), P.get('legacy')); return out === r && JSON.stringify(out) === before; })());
-t('extend con perfil Operativo agrega los 3 bloques antes del anexo, renumera y actualiza included/total/profile', (() => { const r = B.extend(rep(), src({ recovery: { actions: [act()] } }), P.get('operativo')); return r.included.join() === 'cover,pacing,channelPacing,evolution,actions,annex' && r.total === 6 && r.pages.map((p) => p.number).join() === '1,2,3,4,5,6' && r.profile === 'operativo'; })());
+t('extend con perfil Operativo agrega los bloques con datos antes del anexo (el embudo, sin datos, queda omitido), renumera y actualiza included/total/profile', (() => { const r = B.extend(rep(), src({ recovery: { actions: [act()] } }), P.get('operativo')); return r.included.join() === 'cover,pacing,channelPacing,evolution,actions,annex' && r.total === 6 && r.pages.filter((p) => p.status === 'included').map((p) => p.number).join() === '1,2,3,4,5,6' && r.omitted.some((o) => o.id === 'funnel') && r.profile === 'operativo'; })());
 t('extend: una página sin datos queda omitida con su motivo en omitted y en el Anexo, y no cuenta en total', (() => { const r = B.extend(rep(), src({ channel: c0 }), P.get('operativo')); const o = r.omitted.find((x) => x.id === 'channelPacing'); return o && o.reason && r.pages.find((p) => p.id === 'annex').omitted.some((x) => x.reason === o.reason) && !r.included.includes('channelPacing'); })());
 t('extend no agrega un bloque que el reporte ya trae', (() => { const r = rep(); r.pages.splice(2, 0, { id: 'evolution', title: 'x', status: 'included', number: 3 }); r.included.splice(2, 0, 'evolution'); const out = B.extend(r, src(), P.get('operativo')); return out.pages.filter((p) => p.id === 'evolution').length === 1; })());
 t('extend rechaza un constructor que devuelve una página con otro id', (() => { B.register('zz_malo', () => ({ id: 'otro', status: 'included' })); try { B.extend(rep(), src(), { id: 'x', slots: [{ block: 'zz_malo' }] }); return false; } catch (e) { return /no devolvió una página válida/.test(e.message); } })());

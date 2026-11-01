@@ -2,10 +2,11 @@
  * operativo.js — Formato OPERATIVO (Presentation Intelligence · Fase 3).
  *
  * Audiencia: analistas y coordinadores. Objetivo: entender el desempeño, encontrar desviaciones y definir acciones concretas.
- * Reutiliza las páginas que ya arma FP.reportBuilder y agrega tres bloques propios:
+ * Reutiliza las páginas que ya arma FP.reportBuilder y agrega cuatro bloques propios:
  *   channelPacing  Pacing por canal: venta, pedidos, volumen (sesiones, conversaciones o llamadas), conversión y ticket, cada uno contra su plan.
  *   evolution      Evolución de venta y pedidos por semana, mes o día contra el plan de los mismos días.
  *   actions        Acciones, responsables y fechas: las acciones ya registradas en Recuperar.
+ *   funnel         Embudo de fichas de producto (GA4): vistas → carrito → checkout → compra contra la referencia.
  *
  * Reglas (las mismas del resto de la herramienta):
  *   - NO calcula con fórmulas nuevas: toma los bloques que ya trae cada serie del forecast (real, plan, brecha y brecha % de los días contados).
@@ -22,6 +23,8 @@
   const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
   const num = (v) => (isNum(v) ? v : null);
   const RB = () => FP.reportBuilder, CFG = () => FP.config.reports.operativo;
+  /** Umbrales: los que la persona fijó en la herramienta (src.thresholds) o, si no hay, los provisionales de la configuración. */
+  const thr = (src, k) => { const v = src && src.thresholds ? src.thresholds[k] : null; return isNum(v) && v > 0 ? v : CFG()[k]; };
   const fmt = (k, v) => RB().fmt(k, v), TAG = () => RB().TAG;
   const page = (id, title, o) => ({ id, title, status: 'included', question: '', headline: '', kpis: [], tables: [], charts: [], notes: [], sources: [], ...o });
   const omit = (id, title, reason) => ({ id, title, status: 'omitted', reason });
@@ -59,8 +62,8 @@
   const NAME = { conversionRate: () => 'conversión', aov: () => 'ticket', orders: () => 'pedidos', trafficVolume: (row) => String(row.noun || 'volumen').toLowerCase() };
   const ORDER = ['conversionRate', 'aov', 'orders', 'trafficVolume'];
   /** Indicadores de un canal por debajo y por encima de su plan (se aparta ≥ umbral), del más al menos apartado. */
-  function flagsOf(row) {
-    const T = CFG().belowPlanPct, below = [], above = [];
+  function flagsOf(row, T0) {
+    const T = isNum(T0) ? T0 : CFG().belowPlanPct, below = [], above = [];
     ORDER.forEach((id) => { const c = row.cells[id]; if (!c || !isNum(c.gapPct)) return; if (c.gapPct <= -T) below.push({ id, c }); else if (c.gapPct >= T) above.push({ id, c }); });
     below.sort((a, b) => a.c.gapPct - b.c.gapPct); above.sort((a, b) => b.c.gapPct - a.c.gapPct);
     return { below, above };
@@ -84,16 +87,16 @@
     const neg = rows.filter((r) => isNum(r.cells.revenue.gap) && r.cells.revenue.gap < 0).sort((a, b) => a.cells.revenue.gap - b.cells.revenue.gap);
     const pos = rows.filter((r) => isNum(r.cells.revenue.gap) && r.cells.revenue.gap > 0).sort((a, b) => b.cells.revenue.gap - a.cells.revenue.gap);
     const worst = neg[0], best = pos[0], money = (v) => fmt('moneyC', Math.abs(v));
-    const belowTxt = (r) => { const f = flagsOf(r); return f.below.length ? `, con ${joinEs(f.below.map((x) => NAME[x.id](r)))} por debajo` : ''; };
+    const T = thr(src, 'belowPlanPct'), belowTxt = (r) => { const f = flagsOf(r, T); return f.below.length ? `, con ${joinEs(f.below.map((x) => NAME[x.id](r)))} por debajo` : ''; };
     let conclusion;
     if (worst && best) conclusion = `${worst.label} resta ${money(worst.cells.revenue.gap)} contra su plan${belowTxt(worst)}; ${best.label} suma ${money(best.cells.revenue.gap)}`;
     else if (worst) conclusion = `${worst.label} es el canal que más resta (${money(worst.cells.revenue.gap)}) contra su plan${belowTxt(worst)}`;
     else if (best) conclusion = `Ningún canal queda por debajo de su plan a la fecha; ${best.label} suma ${money(best.cells.revenue.gap)}`;
     else conclusion = 'Pacing por canal: venta, pedidos, volumen, conversión y ticket contra el plan';
 
-    const T = CFG().belowPlanPct, review = neg.slice(0, 2).map((r) => {
-      const f = flagsOf(r);
-      if (!f.below.length) return `En ${r.label}: ningún indicador (pedidos, ${NAME.trafficVolume(r)}, conversión o ticket) está más de ${(T * 100).toFixed(1)} % bajo el plan.`;
+    const review = neg.slice(0, 2).map((r) => {
+      const f = flagsOf(r, T);
+      if (!f.below.length) return `En ${r.label}: ningún indicador (pedidos, ${NAME.trafficVolume(r)}, conversión o ticket) está más de ${+(T * 100).toFixed(1)} % bajo el plan.`;
       return `En ${r.label}: ${joinEs(f.below.map((x) => itemTxt(x, r)))} bajo el plan${f.above.length ? `, con ${joinEs(f.above.map((x) => itemTxt(x, r)))} por encima` : ''}.`;
     });
     const nouns = {}; rows.forEach((r) => { (nouns[String(r.noun).toLowerCase()] = nouns[String(r.noun).toLowerCase()] || []).push(r.label); });
@@ -135,7 +138,7 @@
     if (rows.length < 2) return omit(id, title, `Hay menos de 2 ${u.many} con venta real contada en el periodo; no hay evolución que mostrar.`);
 
     const comp = rows.filter((r) => !r.partial && isNum(r.revenue.deltaPct)).slice().sort((a, b) => a.revenue.deltaPct - b.revenue.deltaPct);
-    const weak = comp[0], strong = comp[comp.length - 1], W = CFG().weakPct, spct = (v) => fmt('spct', v);
+    const weak = comp[0], strong = comp[comp.length - 1], W = thr(src, 'weakPct'), spct = (v) => fmt('spct', v);
     let conclusion;
     if (weak && weak.revenue.deltaPct <= -W) {
       const head = unit === 'week' ? `La semana ${+weak.key.slice(6)} fue la más floja` : unit === 'month' ? `${weak.label} fue el mes más flojo` : `${weak.label} fue el día más flojo`;
@@ -146,12 +149,12 @@
     if (weak && weak.revenue.deltaPct <= -W) review = strong && strong !== weak && strong.revenue.deltaPct > 0
       ? `${strong.label} supera su plan (${spct(strong.revenue.deltaPct)}) y ${weak.label} queda bajo el plan (${spct(weak.revenue.deltaPct)}): conviene comparar qué cambió entre ambas.`
       : `Revisar ${weak.label}: venta ${spct(weak.revenue.deltaPct)} contra su plan.`;
-    else review = comp.length ? `Ninguna de las ${u.many} completas se aparta más de ${(W * 100).toFixed(0)} % de su plan.` : `Todas las ${u.many} tienen días sin contar; se comparan con el plan de los días contados.`;
+    else review = comp.length ? `Ninguna de las ${u.many} completas se aparta más de ${+(W * 100).toFixed(1)} % de su plan.` : `Todas las ${u.many} tienen días sin contar; se comparan con el plan de los días contados.`;
     const notes = rows.filter((r) => r.partial).map((r) => `${r.label} es parcial: solo tiene ${r.days} de ${r.periodDays} días contados y se compara con el plan de esos días.`);
     notes.push('Venta y pedidos reales son los días contados de la serie; «vs plan» compara con el plan de esos mismos días. El ticket es venta ÷ pedidos del grupo.');
     const bad = (r) => isNum(r.revenue.deltaPct) && r.revenue.deltaPct <= -W;
     return page(id, title, {
-      question: `¿Cómo se movió ${unit === 'week' ? 'semana a semana' : unit === 'month' ? 'mes a mes' : 'día a día'}?`, conclusion, headline: conclusion, ctx: `${per.label} · del ${fmt('date', rg.from)} al ${fmt('date', rg.to)}`, unit, review, rows, notes,
+      question: `¿Cómo se movió ${unit === 'week' ? 'semana a semana' : unit === 'month' ? 'mes a mes' : 'día a día'}?`, conclusion, headline: conclusion, ctx: per.kind === 'month' ? per.label : `${per.label} · del ${fmt('date', rg.from)} al ${fmt('date', rg.to)}`, unit, review, rows, notes,
       charts: [{ type: 'groupbars', id: 'evo', title: 'Venta real contra el plan de los mismos días', items: rows.map((r) => ({ label: r.label, actual: r.revenue.actual, plan: r.revenue.plan, bad: bad(r), partial: r.partial })) }],
       sources: ['Pacing y forecast (días contados)'], tags: [TAG().obs, TAG().calc]
     });
@@ -186,6 +189,35 @@
     });
   }
 
+
+  /* ===================== 4 · Embudo de fichas de producto ===================== */
+  /** Embudo GA4 por producto (vistas → carrito → checkout → compra) del periodo contra su referencia, con el motor que ya usa Producto y evolución. */
+  function funnel(src) {
+    const id = 'funnel', title = 'Embudo de fichas de producto', FE = FP.funnelEngine, PL = src.productByLevel || {}, r = PL.category || src.product;
+    if (!FE) return omit(id, title, 'El motor del embudo no está disponible.');
+    if (!r || !r.total || !r.total.current) return omit(id, title, 'No hay datos de embudo por producto cargados para el periodo (vistas, carrito, checkout y compra de GA4).');
+    const cur = FE.pick(r.total.current);
+    if (!cur) return omit(id, title, 'El embudo por producto no está completo en el periodo: falta alguno de los pasos (vistas, carrito, checkout o compra).');
+    const base = FE.pick(r.total.baseline), cmp = FE.compare(cur, base), pr = r.period || {}, bl = r.baseline || {};
+    const range = (p) => (p && p.from && p.to ? `${fmt('date', p.from)} al ${fmt('date', p.to)}` : null);
+    const w = cmp.weakest, d = cmp.cr.deltaPp, refTxt = bl.label || range(bl) || 'su referencia';
+    let conclusion;
+    if (w) conclusion = `El paso «${w.label}» es el más débil: su tasa cae ${Math.abs(w.deltaPp).toFixed(2)} pp contra ${String(refTxt).toLowerCase()}`;
+    else if (isNum(d)) conclusion = `La conversión de ficha pasa de ${fmt('pct2', cmp.cr.base)} a ${fmt('pct2', cmp.cr.cur)} (${pp2(d / 100)}) y ningún paso cae más de ${FE.WEAK_PP} pp`;
+    else conclusion = `Conversión de ficha del periodo: ${fmt('pct2', cmp.cr.cur)}; no hay referencia con embudo completo para compararla`;
+    // Grupos (categorías) cuya conversión de ficha más cae: misma aritmética, solo ordena.
+    const groups = (r.rows || []).map((x) => { const c = FE.pick(x.current), b = FE.pick(x.baseline); if (!c || !b) return null; const rc = FE.rates(c), rb = FE.rates(b); return isNum(rc.cr) && isNum(rb.cr) ? { key: String(x.key), cr: rc.cr, base: rb.cr, deltaPp: (rc.cr - rb.cr) * 100, views: c.views } : null; }).filter(Boolean)
+      .sort((a, b) => a.deltaPp - b.deltaPp).slice(0, 4);
+    const notes = ['Las compras son compras de GA4 (artículos), no pedidos: su tasa no es la conversión de pedidos de «Pacing por canal».', `Un paso se marca débil si su tasa cae más de ${FE.WEAK_PP} pp contra la referencia. Es aritmética: no explica por qué cayó.`];
+    if (!base) notes.push('Sin referencia con embudo completo: se muestran las tasas del periodo, sin comparación.');
+    return page(id, title, {
+      question: '¿En qué paso de la ficha se pierde la venta?', conclusion, headline: conclusion, ctx: `${range(pr) || 'Periodo'} vs. ${refTxt}`,
+      steps: cmp.steps.map((s) => ({ id: s.id, label: s.label, transition: s.transition, cur: s.cur, base: s.base, deltaPct: s.deltaPct, rateCur: s.rateCur, rateBase: s.rateBase, deltaPp: s.deltaPp })), cr: cmp.cr, weakest: w ? w.label : null,
+      groups, groupLevel: { category: 'Categoría', subcategory: 'Subcategoría', product: 'Producto' }[r.level] || 'Grupo', notes,
+      sources: ['Producto y evolución (embudo GA4 por producto)'], tags: [TAG().obs, TAG().calc]
+    });
+  }
+
   /* ===================== Perfil OPERATIVO ===================== */
   const legacy = FP.reportProfiles.get('legacy');
   const S = (block, type, depth, o) => ({ block, type, depth, ...(o || {}) });
@@ -200,7 +232,7 @@
     defaultDepth: 'detallado',
     slots: [
       S('cover', 'portada', 'resumen', { required: true }), S('summary', 'analisis', 'resumen'), S('pacing', 'analisis', 'ejecutivo'), S('channelPacing', 'analisis', 'resumen'),
-      S('evolution', 'analisis', 'ejecutivo'), S('drivers', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'),
+      S('evolution', 'analisis', 'ejecutivo'), S('funnel', 'analisis', 'ejecutivo'), S('drivers', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'),
       S('categories', 'analisis', 'detallado'), S('customers', 'analisis', 'detallado'), S('campaigns', 'analisis', 'detallado'), S('movers', 'analisis', 'ejecutivo'),
       S('recovery', 'analisis', 'ejecutivo'), S('actions', 'analisis', 'resumen'), S('seasonality', 'analisis', 'detallado'), S('closing', 'cierre', 'resumen'),
       S('decisions', 'cierre', 'resumen'), S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
@@ -211,7 +243,8 @@
   FP.reportProfiles.register(PROFILE);
   FP.reportBlocks.register('channelPacing', channelPacing);
   FP.reportBlocks.register('evolution', evolution);
+  FP.reportBlocks.register('funnel', funnel);
   FP.reportBlocks.register('actions', actions);
 
-  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, channelPacing, evolution, actions, flagsOf, pp2 };
+  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, rangeOf, toDateOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -68,9 +68,18 @@
       const sub = [r.measurement ? `Medición: ${r.measurement.metric}${isNum(r.measurement.windowDays) ? `, ventana de ${r.measurement.windowDays} días` : ''}` : null, prio ? `Prioridad (descriptiva): ${prio}` : null].filter(Boolean);
       return `<tr><th scope="row">${esc(r.id)}</th><td><strong>${esc(r.title)}</strong>${sub.map((s) => `<span class="rp-op__sub">${esc(s)}</span>`).join('')}</td><td>${esc(r.channel)}</td>
         <td>${r.owner ? esc(r.owner) : '<span class="rp-na">Por asignar</span>'}</td><td>${esc(D(r.start))} → ${esc(D(r.end))}</td><td>${esc(r.status)}</td>
-        <td class="num">${r.impact ? `${esc(f('smoneyC', r.impact.value))} ${tag('Estimado', 'est')}` : '<span class="rp-na">Sin escenario</span>'}</td></tr>`;
+        <td class="num">${r.impact ? `${esc(f('smoneyC', r.impact.value))} ${tag('Estimado', 'est')}${isNum(r.impact.recoveryPct) ? `<span class="rp-op__sub">${esc(f('pct', r.impact.recoveryPct))} de la brecha</span>` : ''}` : '<span class="rp-na">Sin escenario</span>'}</td></tr>`;
     }).join('');
     return `<div class="rp-op"><table class="rp-t rp-op__t rp-op__t--big"><caption class="sr-only">Acciones registradas</caption><thead><tr><th scope="col">ID</th><th scope="col">Acción</th><th scope="col">Canal</th><th scope="col">Responsable</th><th scope="col">Ventana</th><th scope="col">Estado</th><th scope="col" class="num">Impacto simulado</th></tr></thead><tbody>${body}</tbody></table>
+      <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
+  }
+
+  function funnelBody(p) {
+    const row = (s, i) => `<tr><th scope="row">${esc(s.label)}</th><td class="num">${esc(f('int', s.cur))}</td><td class="num">${isNum(s.base) ? esc(f('int', s.base)) : '<span class="rp-na">No disponible</span>'}</td><td class="num ${cls(s.deltaPct)}">${isNum(s.deltaPct) ? arrow(s.deltaPct) + esc(f('spct', s.deltaPct)) : '—'}</td>
+      <td class="num">${i ? esc(f('pct2', s.rateCur)) : '—'}</td><td class="num ${cls(s.deltaPp)}">${i && isNum(s.deltaPp) ? arrow(s.deltaPp) + esc(FP.reportOperativo.pp2(s.deltaPp / 100)) : '—'}</td><td>${i && p.weakest === s.transition ? tag('Paso más débil', 'est') : ''}</td></tr>`;
+    const g = p.groups.length ? `<table class="rp-t rp-op__t"><caption>${esc(p.groupLevel)}s con mayor caída de conversión de ficha</caption><thead><tr><th scope="col">${esc(p.groupLevel)}</th><th scope="col" class="num">Conversión</th><th scope="col" class="num">Referencia</th><th scope="col" class="num">Cambio</th></tr></thead><tbody>${p.groups.map((x) => `<tr><th scope="row">${esc(x.key)}</th><td class="num">${esc(f('pct2', x.cr))}</td><td class="num">${esc(f('pct2', x.base))}</td><td class="num ${cls(x.deltaPp)}">${arrow(x.deltaPp)}${esc(FP.reportOperativo.pp2(x.deltaPp / 100))}</td></tr>`).join('')}</tbody></table>` : '';
+    return `<div class="rp-op"><div><table class="rp-t rp-op__t"><caption class="sr-only">Pasos del embudo</caption><thead><tr><th scope="col">Paso</th><th scope="col" class="num">Periodo</th><th scope="col" class="num">Referencia</th><th scope="col" class="num">Cambio</th><th scope="col" class="num">Tasa del paso</th><th scope="col" class="num">vs ref.</th><th scope="col"></th></tr></thead><tbody>${p.steps.map(row).join('')}</tbody></table>
+      ${isNum(p.cr.cur) ? `<p class="rp-small">Conversión de ficha (compra ÷ vistas): <strong>${esc(f('pct2', p.cr.cur))}</strong>${isNum(p.cr.base) ? ` · referencia ${esc(f('pct2', p.cr.base))}` : ''}.</p>` : ''}</div><div class="rp-op__grp">${g}</div>
       <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
   }
 
@@ -78,5 +87,6 @@
   const title = (p) => p.conclusion || null;
   FP.reportView.register('channelPacing', { section: 'Pacing por canal', body: channelBody, title, noHeadline: true });
   FP.reportView.register('evolution', { section: 'Evolución de venta y pedidos', body: evolutionBody, title, noHeadline: true });
+  FP.reportView.register('funnel', { section: 'Embudo de fichas de producto', body: funnelBody, title, noHeadline: true });
   FP.reportView.register('actions', { section: 'Acciones y responsables', body: actionsBody, title, noHeadline: true });
 })(typeof window !== 'undefined' ? window : globalThis);

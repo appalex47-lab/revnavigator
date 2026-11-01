@@ -29,6 +29,9 @@ async def snap():
         # Fase 3 (aditivo): formato Operativo sobre los mismos datos del escenario base
         await q.goto(U + '#presentacion'); await q.wait_for_selector('[data-action="rp-generate"]'); await q.click('[data-action="rp-audience"][data-id="operativo"]')
         await generate(q); await q.evaluate("window.__sel=FP.reportSetupView.selectionOf(FP.app.state.rp)"); res['operativo'] = await q.evaluate(CAP); await q.evaluate("window.__sel=undefined")
+        # Fase 4 (aditivo): formato Gerencial sobre los mismos datos del escenario base
+        await q.goto(U + '#presentacion'); await q.wait_for_selector('[data-action="rp-generate"]'); await q.click('[data-action="rp-audience"][data-id="gerencial"]')
+        await generate(q); await q.evaluate("window.__sel=FP.reportSetupView.selectionOf(FP.app.state.rp)"); res['gerencial'] = await q.evaluate(CAP); await q.evaluate("window.__sel=undefined")
         q3 = await boot(b)
         await q3.goto(U + '#presentacion'); await q3.wait_for_selector('[data-action="rp-generate"]')
         await q3.evaluate("FP.app.actions['pkg-context']({dataset:{key:'periodType',value:'quarter'},value:'quarter'})")

@@ -415,6 +415,8 @@
     const ctxLine = [x.channelLabel === 'Total digital' ? null : x.channelLabel, scopeTag, p.ctx || null].filter(Boolean).join(' · ');
     const per = ((x.units.find((q) => q.id === 'cover') || {}).page.facts.find((f) => f.id === 'period') || {}).value || '';
     const foot = `<div class="rp-foot"><span>${brandMark(false)}${esc(brandName(null))} · ${esc(x.channelLabel)}${x.lastActual ? ` · Venta real al ${esc(x.lastActual)} (corte ${esc(x.cutoff)})` : ''}${x.tags && p.sources && p.sources.length ? ` · Fuente: ${esc(p.sources.join(', '))}${p.tags && p.tags.length ? ` · ${esc(p.tags.join(' / '))}` : ''}` : ''}</span><span class="rp-pgno">${u.number}</span></div>`;
+    // El periodo arriba a la derecha solo si el subtítulo de la lámina no lo dice ya: una fecha, un lugar (el pie conserva el corte).
+    const perShown = Boolean(per) && !ctxLine.toLowerCase().includes(per.toLowerCase());
     const eyebrow = u.id === 'annex' ? 'Anexo técnico' : (SECTION[u.id] || p.title);
     if (u.id === 'cover') {
       const per = (x.units.find((q) => q.id === 'cover').page.facts.find((f) => f.id === 'period') || {}).value || '';
@@ -426,7 +428,7 @@
     const concl = u.id === 'annex' || !FP.reportCopy ? null : (FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
-    return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span><span class="rp-per">${esc(per)}</span></div>
+    return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
       <h2 class="rp-title">${esc(title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
       <div class="rp-body">${body}</div>${foot}</section>`;
   }
@@ -546,9 +548,20 @@
   }
 
   /* ================= vista «Presentación (PDF)» ================= */
+  /** Sensibilidad del formato elegido (Operativo o Gerencial): a partir de qué desvío contra el plan se marca algo. Vacío = valor por defecto de la configuración. */
+  function thresholdsHtml(rp) {
+    const g = rp.audience === 'gerencial', D = FP.config.reports[g ? 'gerencial' : 'operativo'], T = rp.options.thresholds || {};
+    const inp = (key, label, hint) => `<label class="field rp-th"><span class="field__label">${label}</span><span class="rp-th__in"><input type="text" inputmode="decimal" data-action="rp-threshold" data-key="${key}" value="${T[key] === null || T[key] === undefined ? '' : esc(String(+(T[key] * 100).toFixed(2)))}" placeholder="${+(D[key] * 100).toFixed(2)}" aria-describedby="rp-th-hint"> %</span><span class="field__hint">${hint}</span></label>`;
+    const fields = g
+      ? inp('okPct', 'Canal «en meta» hasta', 'Un canal está en meta si su venta está por encima del plan o a menos de esto por debajo.') + inp('alertPct', 'Canal «fuera de meta» desde', 'Un canal está fuera de meta si su venta queda al menos esto bajo el plan; en medio, «en seguimiento».')
+      : inp('belowPlanPct', 'Indicador «bajo el plan» desde', 'Un indicador de canal se marca bajo el plan si se aparta al menos esto de su plan.') + inp('weakPct', 'Semana, mes o día «más flojo» desde', 'Se nombra como el más flojo si su venta queda al menos esto bajo el plan.');
+    const defs = g ? `${+(D.okPct * 100).toFixed(2)} % y ${+(D.alertPct * 100).toFixed(2)} %` : `${+(D.belowPlanPct * 100).toFixed(2)} % y ${+(D.weakPct * 100).toFixed(2)} %`;
+    return `<fieldset class="rp-step rp-th-box"><legend>Sensibilidad del formato ${g ? 'Gerencial' : 'Operativo'}</legend>${fields}
+      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${defs}). Se aplica al generar de nuevo y vale mientras la sesión esté abierta.</p></fieldset>`;
+  }
   function signature(state) {
     const s = state.dx.settings, an = state.an || {};
-    return JSON.stringify([s.channel, s.periodType, s.periodKey, s.comparison, state.year, state.rp.options.showBusinessName, state.rp.filter || null, (an.filter && FP.productFilter) ? FP.productFilter.active(an.filter) : null, state.fc.run ? state.fc.run.generatedAt : null]);
+    return JSON.stringify([s.channel, s.periodType, s.periodKey, s.comparison, state.year, state.rp.options.showBusinessName, state.rp.options.thresholds || null, state.rp.filter || null, (an.filter && FP.productFilter) ? FP.productFilter.active(an.filter) : null, state.fc.run ? state.fc.run.generatedAt : null]);
   }
   function scale(rootEl) {
     rootEl.querySelectorAll('.rp-frame').forEach((f) => { const s = Math.max(0.5, Math.min(1, f.clientWidth / PW)); f.style.setProperty('--rp-s', s.toFixed(3)); });
@@ -605,6 +618,7 @@
           ${filterSelect(state)}
           <div class="rp-opts"><label class="check"><input type="checkbox" data-action="rp-option" data-key="showTags" ${rp.options.showTags ? 'checked' : ''}> Mostrar etiquetas Observado / Calculado / Estimado</label>
             <label class="check"><input type="checkbox" data-action="rp-option" data-key="showBusinessName" ${rp.options.showBusinessName ? 'checked' : ''}> Incluir el nombre del negocio en la portada</label></div>
+          ${(rp.audience === 'operativo' && FP.reportOperativo) || (rp.audience === 'gerencial' && FP.reportGerencial) ? thresholdsHtml(rp) : ''}
           <div class="btn-row"><button type="button" class="btn ${ready && !stale ? '' : 'btn--primary'}" data-action="rp-generate" ${rp.status === 'busy' ? 'disabled aria-busy="true"' : ''}>${ready ? 'Volver a generar' : 'Generar vista previa'}</button>
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}
