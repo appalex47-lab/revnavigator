@@ -37,7 +37,7 @@ async def main():
             await q.click(f'[data-action="rp-depth"][data-id="{depth}"]'); await q.wait_for_timeout(400)
             got = await pages(q); rows = await q.evaluate(ROWS)
             if exp: chk(f'S11 profundidad «{depth}»: la vista previa muestra solo portada, resumen, cierre y decisiones', got == exp, got)
-            else: chk(f'S12 profundidad «{depth}»: suma desempeño, factores, quién suma/resta (sin categorías, evolución ni clientes)', 'pacing' in got and 'movers' in got and not any(x in got for x in ['categories', 'trends', 'customers']) and got[0] == 'cover' and got[-1] == 'decisions', got)
+            else: chk(f'S12 profundidad «{depth}»: suma desempeño, factores, quién suma/resta y categorías (sin evolución ni clientes)', 'pacing' in got and 'movers' in got and 'categories' in got and not any(x in got for x in ['trends', 'customers']) and got[0] == 'cover' and got[-1] == 'decisions', got)
             chk(f'S13 «{depth}»: la propuesta coincide con la vista previa', len(rows) == len(got), (rows, got))
         chk('S14 cambiar de profundidad no marca la vista como desactualizada ni vuelve a generar el reporte', await q.evaluate("FP.app.state.rp.at") == at0 and not await q.query_selector('#rp-status .note--warn'), at0)
         await q.click('[data-action="rp-depth"][data-id="resumen"]'); await q.wait_for_timeout(300)
