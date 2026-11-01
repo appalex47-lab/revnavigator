@@ -36,14 +36,35 @@
     </div>`;
   }
 
+  /** Editor de una lámina: título y nota propios (texto de la persona) y, si se activa, hipótesis de IA para aceptar una por una. */
+  function editorHtml(state, plan, prof) {
+    const rp = state.rp, id = rp.editing, PE = FP.reportPrefs, L = PE.LIMITS, slide = id && plan.slides.find((s) => s.block === id);
+    if (!slide || PE.EDITABLE_NOT.includes(id)) return '';
+    const ed = (rp.edits && rp.edits[PE.editKey(prof.id, id)]) || {}, ai = rp.aiRes && rp.aiRes[id], on = Boolean(rp.options.ai);
+    const sug = ai && ai.hypotheses && ai.hypotheses.length ? `<ul class="rp-ed__sug" id="rp-ai-sug">${ai.hypotheses.map((h, i) => `<li><span>${esc(h)}</span> <button type="button" class="btn" data-action="rp-ai-accept" data-i="${i}">Aceptar</button></li>`).join('')}</ul>` : '';
+    const acc = ed.hyp && ed.hyp.length ? `<ul class="rp-ed__acc" id="rp-ai-acc">${ed.hyp.map((h, i) => `<li><span>${esc(h)}</span> <button type="button" class="btn btn--ghost" data-action="rp-ai-drop" data-i="${i}" aria-label="Quitar la hipótesis ${i + 1}">Quitar</button></li>`).join('')}</ul>` : '';
+    const aiMsg = !ai ? '' : ai.busy ? '<p class="field__hint" role="status">Consultando…</p>' : ai.ok ? '' : `<p class="note note--warn" role="status">${esc(ai.status === 'rejected' ? 'La IA respondió algo que no cumple las reglas (cifras que no están en la lámina, lenguaje causal o sin lenguaje de posibilidad); no se muestra. ' : '')}${esc((ai.errors || []).slice(0, 2).join(' '))}</p>`;
+    return `<div class="rp-editor" id="rp-editor" role="group" aria-labelledby="rp-editor-t"><h4 class="rp-prop__h" id="rp-editor-t">Editar «${esc(slide.title)}»</h4>
+      <p class="field__hint">Tu texto no cambia ninguna cifra: el título propio reemplaza al generado y la nota se agrega al pie de la lámina. Se guarda en este navegador y se borra al cerrar sesión.</p>
+      <label class="field"><span class="field__label">Título de la lámina (vacío = el generado)</span><input type="text" id="rp-ed-title" data-action="rp-edit-field" data-field="title" maxlength="${L.title}" value="${esc(ed.title || '')}" placeholder="${esc(slide.title)}"></label>
+      <label class="field"><span class="field__label">Nota (máx. ${L.note} caracteres)</span><textarea id="rp-ed-note" data-action="rp-edit-field" data-field="note" rows="2" maxlength="${L.note}">${esc(ed.note || '')}</textarea></label>
+      <label class="check"><input type="checkbox" data-action="rp-option" data-key="ai" ${on ? 'checked' : ''}> Permitir sugerencias de IA (al pedirlas se envía a Cohere el texto y las cifras de esta lámina)</label>
+      ${on ? `<div class="btn-row"><button type="button" class="btn" data-action="rp-ai-ask" ${ai && ai.busy ? 'disabled aria-busy="true"' : ''}>Pedir hipótesis a la IA</button></div>${aiMsg}${sug}` : ''}
+      ${acc ? `<p class="field__hint">Hipótesis aceptadas (salen en la lámina como «Hipótesis (IA), por validar»):</p>${acc}` : ''}
+      <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-edit-reset">Restaurar el texto original</button><button type="button" class="btn" data-action="rp-edit-close">Cerrar</button></div></div>`;
+  }
+
   /** Paso 5: la propuesta del compositor, con la selección editable. */
   function proposalHtml(state, plan) {
     const rp = state.rp, prof = FP.reportProfiles.get(plan.profile), req = new Set(prof.slots.filter((s) => s.required).map((s) => s.block));
+    const PE = FP.reportPrefs;
     let annexRow = 0;
     const rows = plan.slides.map((s) => {
       const first = s.id !== 'annex' || annexRow++ === 0;
       const box = !first ? '' : req.has(s.block) ? '<span class="rp-prop__req" role="img" aria-label="Obligatoria" title="Obligatoria">●</span>' : `<input type="checkbox" data-action="rp-toggle-page" data-id="${esc(s.block)}" checked aria-label="Incluir «${esc(s.title)}»">`;
-      return `<tr><td class="rp-prop__c">${box}</td><td class="rp-prop__n">${s.order}</td><td>${esc(s.title)}</td><td>${esc(TYPE_LABEL[s.type] || s.type)}</td><td class="rp-prop__why">${esc(s.reason)}</td></tr>`;
+      const canEdit = first && !PE.EDITABLE_NOT.includes(s.block), edited = canEdit && rp.edits && rp.edits[PE.editKey(prof.id, s.block)];
+      const editCell = canEdit ? `<button type="button" class="btn btn--ghost" data-action="rp-edit-open" data-id="${esc(s.block)}" aria-label="Editar «${esc(s.title)}»">Editar</button>${edited ? ' <span class="pill pill--na">Editada</span>' : ''}` : '';
+      return `<tr><td class="rp-prop__c">${box}</td><td class="rp-prop__n">${s.order}</td><td>${esc(s.title)}</td><td>${esc(TYPE_LABEL[s.type] || s.type)}</td><td class="rp-prop__why">${esc(s.reason)}</td><td class="rp-prop__e">${editCell}</td></tr>`;
     }).join('');
     const out = plan.excluded.filter((e) => e.block !== 'cover').map((e) => {
       const can = e.kind === 'seleccion-persona' || e.kind === 'profundidad';
@@ -56,7 +77,8 @@
     return `<section class="panel" aria-labelledby="t-rp-prop"><div class="panel__head"><div><h3 class="panel__title" id="t-rp-prop"><span class="rp-step__n">Paso 5</span> Propuesta de presentación</h3>
       <p class="panel__desc" id="rp-prop-sum">${plan.slides.length} lámina${plan.slides.length === 1 ? '' : 's'} en el PDF${nAnnex ? ` (${nAnnex} de anexo técnico)` : ''}${plan.excluded.length ? ` · ${plan.excluded.length} bloque${plan.excluded.length === 1 ? '' : 's'} no incluido${plan.excluded.length === 1 ? '' : 's'}` : ''}. Quita o agrega láminas con las casillas; cada una dice por qué está o no está.</p></div></div>
       <div class="panel__body stack">
-        <div class="rp-prop__w"><table class="rp-prop" id="rp-prop"><caption class="sr-only">Láminas de la presentación</caption><thead><tr><th scope="col"><span class="sr-only">Incluir</span></th><th scope="col">#</th><th scope="col">Lámina</th><th scope="col">Tipo</th><th scope="col">Por qué está</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="rp-prop__w"><table class="rp-prop" id="rp-prop"><caption class="sr-only">Láminas de la presentación</caption><thead><tr><th scope="col"><span class="sr-only">Incluir</span></th><th scope="col">#</th><th scope="col">Lámina</th><th scope="col">Tipo</th><th scope="col">Por qué está</th><th scope="col"><span class="sr-only">Editar</span></th></tr></thead><tbody>${rows}</tbody></table></div>
+        ${editorHtml(state, plan, prof)}
         ${out ? `<div><h4 class="rp-prop__h">No incluidas</h4><ul class="rp-offlist" id="rp-offlist">${out}</ul></div>` : ''}
         ${lim ? `<div><h4 class="rp-prop__h">Limitaciones detectadas</h4><ul class="rp-limits" id="rp-limits">${lim}</ul></div>` : '<p class="field__hint">No se detectaron limitaciones declaradas en las páginas incluidas.</p>'}
         <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-reset-selection">Restablecer la selección</button></div>

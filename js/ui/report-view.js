@@ -415,6 +415,9 @@
     const ctxLine = [x.channelLabel === 'Total digital' ? null : x.channelLabel, scopeTag, p.ctx || null].filter(Boolean).join(' · ');
     const per = ((x.units.find((q) => q.id === 'cover') || {}).page.facts.find((f) => f.id === 'period') || {}).value || '';
     const foot = `<div class="rp-foot"><span>${brandMark(false)}${esc(brandName(null))} · ${esc(x.channelLabel)}${x.lastActual ? ` · Venta real al ${esc(x.lastActual)} (corte ${esc(x.cutoff)})` : ''}${x.tags && p.sources && p.sources.length ? ` · Fuente: ${esc(p.sources.join(', '))}${p.tags && p.tags.length ? ` · ${esc(p.tags.join(' / '))}` : ''}` : ''}</span><span class="rp-pgno">${u.number}</span></div>`;
+    // Fase 7: texto de la persona (título y nota) e hipótesis de IA que aceptó; siempre rotulados, nunca reemplazan una cifra calculada.
+    const ed = u.id !== 'annex' && x.edits ? x.edits[`${x.editProfile}|${u.id}`] : null;
+    const edHtml = ed && (ed.note || (ed.hyp && ed.hyp.length)) ? `<div class="rp-ed">${ed.note ? `<p class="rp-ed__n"><strong>Nota.</strong> ${esc(ed.note)}</p>` : ''}${ed.hyp && ed.hyp.length ? `<div class="rp-ed__h"><strong>Hipótesis (IA), por validar:</strong><ul>${ed.hyp.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></div>` : ''}</div>` : '';
     // El periodo arriba a la derecha solo si el subtítulo de la lámina no lo dice ya: una fecha, un lugar (el pie conserva el corte).
     const perShown = Boolean(per) && !ctxLine.toLowerCase().includes(per.toLowerCase());
     const eyebrow = u.id === 'annex' ? 'Anexo técnico' : (SECTION[u.id] || p.title);
@@ -429,13 +432,13 @@
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
     return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
-      <h2 class="rp-title">${esc(title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
-      <div class="rp-body">${body}</div>${foot}</section>`;
+      <h2 class="rp-title">${esc(ed && ed.title ? ed.title : title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
+      <div class="rp-body">${body}${edHtml}</div>${foot}</section>`;
   }
   function docHtml(report, opts = {}) {
     const us = units(report, opts.exclude, opts.sel); NOANNEX = !us.some((q) => q.id === 'annex'); const cover = report.pages.find((p) => p.id === 'cover');
     const sel = cover && cover.facts ? (cover.facts.find((f) => f.id === 'selection') || {}).value : '';
-    const x = { report, tags: opts.tags === undefined ? report.options.showTags === true : Boolean(opts.tags), units: us, total: us.length, omitted: report.omitted.length, omittedList: report.omitted, gapsPage: (report.pages.find((q) => q.id === 'recovery' && q.status === 'included') || {}).gaps ? report.pages.find((q) => q.id === 'recovery') : null, relPage: report.pages.find((q) => q.id === 'reliability' && q.status === 'included') || null, channelLabel: report.context.channel === 'total' || !report.context.channel ? 'Total digital' : ({ ecommerce: 'Ecommerce', app: 'App', whatsapp: 'WhatsApp', llamadas: 'Llamadas' }[report.context.channel] || report.context.channel), cutoff: report.context.cutoff ? dateOf(report.context.cutoff) : NA, lastActual: report.context.lastActual && report.context.cutoff && report.context.lastActual < report.context.cutoff ? dateOf(report.context.lastActual) : null,
+    const x = { edits: opts.edits || null, editProfile: (opts.sel && opts.sel.profile) || 'legacy', report, tags: opts.tags === undefined ? report.options.showTags === true : Boolean(opts.tags), units: us, total: us.length, omitted: report.omitted.length, omittedList: report.omitted, gapsPage: (report.pages.find((q) => q.id === 'recovery' && q.status === 'included') || {}).gaps ? report.pages.find((q) => q.id === 'recovery') : null, relPage: report.pages.find((q) => q.id === 'reliability' && q.status === 'included') || null, channelLabel: report.context.channel === 'total' || !report.context.channel ? 'Total digital' : ({ ecommerce: 'Ecommerce', app: 'App', whatsapp: 'WhatsApp', llamadas: 'Llamadas' }[report.context.channel] || report.context.channel), cutoff: report.context.cutoff ? dateOf(report.context.cutoff) : NA, lastActual: report.context.lastActual && report.context.cutoff && report.context.lastActual < report.context.cutoff ? dateOf(report.context.lastActual) : null,
       selection: sel && !/^Sin filtros/.test(sel) ? cut(sel, 60) : 'Sin filtros' };
     const parts = us.map((u) => pageHtml(u, x).replace(/<(th|dt)(\s|>)/g, '<$1 data-helped="1"$2'));   // sin íconos de ayuda de la app dentro del reporte
     return { html: parts.join(''), parts, units: us, total: us.length };
@@ -602,7 +605,7 @@
     const ready = rp.status === 'ready' && rp.report;
     const stale = ready && rp.sig !== signature(state);
     const SV = FP.reportSetupView, sel = SV.selectionOf(rp);
-    const doc = ready ? docHtml(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel }) : null;
+    const doc = ready ? docHtml(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel, edits: rp.edits }) : null;
     const plan = ready ? FP.reportComposer.compose(rp.report, sel) : null;
     el.innerHTML = `
       <section class="panel" aria-labelledby="t-rp">
@@ -623,6 +626,7 @@
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}
           <div id="rp-status" aria-live="polite">${rp.status === 'busy' ? FP.loader.html('Armando la presentación con los cálculos actuales…', { key: 'presentacion' }) : ''}
+            ${rp.prefsNote && rp.prefsNote.length ? `<p class="note note--warn" id="rp-prefs-note" role="status">Parte de lo que tenías guardado ya no aplica y se descartó: ${H().esc(rp.prefsNote.join(' '))}</p>` : ''}
             ${rp.status === 'error' ? `<p class="note note--warn">No pude armar la presentación: ${H().esc(rp.error || '')}</p>` : ''}
             ${stale ? '<p class="note note--warn" role="status">La selección o los datos cambiaron desde que se generó la vista previa. Vuelve a generar antes de guardar el PDF.</p>' : ''}</div>
           <p class="field__hint">«Guardar como PDF» abre el cuadro de impresión del navegador: elige <strong>Guardar como PDF</strong>; el tamaño horizontal 16:9 ya viene definido. Si no salen los colores, activa «Gráficos de fondo».</p>

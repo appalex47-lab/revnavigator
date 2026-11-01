@@ -95,7 +95,7 @@
     },
     // Fase 8.1: Categoría → Producto (resultados en memoria; datos en IndexedDB)
     pkg: { busy: false, last: null },
-    rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false, thresholds: { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null } }, filter: null, sig: null, at: null },   // «Presentación (PDF)»
+    rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false, ai: false, thresholds: { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null } }, edits: {}, editing: null, aiRes: {}, prefsNote: [], filter: null, sig: null, at: null },   // «Presentación (PDF)»
     pa: { from: null, to: null, comparison: 'previous', channel: 'total', viewBy: 'category', drill: [], next: null, geo: {}, topN: 20, page: 1, result: null, loading: false, key: null,
       trace: null, counts: null, estimate: null, tests: null, testing: false, note: null },
     // Análisis 1: evolución histórica y patrones. La serie se calcula desde IndexedDB.
@@ -537,6 +537,24 @@
     // Hay algo guardado que no se puede leer (JSON dañado o versión de esquema desconocida): se avisa, no se adivina
     const raw = lsAdapter.get(`${C.storage.namespace}:${K.businessContext}`);
     state.bc = { draft: ctx || BCX.empty(), storedAt: ctx ? env.savedAt : null, dirty: false, unreadable: Boolean(raw) && !ctx };
+  }
+  /* ---------- Fase 7: selección, umbrales y ediciones de la presentación (local; se borran al cerrar sesión) ---------- */
+  let rpSaved = null;   // lo último que se guardó (o se leyó): solo se vuelve a escribir cuando cambia
+  function loadRpPrefs() {
+    const env = storage.load(K.reportPrefs), n = FP.reportPrefs.normalize(env ? env.data : null), v = n.value, rp = state.rp;
+    if (v.audience) {
+      const prof = FP.reportCatalog.resolve(v.audience, v.type);
+      Object.assign(rp, { audience: v.audience, type: v.type, depth: v.depth || prof.defaultDepth || null, include: v.include || [], exclude: v.exclude || prof.defaultExclude.slice() });
+    }
+    if (v.options) { ['showTags', 'showBusinessName'].forEach((k) => { if (typeof v.options[k] === 'boolean') rp.options[k] = v.options[k]; }); Object.assign(rp.options.thresholds, { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null }, v.options.thresholds); }
+    if (v.edits) rp.edits = v.edits;
+    rp.prefsNote = n.dropped;
+    rpSaved = env ? JSON.stringify(FP.reportPrefs.serialize(rp)) : JSON.stringify(FP.reportPrefs.serialize(rp));
+  }
+  function rpPersist() {
+    const json = JSON.stringify(FP.reportPrefs.serialize(state.rp));
+    if (json === rpSaved) return;
+    if (storage.save(K.reportPrefs, JSON.parse(json))) rpSaved = json;   // si se está cerrando sesión, save devuelve false y no se escribe nada
   }
   /** Marca de la presentación: lo guardado se aplica a la presentación; el borrador sirve a la pantalla de Configuración. */
   function loadBrand() {
@@ -1605,6 +1623,7 @@
     if (g) u.lastByGroup[g] = state.view;
     FP.navigation.renderNav(state);
     renderView();
+    rpPersist();
     restoreDrafts();
     announceView();
     learnFromView();
@@ -4699,17 +4718,42 @@
     'rp-gap-last'() { state.rp.gap = null; state.rp.gapOk = false; actions['fc-ref-last'](); },
     'rp-gap-load'() { state.rp.gap = null; root.location.hash = 'carga'; },
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
-    'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp) }); },
+    'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp), edits: rp.edits }); },
+    /* Fase 7 · editor de la lámina: título y nota de la persona (texto, nunca cifras calculadas) y las hipótesis de IA que acepte */
+    'rp-edit-open'(el) { state.rp.editing = el.dataset.id; render(); },
+    'rp-edit-close'() { state.rp.editing = null; render(); },
+    'rp-edit-field'(el) {
+      const rp = state.rp, P = FP.reportPrefs, key = P.editKey(FP.reportSetupView.selectionOf(rp).profile, rp.editing); if (!rp.editing) return;
+      const cur = { ...(rp.edits[key] || {}) }; cur[el.dataset.field] = el.value;
+      const s = P.sanitizeEdit(cur); if (s) rp.edits[key] = s; else delete rp.edits[key];
+      render();
+    },
+    'rp-edit-reset'() { const rp = state.rp; delete rp.edits[FP.reportPrefs.editKey(FP.reportSetupView.selectionOf(rp).profile, rp.editing)]; render(); FP.ui.toast('Lámina restaurada al texto original.'); },
+    async 'rp-ai-ask'() {
+      const rp = state.rp, id = rp.editing, page = rp.report && rp.report.pages.find((p) => p.id === id); if (!page || !rp.options.ai || rp.aiRes[id] && rp.aiRes[id].busy) return;
+      rp.aiRes[id] = { busy: true }; render();
+      const r = await FP.presentationAI.ask(page, { apiKey: state.dx.apiKey, model: state.dx.model });
+      rp.aiRes[id] = { busy: false, status: r.status, ok: r.ok, hypotheses: r.hypotheses, errors: r.errors }; render();
+    },
+    'rp-ai-accept'(el) {
+      const rp = state.rp, P = FP.reportPrefs, key = P.editKey(FP.reportSetupView.selectionOf(rp).profile, rp.editing), r = rp.aiRes[rp.editing], text = r && r.hypotheses ? r.hypotheses[Number(el.dataset.i)] : null; if (!text) return;
+      const cur = { ...(rp.edits[key] || {}) }; cur.hyp = (cur.hyp || []).filter((h) => h !== text).concat(text);
+      const s = P.sanitizeEdit(cur); if (s) rp.edits[key] = s; r.hypotheses = r.hypotheses.filter((h) => h !== text); render();
+    },
+    'rp-ai-drop'(el) {
+      const rp = state.rp, P = FP.reportPrefs, key = P.editKey(FP.reportSetupView.selectionOf(rp).profile, rp.editing), cur = { ...(rp.edits[key] || {}) };
+      cur.hyp = (cur.hyp || []).filter((_, i) => i !== Number(el.dataset.i)); const s = P.sanitizeEdit(cur); if (s) rp.edits[key] = s; else delete rp.edits[key]; render();
+    },
     /** Presentación · pasos 1 a 3: solo se puede elegir lo habilitado (un perfil que lo sirva); al cambiar audiencia o tipo, la selección vuelve a la del perfil. */
     'rp-audience'(el) {
       const rp = state.rp, C = FP.reportCatalog, a = C.audiences().find((x) => x.id === el.dataset.id), t = a && a.enabled ? C.types(a.id).find((x) => x.enabled) : null;
       if (!t || rp.audience === a.id) return;
-      const prof = C.resolve(a.id, t.id); Object.assign(rp, { audience: a.id, type: t.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null }); render();
+      const prof = C.resolve(a.id, t.id); Object.assign(rp, { audience: a.id, type: t.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null, editing: null, aiRes: {} }); render();
     },
     'rp-type'(el) {
       const rp = state.rp, C = FP.reportCatalog, prof = C.resolve(rp.audience, el.dataset.id);
       if (!prof || rp.type === el.dataset.id) return;
-      Object.assign(rp, { type: el.dataset.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null }); render();
+      Object.assign(rp, { type: el.dataset.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null, editing: null, aiRes: {} }); render();
     },
     'rp-depth'(el) {
       const rp = state.rp, prof = FP.reportCatalog.resolve(rp.audience, rp.type);
@@ -6071,6 +6115,7 @@
     loadCalibration();
     loadProjCalibration();
     loadUx();
+    loadRpPrefs();
     loadStore();
     loadYearScoped(C.defaultYear);
     const migrated = migrateLegacyDataset();
