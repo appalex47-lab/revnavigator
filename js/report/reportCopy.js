@@ -90,7 +90,7 @@
         const big = Math.max(-drag, comp), near = big > 0 && Math.abs(bal) <= 0.05 * big;
         return `${nf(nD)} ${pl(u, nD)} ${nD === 1 ? 'resta' : 'restan'} ${moneyC(-drag)} y ${nf(nC)} ${nC === 1 ? 'suma' : 'suman'} ${moneyC(comp)}: ${near ? 'casi se compensan' : bal < 0 ? 'la caída supera al crecimiento' : 'el crecimiento supera a la caída'} (neto ${money(bal)})`;
       }
-      const tail = fin(comp) && comp > 0 ? `; lo que suma, ${money(comp)}` : '; nada suma de forma medible';
+      const tail = fin(comp) && comp > 0 ? `; lo que suma, ${money(comp)}` : '';   // «nada suma» ya lo dice la banda de la página: no se repite en el título
       return `${ent ? `${ent} concentra la mayor caída` : 'Lo que resta'} (total ${money(drag)})${tail}`;
     },
     categories(p) {

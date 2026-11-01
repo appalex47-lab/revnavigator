@@ -69,6 +69,11 @@
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     return m ? `${m[3]} ${MONTHS[+m[2] - 1].toLowerCase()} ${m[1]}` : NA;
   }
+  /** Rezago: la venta real llega antes del corte (null si está al día). */
+  function lagOf(s) {
+    if (!(s.lastActual && s.run && s.run.cutoff && s.lastActual < s.run.cutoff)) return null;
+    return { last: dateLabel(s.lastActual), cutoff: dateLabel(s.run.cutoff), days: Math.max(1, Math.round((Date.parse(s.run.cutoff) - Date.parse(s.lastActual)) / 86400000)) };
+  }
   function dateTimeLabel(iso) {
     const d = new Date(iso); if (!iso || isNaN(d)) return NA;
     const p = (n) => String(n).padStart(2, '0');
@@ -776,9 +781,11 @@
     else if (R.worst) sent.push(`La principal área de atención es ${R.worst.channel} (${smoney(R.worst.gap)} frente al plan).`);
     if (R.pc && isNum(R.pc.forecast)) sent.push(`Al ritmo actual, ${R.mk ? R.the : 'el año'} cerraría en ${moneyC(R.pc.forecast)}${R.pc.forecastSub && !R.mk ? ` (${R.pc.forecastSub})` : ''}${R.material && !noteShown ? ', cifra que depende del método de proyección' : ''}.`);
     else if (R.rec && isNum(R.rec.remaining)) sent.push(`Para cumplir ${R.mk ? `el plan ${R.of}` : 'la meta'} faltan ${moneyC(R.rec.remaining)}.`);
+    /* Rezago: la venta real llega antes del corte. Se dice en la lámina, no solo en el pie. */
+    const lag = lagOf(s);
     const yp = yearPhrase(R);
     const review = R.focus || s.reportFilter ? null : R.drag ? `Revisar primero ${R.drag.entity}: es la que más resta (${smoneyC(R.drag.impact)}) ${trPer}.` : (R.rec && rv && rv.headline.includes('vs. el plan diario') ? 'Revisar si el ritmo diario requerido para cumplir la meta es alcanzable.' : null);
-    return page('summary', 'Resumen ejecutivo', { question: '¿Qué debo saber si solo leo una página?', headline: 'Lo más importante, en una mirada', narrative: sent.length ? sent.join(' ') : null, yearStrip: yp || null, movers: R.movers && (R.movers.minus.length || R.movers.plus.length) ? { minus: [...R.movers.minus].sort((a, b) => a.rank - b.rank).slice(0, 2), plus: [...R.movers.plus].sort((a, b) => a.rank - b.rank).slice(0, 2) } : null, filterStrip: s.reportFilter ? `Filtro activo: ${s.reportFilter}. ${R.sel ? 'Venta, categorías, evolución y clientes muestran solo esa selección (la venta contra el periodo de referencia, no contra el plan); el diagnóstico y la recuperación son del total del negocio.' : 'Categorías, evolución y clientes muestran solo esa selección; el pacing y el forecast son del total del negocio.'}` : null, focus: R.focus ? { entity: R.focus.entity, level: R.focus.level, spark: R.focus.spark, text: [R.focus.sinceLabel ? `${R.focus.entity} ${focusSince(R.focus)}${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.` : `${R.focus.entity} es la ${R.focus.level} que más arrastra${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.`, `Aporta ${smoneyC(R.focus.loss)} de los ${smoneyC(R.focus.totalDrag)} que caen las ${R.focus.level === 'categoría' ? 'categorías' : 'entidades'}.`, yoyPhrase(R.focus)].filter(Boolean).join(' ') } : null, items: out, review: review ? { text: review, basis: 'Regla determinista sobre los cálculos de las páginas siguientes; no es una recomendación causal.' } : null, sources: ['Cálculos de las páginas siguientes'], tags: [TAG.obs, TAG.calc, TAG.est] });
+    return page('summary', 'Resumen ejecutivo', { question: '¿Qué debo saber si solo leo una página?', headline: 'Lo más importante, en una mirada', lag, narrative: sent.length ? sent.join(' ') : null, yearStrip: yp || null, movers: R.movers && (R.movers.minus.length || R.movers.plus.length) ? { minus: [...R.movers.minus].sort((a, b) => a.rank - b.rank).slice(0, 2), plus: [...R.movers.plus].sort((a, b) => a.rank - b.rank).slice(0, 2) } : null, filterStrip: s.reportFilter ? `Filtro activo: ${s.reportFilter}. ${R.sel ? 'Venta, categorías, evolución y clientes muestran solo esa selección (la venta contra el periodo de referencia, no contra el plan); el diagnóstico y la recuperación son del total del negocio.' : 'Categorías, evolución y clientes muestran solo esa selección; el pacing y el forecast son del total del negocio.'}` : null, focus: R.focus ? { entity: R.focus.entity, level: R.focus.level, spark: R.focus.spark, text: [R.focus.sinceLabel ? `${R.focus.entity} ${focusSince(R.focus)}${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.` : `${R.focus.entity} es la ${R.focus.level} que más arrastra${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.`, `Aporta ${smoneyC(R.focus.loss)} de los ${smoneyC(R.focus.totalDrag)} que caen las ${R.focus.level === 'categoría' ? 'categorías' : 'entidades'}.`, yoyPhrase(R.focus)].filter(Boolean).join(' ') } : null, items: out, review: review ? { text: review, basis: 'Regla determinista sobre los cálculos de las páginas siguientes; no es una recomendación causal.' } : null, sources: ['Cálculos de las páginas siguientes'], tags: [TAG.obs, TAG.calc, TAG.est] });
   }
 
   /* ---------------- 13 · Cierre ejecutivo ---------------- */
@@ -904,8 +911,28 @@
     });
   }
 
+
+  /* ---------------- 14 · Decisiones ---------------- */
+  /** Decisiones sugeridas por regla a partir de los mayores aportes a la brecha, el rezago de datos y las acciones ya registradas en Recuperar.
+   *  Son sugerencias: no se guardan ni se ejecutan; el responsable queda por asignar (la herramienta no registra dueños todavía). */
+  function pageDecisions(s, pages) {
+    const by = Object.fromEntries(pages.filter((p) => p.status === 'included').map((p) => [p.id, p]));
+    const R = readout(s, by); if (!R.pc && !R.sel) return omit('decisions', 'Decisiones', 'Sin resultados de pacing no hay base para proponer decisiones.');
+    const rows = [], F = R.focus, vs = R.sel ? 'la referencia' : 'el plan';
+    if (F) rows.push({ what: `Revisar ${F.entity}`, why: `Concentra ${pct(F.share, 0)} de lo que se pierde (${smoneyC(F.loss)})`, when: 'Esta semana' });
+    else if (R.drag) rows.push({ what: `Revisar ${R.drag.entity}`, why: `Mayor arrastre ${trendWhen(by, R)}: ${smoneyC(R.drag.impact)}`, when: 'Esta semana' });
+    else if (R.worst) rows.push({ what: `Revisar ${R.worst.channel}`, why: `${smoneyC(R.worst.gap)} frente a ${vs}`, when: 'Esta semana' });
+    if (R.best) rows.push({ what: `Mantener ${R.best.channel}`, why: `${smoneyC(R.best.gap)} sobre ${vs}`, when: 'Seguimiento' });
+    const lag = lagOf(s);
+    if (lag) rows.push({ what: 'Completar la venta real que falta', why: `Faltan ${lag.days} ${lag.days === 1 ? 'día' : 'días'} del corte; hasta entonces el cierre depende del método`, when: 'Hoy' });
+    else if (R.rec && isNum(R.rec.daily)) rows.push({ what: `Sostener ${moneyC(R.rec.daily)} por día`, why: `Para ${R.mk ? `cerrar ${R.the}` : 'la meta'}${isNum(R.rec.days) ? ` con ${Number(R.rec.days) === 1 ? 'el día restante' : `los ${int(R.rec.days)} días restantes`}` : ''}`, when: 'Hasta el cierre' });
+    (R.rec && R.rec.actions ? R.rec.actions.filter((a) => a && a.title) : []).slice(0, 2).forEach((a) => rows.push({ what: `Acción del plan: ${a.title}`, why: 'Registrada en Recuperar', when: 'Según el plan' }));
+    if (!rows.length) return omit('decisions', 'Decisiones', 'No hay hallazgos que sustenten una decisión.');
+    return page('decisions', 'Decisiones', { question: 'Qué decidimos hoy', headline: '', rows: rows.slice(0, 4).map((r) => ({ ...r, who: 'Por asignar' })), note: 'Sugeridas por regla a partir de los mayores aportes y de los avisos de datos; no se guardan ni se ejecutan. El responsable queda por asignar.', sources: ['Reglas de la herramienta'], tags: [TAG.est] });
+  }
+
   /* ---------------- ensamblado ---------------- */
-  const ORDER = ['cover', 'summary', 'pacing', 'reliability', 'drivers', 'categories', 'trends', 'movers', 'customers', 'traffic', 'campaigns', 'recovery', 'seasonality', 'closing', 'annex'];
+  const ORDER = ['cover', 'summary', 'pacing', 'reliability', 'drivers', 'categories', 'trends', 'movers', 'customers', 'traffic', 'campaigns', 'recovery', 'seasonality', 'closing', 'decisions', 'annex'];
   function build(src) {
     const s = { channel: 'total', options: {}, filters: [], ...src };
     s.options = { includeAnnex: true, showTags: false, showBusinessName: false, ...(s.options || {}) };
@@ -916,6 +943,7 @@
     const rel = all.find((p) => p.id === 'reliability'), pac = all.find((p) => p.id === 'pacing');
     if (rel && rel.status === 'included' && rel.warning && pac && pac.status === 'included') pac.caveat = 'El cierre estimado depende del método de proyección: los métodos con datos suficientes difieren de forma importante (detalle en el anexo técnico).';
     all.push(pageClosing(s, all));
+    all.push(pageDecisions(s, all));
     const annex = pageAnnex(s, all, adv);
     const pages = [...all, annex].filter((p) => p.id !== 'annex' || s.options.includeAnnex || true);   // el anexo siempre existe: lista las omisiones
     const included = pages.filter((p) => p.status === 'included');
