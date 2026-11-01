@@ -584,6 +584,13 @@
       dataKeys: ['historicalData', 'planData', 'actualData', 'segmentsData', 'dataset', 'plans', 'forecasts', 'reforecasts', 'scenarios', 'actionPlan'],
       migrationSchema: 1
     },
+    /** Presentation Intelligence · formato Operativo. PROVISIONALES: criterios propuestos para decir qué se considera «bajo el plan», no benchmarks; ajústalos con tu historial. */
+    reports: {
+      operativo: {
+        belowPlanPct: 0.005,   // un indicador está «bajo el plan» (o «por encima») cuando se aparta ≥ 0.5 % de su plan; menos se considera ruido
+        weakPct: 0.01          // una semana, mes o día es «la más floja» solo si su venta queda ≥ 1 % bajo el plan; si no, el periodo está en línea
+      }
+    },
     products: {
       /**
        * Fase 8.1.1: dos archivos de producto (no forman parte de dataTypeIds: viven en IndexedDB).
