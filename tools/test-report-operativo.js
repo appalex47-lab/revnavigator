@@ -40,6 +40,15 @@ t('Pacing por canal: con un canal elegido se omite con motivo', (() => { const p
 t('Pacing por canal: sin canal con venta real y plan se omite con motivo', (() => { const r = run(); r.channels[c0].months[0].toDate.revenue = blk(null, null); r.channels[c1].months[0].toDate.revenue = blk(null, null); const p = O.channelPacing(src({ run: r })); return p.status === 'omitted' && /Ningún canal/.test(p.reason); })());
 t('Pacing por canal: el umbral viene de FP.config.reports.operativo (provisional, congelado)', FP.config.reports.operativo.belowPlanPct === 0.005 && Object.isFrozen(FP.config.reports.operativo));
 
+/* ---------- Umbrales editables ---------- */
+t('Umbrales: sin valores de la persona rige el provisional; con valores válidos cambia qué se marca', (() => {
+  const base = O.channelPacing(src()), strict = O.channelPacing(src({ thresholds: { belowPlanPct: 0.5 } })), lax = O.channelPacing(src({ thresholds: { belowPlanPct: null } }));
+  return base.review.length === 1 && /pedidos/.test(base.review[0]) && /ningún indicador/.test(strict.review[0]) && lax.review[0] === base.review[0];
+})());
+t('Umbrales: un valor inválido (0, negativo, texto) se ignora y rige el provisional', ['x', 0, -1, NaN].every((v) => O.channelPacing(src({ thresholds: { belowPlanPct: v } })).review[0] === O.channelPacing(src()).review[0]));
+t('Umbrales: el de «más floja» decide si la semana se nombra o las semanas quedan «en línea»', (() => { const e = O.evolution(src({ thresholds: { weakPct: 0.5 } })); return /en línea con su plan/.test(e.conclusion) && /^La semana 37 fue la más floja/.test(O.evolution(src({ thresholds: { weakPct: 0.05 } })).conclusion); })());
+t('Umbrales: la gráfica marca en rojo según el umbral vigente', O.evolution(src({ thresholds: { weakPct: 0.5 } })).charts[0].items.every((i) => !i.bad));
+
 /* ---------- Evolución ---------- */
 const ev = O.evolution(src());
 t('Evolución (mes): agrupa por semana y suma solo los días contados; real y plan de los mismos días', ev.status === 'included' && ev.unit === 'week' && ev.rows.length === 4 && ev.rows[1].revenue.actual === 1800 && ev.rows[1].revenue.plan === 2000, ev.rows && ev.rows.map((r) => [r.key, r.revenue]));
@@ -58,7 +67,7 @@ const ac = O.actions(src({ recovery: { actions: [act(), act({ actionId: 'ACT_2',
 t('Acciones: solo las que se cruzan con el periodo; sin responsable queda «Por asignar» (owner null), no un nombre inventado', ac.status === 'included' && ac.rows.length === 1 && ac.rows[0].owner === null && /todavía no tiene responsable/.test(ac.conclusion), ac.rows);
 t('Acciones: el impacto simulado se rotula Estimado y no se suma entre acciones', ac.tags.some((x) => /stim/i.test(JSON.stringify(x))) && ac.notes.some((n) => /no se suman/.test(n)));
 t('Acciones: con responsable el titular lo dice; sin acciones se omite con motivo', (() => { const a = O.actions(src({ recovery: { actions: [act({ owner: 'Ana' })] } })), z = O.actions(src()); return /con responsable/.test(a.conclusion) && z.status === 'omitted' && /No hay acciones registradas/.test(z.reason); })());
-t('Acciones: lleva el impacto simulado tal como lo guardó Recuperar (5000), sin derivar otra cifra', ac.rows[0].impact.value === 5000);
+t('Acciones: lleva el impacto simulado y su recuperación de la brecha tal como los guardó Recuperar (5000 y 0.4 = fracción de la brecha), sin derivar otra cifra', ac.rows[0].impact.value === 5000 && ac.rows[0].impact.recoveryPct === 0.4);
 t('Acciones: un impacto ausente es «sin escenario» (null), no cero', O.actions(src({ recovery: { actions: [act({ expectedImpact: null })] } })).rows[0].impact === null);
 t('Acciones: filtra por canal elegido (acciones de otro canal quedan fuera)', O.actions(src({ channel: c1, recovery: { actions: [act()] } })).status === 'omitted');
 

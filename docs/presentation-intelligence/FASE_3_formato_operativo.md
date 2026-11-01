@@ -27,9 +27,9 @@ Sin fórmulas nuevas (solo suma de días contados de la propia serie y venta ÷ 
 
 ## Limitaciones conocidas
 - Embudo diferido (no hay etapas de funnel por canal en las series; se revisará con el análisis de productos).
-- `recoveryPercent` de las acciones tiene unidad ambigua: no se muestra.
+- `recoveryPercent` es una fracción de la brecha (impacto ÷ brecha; verificado en `scenarioEngine.js`); se muestra como «% de la brecha», rotulado Estimado.
 - Los textos son plantillas; no explican causas.
-- D1 («Al corte del null») sigue abierto, documentado en Fase 2.
+- D1 («Al corte del null») quedó corregido después (ver cierre de Fase 3).
 
 ## Criterios de aceptación y resultado
 Ver el reporte de fase entregado con esta rama: pruebas Node (todas), batch_report_operativo / setup / golden / composer, regresión completa, lint ≤ 193.

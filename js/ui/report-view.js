@@ -546,9 +546,18 @@
   }
 
   /* ================= vista «Presentación (PDF)» ================= */
+  /** Sensibilidad del formato Operativo: a partir de qué desvío contra el plan se marca un indicador o una semana. Vacío = valor por defecto. */
+  function thresholdsHtml(rp) {
+    const D = FP.config.reports.operativo, T = rp.options.thresholds || {};
+    const inp = (key, label, hint) => `<label class="field rp-th"><span class="field__label">${label}</span><span class="rp-th__in"><input type="text" inputmode="decimal" data-action="rp-threshold" data-key="${key}" value="${T[key] === null || T[key] === undefined ? '' : esc(String(+(T[key] * 100).toFixed(2)))}" placeholder="${+(D[key] * 100).toFixed(2)}" aria-describedby="rp-th-hint"> %</span><span class="field__hint">${hint}</span></label>`;
+    return `<fieldset class="rp-step rp-th-box"><legend>Sensibilidad del formato Operativo</legend>
+      ${inp('belowPlanPct', 'Indicador «bajo el plan» desde', 'Un indicador de canal se marca bajo el plan si se aparta al menos esto de su plan.')}
+      ${inp('weakPct', 'Semana, mes o día «más flojo» desde', 'Se nombra como el más flojo si su venta queda al menos esto bajo el plan.')}
+      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${+(D.belowPlanPct * 100).toFixed(2)} % y ${+(D.weakPct * 100).toFixed(2)} %). Se aplica al generar de nuevo y vale mientras la sesión esté abierta.</p></fieldset>`;
+  }
   function signature(state) {
     const s = state.dx.settings, an = state.an || {};
-    return JSON.stringify([s.channel, s.periodType, s.periodKey, s.comparison, state.year, state.rp.options.showBusinessName, state.rp.filter || null, (an.filter && FP.productFilter) ? FP.productFilter.active(an.filter) : null, state.fc.run ? state.fc.run.generatedAt : null]);
+    return JSON.stringify([s.channel, s.periodType, s.periodKey, s.comparison, state.year, state.rp.options.showBusinessName, state.rp.options.thresholds || null, state.rp.filter || null, (an.filter && FP.productFilter) ? FP.productFilter.active(an.filter) : null, state.fc.run ? state.fc.run.generatedAt : null]);
   }
   function scale(rootEl) {
     rootEl.querySelectorAll('.rp-frame').forEach((f) => { const s = Math.max(0.5, Math.min(1, f.clientWidth / PW)); f.style.setProperty('--rp-s', s.toFixed(3)); });
@@ -605,6 +614,7 @@
           ${filterSelect(state)}
           <div class="rp-opts"><label class="check"><input type="checkbox" data-action="rp-option" data-key="showTags" ${rp.options.showTags ? 'checked' : ''}> Mostrar etiquetas Observado / Calculado / Estimado</label>
             <label class="check"><input type="checkbox" data-action="rp-option" data-key="showBusinessName" ${rp.options.showBusinessName ? 'checked' : ''}> Incluir el nombre del negocio en la portada</label></div>
+          ${rp.audience === 'operativo' && FP.reportOperativo ? thresholdsHtml(rp) : ''}
           <div class="btn-row"><button type="button" class="btn ${ready && !stale ? '' : 'btn--primary'}" data-action="rp-generate" ${rp.status === 'busy' ? 'disabled aria-busy="true"' : ''}>${ready ? 'Volver a generar' : 'Generar vista previa'}</button>
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}

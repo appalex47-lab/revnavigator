@@ -12,9 +12,8 @@ const reports = JSON.parse(fs.readFileSync(tmp, 'utf8')); fs.unlinkSync(tmp); fs
 
 /* ---- el contrato sobre los reportes reales del armador ---- */
 const all = reports.map((rep) => RC.validate(rep).violations).flat();
-const known = all.filter((v) => v.rule === 'valores' && v.block === 'summary' && /Al corte del null/.test(v.detail));
-t('el contrato sobre 89 reportes solo encuentra UN hallazgo, ya conocido: el resumen dice «Al corte del null» cuando el corte no existe', all.length === 1 && known.length === 1, all);
-/* Hallazgo D1, documentado y NO corregido en esta fase: arreglarlo cambiaría el texto del reporte actual y su línea base (ver docs/presentation-intelligence/FASE_1_modelo_y_compositor.md). */
+t('el contrato sobre 89 reportes no encuentra ningún hallazgo (D1 corregido: sin fecha de corte el resumen ya no dice «Al corte del null»)', all.length === 0, all);
+t('ningún resumen contiene «null», «undefined» ni «NaN»', !reports.some((rep) => rep.pages.some((p) => p.id === 'summary' && p.status === 'included' && /\b(null|undefined|NaN)\b/.test(JSON.stringify(p, (k, v) => (v === null ? undefined : v))))));
 t('ningún reporte omite una página sin motivo, ni trae KPI numérico sin sello, ni páginas repetidas', !all.some((v) => ['omitida', 'sello', 'estructura', 'incluida'].includes(v.rule)), all);
 t('toda página incluida declara fuentes, salvo el cierre (que sintetiza otras)', !all.some((v) => v.rule === 'fuentes') && RC.DERIVED.join() === 'closing', RC.DERIVED);
 

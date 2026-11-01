@@ -397,3 +397,6 @@
 .rp-op .rp-row { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr); gap:18px; align-items:start; }
 .rp-op .rp-col-a, .rp-op .rp-col-b { min-width:0; width:auto; flex:none; }
 .rp-op__t tbody th { white-space:nowrap; }
+.rp-th-box { margin-top:12px; }
+.rp-th { display:flex; flex-direction:column; gap:4px; margin:8px 0; }
+.rp-th__in input { width:84px; }

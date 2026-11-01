@@ -92,6 +92,7 @@
   /** Nombre único de cada factor en todo el reporte (gráficas, tablas, narrativa). */
   const DRV = { trafficVolume: 'Tráfico', conversionRate: 'Conversión', aov: 'Ticket' };
   const tidy = (t) => (typeof t === 'string' ? t.replace(/\s+,/g, ',').replace(/,(?=[^\s\d])/g, ', ') : t);
+  const cap = (t) => (typeof t === 'string' && t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
   const clean = (t) => (typeof t === 'string' && !/\b(null|undefined|NaN|Infinity)\b/.test(t) ? t : null);
 
   const series = (run, ch) => (!run ? null : ch === 'total' ? run.total : (run.channels && run.channels[ch]) || null);
@@ -777,8 +778,8 @@
     // Introducción narrativa: estado contra plan → qué sobresale → área de atención → implicación para el cierre. Cada frase solo si hay dato.
     const sent = [];
     if (R.sel) sent.push(`En ${R.sel.period}, ${R.sel.filter} vende ${moneyC(R.sel.real)}${isNum(R.sel.pct) ? `, ${Math.abs(R.sel.pct) < 0.005 ? 'sin cambio' : R.sel.pct < 0 ? `${pct(Math.abs(R.sel.pct))} menos` : `${pct(R.sel.pct)} más`} que ${R.sel.baseRef}` : ''}.`);
-    else if (R.state) sent.push(`Al corte del ${R.cutoff}, ${R.mk ? R.the : 'el negocio'} ${phrasePlan(R)}. Se han vendido ${moneyC(R.pc.real)}, frente a los ${moneyC(R.pc.plan)} previstos para este mismo período.`);
-    else if (R.pc && isNum(R.pc.real) && !R.sel) sent.push(`Al corte del ${R.cutoff}, la venta real acumulada es ${moneyC(R.pc.real)}; no hay plan esperado a la fecha para medir el avance.`);
+    else if (R.state) sent.push(`${R.cutoff ? `Al corte del ${R.cutoff}, ${R.mk ? R.the : 'el negocio'}` : cap(R.mk ? R.the : 'el negocio')} ${phrasePlan(R)}. Se han vendido ${moneyC(R.pc.real)}, frente a los ${moneyC(R.pc.plan)} previstos para este mismo período.`);
+    else if (R.pc && isNum(R.pc.real) && !R.sel) sent.push(`${R.cutoff ? `Al corte del ${R.cutoff}, la venta real acumulada es` : 'La venta real acumulada es'} ${moneyC(R.pc.real)}; no hay plan esperado a la fecha para medir el avance.`);
     if (R.best) sent.push(`${R.best.channel} es el canal que más sobresale (${smoney(R.best.gap)} frente al plan).`);
     if (R.focus) sent.push(`En la caída por ${R.focus.level}, lo que más pesa es ${R.focus.entity}: concentra el ${pct(R.focus.share, 0)} de lo que se pierde${R.focus.sinceLabel ? ` y ${focusSince(R.focus).replace('cae desde', 'cae desde')}` : ''}.`);
     else if (R.drag) sent.push(`La principal área de atención es ${R.drag.entity}, que resta ${moneyC(Math.abs(R.drag.impact))} ${trPer}.`);

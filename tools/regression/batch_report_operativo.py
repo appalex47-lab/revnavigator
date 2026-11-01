@@ -55,6 +55,16 @@ async def main():
         chk('O14 la casilla quita la lámina de Evolución de la vista previa', 'evolution' not in await f.evaluate(PAGES))
         await f.click('#rp-offlist input[data-id="evolution"]'); await f.wait_for_timeout(300)
         chk('O15 y la vuelve a poner', 'evolution' in await f.evaluate(PAGES))
+        # umbrales editables
+        chk('O18 con Operativo aparece la sensibilidad (2 campos con valor provisional como ejemplo)', await f.evaluate("document.querySelectorAll('.rp-th input').length") == 2 and await f.evaluate("document.querySelector('.rp-th input').placeholder") == '0.5')
+        await f.fill('.rp-th input[data-key="belowPlanPct"]', '20'); await f.dispatch_event('.rp-th input[data-key="belowPlanPct"]', 'change'); await f.wait_for_timeout(300)
+        chk('O19 cambiar un umbral guarda el valor y marca la vista previa como desactualizada', await f.evaluate("FP.app.state.rp.options.thresholds.belowPlanPct") == 0.2 and await f.evaluate("!!document.querySelector('#view-presentacion .rp-stale, #view-presentacion [data-stale]') || FP.app.state.rp.sig!==FP.reportView.signature(FP.app.state)"))
+        await gen(f); rv = await f.evaluate("(FP.app.state.rp.report.pages.find(p=>p.id==='channelPacing')||{}).review")
+        chk('O20 al generar de nuevo, con el umbral en 20 % ningún indicador se marca bajo el plan', rv and all('ningún indicador' in x for x in rv), rv)
+        await f.fill('.rp-th input[data-key="belowPlanPct"]', 'abc'); await f.dispatch_event('.rp-th input[data-key="belowPlanPct"]', 'change'); await f.wait_for_timeout(300)
+        chk('O21 un valor inválido no cambia el umbral y avisa', await f.evaluate("FP.app.state.rp.options.thresholds.belowPlanPct") == 0.2)
+        await f.fill('.rp-th input[data-key="belowPlanPct"]', ''); await f.dispatch_event('.rp-th input[data-key="belowPlanPct"]', 'change'); await f.wait_for_timeout(300)
+        chk('O22 vaciar el campo vuelve al valor provisional', await f.evaluate("FP.app.state.rp.options.thresholds.belowPlanPct") is None)
         # volver al reporte actual: las láminas nuevas desaparecen
         await f.click('[data-action="rp-audience"][data-id="actual"]'); await f.wait_for_timeout(300); await gen(f)
         chk('O16 volver a «Reporte actual» y generar quita las láminas nuevas', not set(NEW) & set(await f.evaluate(PAGES)), await f.evaluate(PAGES))
