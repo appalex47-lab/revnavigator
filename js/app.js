@@ -421,10 +421,10 @@
     const rf = ensureReforecast();
     const s = dx.settings;
     const cutoff = run.cutoff && run.cutoff.startsWith(`${state.year}-`) ? run.cutoff : `${state.year}-01-01`;
-    const valid = s.periodType === 'year' ? [String(state.year)] : s.periodType === 'month'
+    const valid = s.periodType === 'year' ? [String(state.year)] : s.periodType === 'quarter' ? [1, 2, 3, 4].map((q) => `${state.year}-Q${q}`) : s.periodType === 'month'
       ? Array.from({ length: 12 }, (_, i) => `${state.year}-${String(i + 1).padStart(2, '0')}`) : run.total.weeks.map((w) => w.key);
     if (!valid.includes(s.periodKey)) {
-      s.periodKey = s.periodType === 'year' ? String(state.year) : s.periodType === 'month' ? defaultMonth(cutoff) : Cal.getWeekInfo(cutoff).weekKey;
+      s.periodKey = s.periodType === 'year' ? String(state.year) : s.periodType === 'quarter' ? Cal.periodKey(defaultMonth(cutoff) + '-01', 'quarter') : s.periodType === 'month' ? defaultMonth(cutoff) : Cal.getWeekInfo(cutoff).weekKey;
       dx.run = null;
     }
     if (dx.run && dx.base === run && dx.baseRf === rf) return dx.run;
@@ -1129,9 +1129,15 @@
    * ningún día con venta real (p. ej. el día 1): entonces el último mes con venta real. Solo aplica cuando no hay un mes elegido.
    */
   /** Rango de fechas de un periodo del diagnóstico (mes AAAA-MM, semana ISO o año). */
+  /** Recuperar maneja año, mes, semana, día y rango: un Q se le pasa como rango (inicio y fin del Q). */
+  function rcPeriodOf(type, key) {
+    if (type === 'quarter') { const r = periodRange('quarter', key); return r ? { periodType: 'range', periodKey: null, start: r.from, end: r.to } : { periodType: 'year', periodKey: String(state.year) }; }
+    return { periodType: type, periodKey: key };
+  }
   function periodRange(type, key) {
     if (!key) return null;
     if (type === 'year') return { from: `${key}-01-01`, to: `${key}-12-31` };
+    if (type === 'quarter') { const r = Cal.quarterRange(key); return r ? { from: r.from, to: r.to } : null; }
     if (type === 'month') { const [y, m] = key.split('-').map(Number); const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); return { from: `${key}-01`, to: `${key}-${String(last).padStart(2, '0')}` }; }
     const w = state.fc.run && state.fc.run.total.weeks.find((x) => x.key === key);
     return w ? { from: w.weekStart, to: w.weekEnd } : null;
@@ -1250,7 +1256,7 @@
     // (se recalcula en local con el mismo motor; la fecha de referencia del forecast de toda la app no se toca).
     let localCut = null;
     try {
-      const px = state.dx.settings || {}, coll = px.periodType === 'month' ? 'months' : px.periodType === 'week' ? 'weeks' : null;
+      const px = state.dx.settings || {}, coll = px.periodType === 'month' ? 'months' : px.periodType === 'week' ? 'weeks' : px.periodType === 'quarter' ? 'quarters' : null;
       const per = run && run.total && coll ? (run.total[coll] || []).find((m) => m.key === px.periodKey) : null;
       if (per && per.lastDate && run.cutoff && per.lastDate < run.cutoff) {
         const planVersion = FP.planning.getOriginalPlan(state.planning.registry);
@@ -1297,12 +1303,13 @@
     let productByLevel = null, trendSnap = null;
     // Período y canal seleccionados (Diagnóstico): si es un mes, Productos y Evolución se leen sobre ESE mes y canal.
     const dxs = state.dx.settings || {};
-    const monthSel = (dxs.periodType === 'month' && /^\d{4}-\d{2}$/.test(dxs.periodKey || '')) || (dxs.periodType === 'week' && /^\d{4}-W\d{2}$/.test(dxs.periodKey || '')) ? dxs.periodKey : null;
+    const monthSel = (dxs.periodType === 'month' && /^\d{4}-\d{2}$/.test(dxs.periodKey || '')) || (dxs.periodType === 'week' && /^\d{4}-W\d{2}$/.test(dxs.periodKey || '')) || (dxs.periodType === 'quarter' && /^\d{4}-Q[1-4]$/.test(dxs.periodKey || '')) ? dxs.periodKey : null;
     const monthArgs = monthSel && diag && FP.productAnalysis.fromDiagnosis ? FP.productAnalysis.fromDiagnosis(diag) : null;
-    const monthOn = Boolean(monthArgs && monthArgs.periodType === dxs.periodType && monthArgs.from && (dxs.periodType === 'week' || monthArgs.from.slice(0, 7) === monthSel));
+    const monthOn = Boolean(monthArgs && monthArgs.periodType === dxs.periodType && monthArgs.from && (dxs.periodType === 'week' || dxs.periodType === 'quarter' || monthArgs.from.slice(0, 7) === monthSel));
     // Lectura anual: Evolución se centra en el mes del corte (en curso contra los mismos días del anterior), no en el último mes completo que usa la vista por defecto.
     const cutMonthKey = run && run.cutoff && /^\d{4}-\d{2}-\d{2}$/.test(run.cutoff) ? run.cutoff.slice(0, 7) : null;
-    const trendBase = monthOn ? { periodType: dxs.periodType, focusKey: monthSel, channel: ch, comparison: monthArgs.comparison === 'yoy' ? 'yoy' : 'previous' } : (cutMonthKey ? { periodType: 'month', focusKey: cutMonthKey, channel: ch, comparison: 'previous' } : {});
+    const qLastMonth = dxs.periodType === 'quarter' && monthSel ? (() => { const q = FP.calendar.quarterRange(monthSel); const lm = q ? q.months[2] : null; return lm && cutMonthKey && cutMonthKey < lm ? cutMonthKey : lm; })() : null;   // Evolución trabaja por mes: un Q se lee en su último mes con datos
+    const trendBase = qLastMonth ? { periodType: 'month', focusKey: qLastMonth, channel: ch, comparison: 'previous' } : monthOn ? { periodType: dxs.periodType, focusKey: monthSel, channel: ch, comparison: monthArgs.comparison === 'yoy' ? 'yoy' : 'previous' } : (cutMonthKey ? { periodType: 'month', focusKey: cutMonthKey, channel: ch, comparison: 'previous' } : {});
     let rfMonth = null;
     if (rf && !localCut) { const r = state.rf; rfMonth = [r.run, r.altRun].find((x) => x && x.total && x.total.horizon && x.total.horizon.type === 'month') || null; }
     const rpF = FP.productFilter && state.rp.filter && FP.productFilter.isActive(state.rp.filter) ? FP.productFilter.active(state.rp.filter) : null;
@@ -3838,7 +3845,7 @@
       const run = state.dx.run; if (!run) return;
       const ds = state.dx.settings, rc = state.rc, hyp = (run.hypotheses || []).find((h) => h.id === el.dataset.hyp);
       if (rc.imported) { rc.imported = null; rc.draft = emptyDraft(); }
-      Object.assign(rc.settings, { channel: ds.channel, periodType: ds.periodType, periodKey: ds.periodKey, comparison: ds.comparison });
+      Object.assign(rc.settings, { channel: ds.channel, ...rcPeriodOf(ds.periodType, ds.periodKey), comparison: ds.comparison });
       rc.altHyp = el.dataset.hyp; rc.draft = { ...(rc.draft || emptyDraft()), hypothesisId: el.dataset.hyp };
       rc.fromDx = { hypId: el.dataset.hyp, hyp: hyp ? hyp.hypothesis : '', alt: el.dataset.alt || '', period: run.period.label, channel: run.channel.label, to: 'inverse' };
       saveRecoverySettings();
@@ -3849,7 +3856,7 @@
       const run = state.dx.run; if (!run) return;
       const ds = state.dx.settings, rc = state.rc, hyp = (run.hypotheses || []).find((h) => h.id === el.dataset.hyp);
       if (rc.imported) { rc.imported = null; rc.draft = emptyDraft(); }
-      Object.assign(rc.settings, { channel: ds.channel, periodType: ds.periodType, periodKey: ds.periodKey, comparison: ds.comparison });
+      Object.assign(rc.settings, { channel: ds.channel, ...rcPeriodOf(ds.periodType, ds.periodKey), comparison: ds.comparison });
       rc.actionScenario = el.dataset.scenario;
       rc.fromDx = { hypId: el.dataset.hyp, hyp: hyp ? hyp.hypothesis : '', alt: '', period: run.period.label, channel: run.channel.label, to: 'library' };
       saveRecoverySettings();
@@ -4647,7 +4654,7 @@
       const rel = Number(el.dataset.rel), seg = el.dataset.label || 'segmento';
       if (!isFinite(rel) || rel <= 0) return;
       const s = state.dx.settings, rs = state.rc.settings;
-      rs.channel = s.channel; rs.periodType = s.periodType; rs.periodKey = s.periodKey;
+      rs.channel = s.channel; Object.assign(rs, rcPeriodOf(s.periodType, s.periodKey));
       const r = periodRange(s.periodType, s.periodKey); const cutoff = state.fc.run && state.fc.run.cutoff;
       rs.applyTo = r && cutoff && r.to <= cutoff ? 'all' : 'future';
       saveRecoverySettings();
@@ -4659,8 +4666,8 @@
     'pkg-context'(el) {
       const k = el.dataset.key, v = el.dataset.value || el.value;
       const dx = state.dx.settings, rc = state.rc.settings, pa = state.pa;
-      if (k === 'periodType') { dx.periodType = v; dx.periodKey = null; rc.periodType = v; rc.periodKey = null; state.ux.ctx.periodType = v; state.ux.ctx.periodKey = null; }
-      else if (k === 'periodKey') { dx.periodKey = v; rc.periodKey = v; state.ux.ctx.periodKey = v; }
+      if (k === 'periodType') { dx.periodType = v; dx.periodKey = null; Object.assign(rc, v === 'quarter' ? { periodType: 'year', periodKey: String(state.year) } : { periodType: v, periodKey: null }); state.ux.ctx.periodType = v; state.ux.ctx.periodKey = null; }
+      else if (k === 'periodKey') { dx.periodKey = v; Object.assign(rc, rcPeriodOf(dx.periodType, v)); state.ux.ctx.periodKey = v; }
       else if (k === 'channel') { dx.channel = v; rc.channel = v; pa.channel = v; state.ux.ctx.channel = v; }
       state.dx.run = null;
       saveDiagnosticSettings(); saveRecoverySettings();

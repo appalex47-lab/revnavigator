@@ -50,6 +50,10 @@
       const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
       return { ...period, start: `${period.key}-01`, end: `${period.key}-${String(last).padStart(2, '0')}`, label: `${MONTHS[m - 1]} ${y}` };
     }
+    if (t === 'quarter') {
+      const r = FP.calendar.quarterRange(period.key);
+      return r ? { ...period, start: r.from, end: r.to, label: FP.calendar.periodLabel(period.key, 'quarter') } : { ...period, start: null, end: null, label: String(period.key) };
+    }
     if (t === 'week') {
       const days = FP.calendar.daysOfYear(year).filter((d) => FP.calendar.getWeekInfo(d).weekKey === period.key);
       const all = [year - 1, year, year + 1].flatMap((y) => FP.calendar.daysOfYear(y)).filter((d) => FP.calendar.getWeekInfo(d).weekKey === period.key);

@@ -7,6 +7,8 @@
   'use strict';
   const FP = root.FP = root.FP || {};
   const RB = () => FP.reportBuilder;
+  /** Sujeto de la frase para un periodo: «Septiembre», «El año», «La semana», «El Q3 2026». */
+  const perSubj = (per) => { const w = per.split(' ')[0]; return { 'Año': 'El año', 'Semana': 'La semana' }[w] || (/^Q[1-4]$/.test(w) ? `El ${per}` : w); };
   const fin = (v) => typeof v === 'number' && isFinite(v);
   // Nombres largos: se corta en límite de palabra, sin puntos suspensivos ni dosis/medidas sueltas al final («MOUNJARO KWIKPEN MULTIDOSIS 1…» → «MOUNJARO KWIKPEN MULTIDOSIS»).
   // Un nombre técnico sin espacios no se corta (se deja entero).
@@ -41,14 +43,14 @@
     summary(p, rep) {
       const st = standing(kpi(page(rep, 'pacing'), 'compliance')); if (!st) return null;
       const per = periodOf(rep), sel = page(rep, 'pacing') && page(rep, 'pacing').selection;
-      const subj = sel ? 'La selección' : (per ? ({ 'Año': 'El año', 'Semana': 'La semana' }[per.split(' ')[0]] || per.split(' ')[0]) : 'El período');
+      const subj = sel ? 'La selección' : (per ? perSubj(per) : 'El período');
       const ent = p.focus && p.focus.entity ? withDim(p.focus.level, cut(p.focus.entity, 32)) : null;
       return `${subj} ${st.text}${ent ? `; la atención está en ${ent}` : ''}`;
     },
     pacing(p, rep) {
       const c = kpi(p, 'compliance'), st = standing(c); if (!st) return null;
       const per = periodOf(rep), sel = p.selection;
-      const subj = sel ? 'La selección' : (per ? ({ 'Año': 'El año', 'Semana': 'La semana' }[per.split(' ')[0]] || per.split(' ')[0]) : 'El período');
+      const subj = sel ? 'La selección' : (per ? perSubj(per) : 'El período');
       const verb = st.key === 'above' ? 'supera el' : st.key === 'on' ? 'llega al' : st.key === 'below' ? 'queda por debajo del' : 'queda lejos del';
       let tail = '';
       const ch = (p.charts || [])[0];
@@ -146,7 +148,7 @@
       const blk = (n) => (p.blocks || []).find((b) => b.title === n) || {};
       const down = blk('Qué resta').list && blk('Qué resta').list[0];
       if (!st) return null;
-      const head = `${per ? per.split(' ')[0] : 'El período'} ${st.text}`;
+      const head = `${per ? perSubj(per) : 'El período'} ${st.text}`;
       return down && down.name ? `${head}; conviene revisar primero ${withDim(down.type, cut(down.name, 30))}` : head;
     }
   };
