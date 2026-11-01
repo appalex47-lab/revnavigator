@@ -154,7 +154,7 @@
     notes.push('Venta y pedidos reales son los días contados de la serie; «vs plan» compara con el plan de esos mismos días. El ticket es venta ÷ pedidos del grupo.');
     const bad = (r) => isNum(r.revenue.deltaPct) && r.revenue.deltaPct <= -W;
     return page(id, title, {
-      question: `¿Cómo se movió ${unit === 'week' ? 'semana a semana' : unit === 'month' ? 'mes a mes' : 'día a día'}?`, conclusion, headline: conclusion, ctx: `${per.label} · del ${fmt('date', rg.from)} al ${fmt('date', rg.to)}`, unit, review, rows, notes,
+      question: `¿Cómo se movió ${unit === 'week' ? 'semana a semana' : unit === 'month' ? 'mes a mes' : 'día a día'}?`, conclusion, headline: conclusion, ctx: per.kind === 'month' ? per.label : `${per.label} · del ${fmt('date', rg.from)} al ${fmt('date', rg.to)}`, unit, review, rows, notes,
       charts: [{ type: 'groupbars', id: 'evo', title: 'Venta real contra el plan de los mismos días', items: rows.map((r) => ({ label: r.label, actual: r.revenue.actual, plan: r.revenue.plan, bad: bad(r), partial: r.partial })) }],
       sources: ['Pacing y forecast (días contados)'], tags: [TAG().obs, TAG().calc]
     });

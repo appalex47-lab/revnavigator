@@ -415,6 +415,8 @@
     const ctxLine = [x.channelLabel === 'Total digital' ? null : x.channelLabel, scopeTag, p.ctx || null].filter(Boolean).join(' · ');
     const per = ((x.units.find((q) => q.id === 'cover') || {}).page.facts.find((f) => f.id === 'period') || {}).value || '';
     const foot = `<div class="rp-foot"><span>${brandMark(false)}${esc(brandName(null))} · ${esc(x.channelLabel)}${x.lastActual ? ` · Venta real al ${esc(x.lastActual)} (corte ${esc(x.cutoff)})` : ''}${x.tags && p.sources && p.sources.length ? ` · Fuente: ${esc(p.sources.join(', '))}${p.tags && p.tags.length ? ` · ${esc(p.tags.join(' / '))}` : ''}` : ''}</span><span class="rp-pgno">${u.number}</span></div>`;
+    // El periodo arriba a la derecha solo si el subtítulo de la lámina no lo dice ya: una fecha, un lugar (el pie conserva el corte).
+    const perShown = Boolean(per) && !ctxLine.toLowerCase().includes(per.toLowerCase());
     const eyebrow = u.id === 'annex' ? 'Anexo técnico' : (SECTION[u.id] || p.title);
     if (u.id === 'cover') {
       const per = (x.units.find((q) => q.id === 'cover').page.facts.find((f) => f.id === 'period') || {}).value || '';
@@ -426,7 +428,7 @@
     const concl = u.id === 'annex' || !FP.reportCopy ? null : (FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
-    return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span><span class="rp-per">${esc(per)}</span></div>
+    return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
       <h2 class="rp-title">${esc(title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
       <div class="rp-body">${body}</div>${foot}</section>`;
   }
