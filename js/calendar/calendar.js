@@ -183,6 +183,7 @@
     switch (granularity) {
       case 'year': return String(a.year);
       case 'month': return `${a.year}-${String(a.month).padStart(2, '0')}`;
+      case 'quarter': return `${a.year}-Q${a.quarter}`;
       case 'week': return a.weekKey;
       case 'day': return a.date;
       default: return null;
@@ -196,6 +197,10 @@
       const [y, m] = key.split('-');
       return `${c.monthNamesEs[+m - 1]} ${y}`;
     }
+    if (granularity === 'quarter') {
+      const m = /^(\d{4})-Q([1-4])$/.exec(key);
+      return m ? `Q${m[2]} ${m[1]}` : key;
+    }
     if (granularity === 'week') {
       const [y, w] = key.split('-W');
       return `Semana ${+w} · ${y}`;
@@ -207,7 +212,20 @@
     return key;
   }
 
+  /** Q1 ene–mar, Q2 abr–jun, Q3 jul–sep, Q4 oct–dic (año fiscal = calendario). */
+  const QUARTER_RE = /^(\d{4})-Q([1-4])$/;
+  function quarterRange(key) {
+    const m = QUARTER_RE.exec(key || ''); if (!m) return null;
+    const y = +m[1], q = +m[2], m1 = (q - 1) * 3 + 1, m3 = m1 + 2;
+    return { from: `${y}-${String(m1).padStart(2, '0')}-01`, to: `${y}-${String(m3).padStart(2, '0')}-${String(daysInMonth(y, m3)).padStart(2, '0')}`, months: [0, 1, 2].map((i) => `${y}-${String(m1 + i).padStart(2, '0')}`) };
+  }
+  /** Clave del Q anterior (Q1 → Q4 del año previo). */
+  function prevQuarterKey(key) {
+    const m = QUARTER_RE.exec(key || ''); if (!m) return null;
+    return +m[2] === 1 ? `${+m[1] - 1}-Q4` : `${m[1]}-Q${+m[2] - 1}`;
+  }
   FP.calendar = {
+    quarterRange, prevQuarterKey,
     getCalendarDay, isLeapYear,
     parseDate, isValidISODate, toISODate, addDays, daysInMonth,
     getISOWeek, getWeekOfMonth, getWeekInfo, getQuarter, getFortnight,

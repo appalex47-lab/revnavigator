@@ -21,6 +21,7 @@
   function periodLabel(period) {
     if (period.type === 'month') return FP.calendar.periodLabel ? FP.calendar.periodLabel(period.key, 'month') : period.key;
     if (period.type === 'week') return `Semana ${period.key}`;
+    if (period.type === 'quarter') return FP.calendar.periodLabel(period.key, 'quarter');
     return `Año ${period.key}`;
   }
 

@@ -49,6 +49,7 @@
   function inPeriod(date, period) {
     if (period.type === 'month') return date.slice(0, 7) === period.key;
     if (period.type === 'week') return Cal().getWeekInfo(date).weekKey === period.key;
+    if (period.type === 'quarter') return Cal().periodKey(date, 'quarter') === period.key;
     return date.startsWith(`${period.key}-`);
   }
 
@@ -62,8 +63,17 @@
     const d = `${py}-${String(pm).padStart(2, '0')}-${date.slice(8)}`;
     return Cal().isValidISODate(d) ? d : null;
   }
+  /** Mismo día del Q anterior (por posición dentro del Q); null si el Q anterior es más corto y ese día no existe. */
+  function shiftQuarter(date) {
+    const cur = Cal().periodKey(date, 'quarter'), r = Cal().quarterRange(cur), pr = Cal().quarterRange(Cal().prevQuarterKey(cur));
+    if (!r || !pr) return null;
+    const off = Math.round((Date.parse(date + 'T00:00:00Z') - Date.parse(r.from + 'T00:00:00Z')) / 864e5);
+    const d = Cal().addDays(pr.from, off);
+    return d && d <= pr.to ? d : null;
+  }
   function baselineDate(date, comparison, period) {
     if (comparison === 'actual_vs_yoy') return shiftYear(date);
+    if (period.type === 'quarter') return shiftQuarter(date);
     if (period.type === 'week') return Cal().addDays(date, -7);
     if (period.type === 'month') return shiftMonth(date);
     return shiftYear(date);
