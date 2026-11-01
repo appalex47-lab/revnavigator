@@ -3,7 +3,7 @@
 const fs = require('fs'), vm = require('vm');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, Error }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/gerencial.js', 'js/report/composer.js']
+['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/composer.js']
   .forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const FP = ctx.FP, G = FP.reportGerencial, B = FP.reportBlocks, P = FP.reportProfiles, C = FP.reportComposer;
 const CH = FP.config.channels.map((c) => c.id);
@@ -41,9 +41,9 @@ t('Cumplimiento por canal: no incluye margen, ROI, ROAS ni CAC', !/margen|ROI|RO
 const rep = () => ({ schema: 'executive_report', schemaVersion: '1.0.0', pages: ['cover', 'summary', 'drivers', 'pacing', 'movers', 'trends', 'closing', 'decisions', 'annex'].map((id, i) => ({ id, title: id, status: 'included', number: i + 1, ...(id === 'annex' ? { omitted: [] } : {}) })), included: [], omitted: [], total: 9 });
 const full = B.extend(rep(), src([[900, 1000], [1100, 1000], [970, 1000]]), P.get('gerencial'));
 const plan = (d) => C.compose(full, { profile: 'gerencial', depth: d, exclude: [] }).slides.map((s) => s.id).join();
-t('extend con Gerencial agrega la lámina antes del anexo y marca el perfil', full.profile === 'gerencial' && full.pages.findIndex((p) => p.id === 'channelScorecard') === full.pages.findIndex((p) => p.id === 'annex') - 1);
+t('extend con Gerencial agrega la lámina antes del anexo y marca el perfil', full.profile === 'gerencial' && full.pages.map((p) => p.id).slice(-3).join() === 'channelScorecard,opportunities,annex');
 t('Compositor: Resumen = portada, resumen, brecha, cierre y decisiones (sin pacing ni semáforo)', plan('resumen') === 'cover,summary,drivers,closing,decisions', plan('resumen'));
-t('Compositor: Ejecutivo suma pacing, cumplimiento por canal y quién suma y resta, en el orden del perfil', plan('ejecutivo') === 'cover,summary,drivers,pacing,channelScorecard,movers,closing,decisions', plan('ejecutivo'));
+t('Compositor: Ejecutivo suma pacing, cumplimiento por canal, oportunidades priorizadas y quién suma y resta, en el orden del perfil', plan('ejecutivo') === 'cover,summary,drivers,pacing,channelScorecard,opportunities,movers,closing,decisions', plan('ejecutivo'));
 t('Compositor: Detallado agrega lo que tiene datos (tendencias)', plan('detallado').includes('trends') && plan('detallado').includes('channelScorecard'));
 t('Operativo y Gerencial no se pisan: el bloque de semáforo solo está en Gerencial y la lámina de pacing por canal solo en Operativo', P.get('operativo').slots.every((s) => s.block !== 'channelScorecard') && P.get('gerencial').slots.every((s) => s.block !== 'channelPacing'));
 
