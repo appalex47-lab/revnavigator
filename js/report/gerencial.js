@@ -9,7 +9,7 @@
  * Reglas: sin fórmulas nuevas (real, plan, brecha y brecha % salen del bloque toDate de cada serie del forecast); sin margen, ROI, ROAS ni CAC porque
  * no hay datos para calcularlos; un dato ausente no entra al semáforo (se muestra «No disponible»); el estado se dice con palabra y símbolo, no solo con
  * color. Los umbrales del semáforo son provisionales (FP.config.reports.gerencial) y la persona los puede cambiar en la pantalla de la presentación.
- * Depende de operativo.js para leer el periodo y el bloque toDate (misma lectura que el resto del reporte).
+ * Con oportunidades.js (cargado antes) suma la lámina «Oportunidades priorizadas». Depende de operativo.js para leer el periodo y el bloque toDate (misma lectura que el resto del reporte).
  */
 (function (root) {
   'use strict';
@@ -77,7 +77,7 @@
     defaultDepth: 'ejecutivo',
     slots: [
       S('cover', 'portada', 'resumen', { required: true }), S('summary', 'analisis', 'resumen'), S('drivers', 'analisis', 'resumen'), S('pacing', 'analisis', 'ejecutivo'),
-      S('channelScorecard', 'analisis', 'ejecutivo'), S('movers', 'analisis', 'ejecutivo'), S('recovery', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'),
+      S('channelScorecard', 'analisis', 'ejecutivo'), S('opportunities', 'analisis', 'ejecutivo'), S('movers', 'analisis', 'ejecutivo'), S('recovery', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'),
       S('categories', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'), S('customers', 'analisis', 'detallado'), S('campaigns', 'analisis', 'detallado'),
       S('seasonality', 'analisis', 'detallado'), S('closing', 'cierre', 'resumen'), S('decisions', 'cierre', 'resumen'),
       S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')

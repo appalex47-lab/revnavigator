@@ -32,6 +32,15 @@ async def main():
           const o={w:Math.round(b.width),h:Math.round(b.height),ov:pg.getAttribute('data-overflow'),wide:[...pg.querySelectorAll('table')].filter(t=>t.getBoundingClientRect().right>b.right+1).length,small};
           h.remove();document.getElementById('rp-print-style')&&document.getElementById('rp-print-style').remove();document.body.classList.remove('rp-printing');return o})()""")
         chk('G8 en impresión la lámina es 1122×630, sin desborde, con texto ≥ 13.4 px', geo['w'] == 1122 and geo['h'] == 630 and geo['ov'] is None and geo['wide'] == 0 and geo['small'] == 0, geo)
+        chk('G4b la vista previa de Gerencial trae «Oportunidades priorizadas» después del semáforo', 'opportunities' in prev and prev.index('channelScorecard') < prev.index('opportunities'), prev)
+        ot = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"opportunities\"]')||{textContent:''}).textContent.replace(/\\s+/g,' ')")
+        chk('G4c la lámina muestra brecha (Observado), acciones (Estimado), «Por asignar» y aclara que es venta, sin margen, ROI, ROAS ni CAC', all(k in ot for k in ['Dónde está la brecha', 'Qué se puede recuperar', 'Observado', 'Estimado', 'Impacto simulado', 'venta, no utilidad', 'ROAS']), ot[:300])
+        chk('G4e con un impacto simulado mayor que la brecha la lámina avisa «Revisa los supuestos» y marca la acción', 'Revisa los supuestos' in ot and await f.evaluate("!!document.querySelector('#view-presentacion .rp-page[data-page=\"opportunities\"] .rp-warnmark')"), ot[-300:])
+        g3 = await f.evaluate('''(()=>{const r=FP.app.state.rp.report,h=FP.reportView.mountPrint(r,{exclude:[],tags:true,sel:FP.reportSetupView.selectionOf(FP.app.state.rp)});h.style.cssText='display:block;position:absolute;left:0;top:0;visibility:hidden';
+          const pg=h.querySelector('.rp-page[data-page="opportunities"]');const b=pg.getBoundingClientRect();const small=[...pg.querySelectorAll('*')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(e).fontSize)<13.3).length;
+          const o={w:Math.round(b.width),h:Math.round(b.height),ov:pg.getAttribute('data-overflow'),wide:[...pg.querySelectorAll('table')].filter(t=>t.getBoundingClientRect().right>b.right+1).length,small};
+          h.remove();document.getElementById('rp-print-style')&&document.getElementById('rp-print-style').remove();document.body.classList.remove('rp-printing');return o})()''')
+        chk('G4d en impresión la lámina de oportunidades es 1122×630, sin desborde, con texto ≥ 13.4 px', g3['w'] == 1122 and g3['h'] == 630 and g3['ov'] is None and g3['wide'] == 0 and g3['small'] == 0, g3)
         cover = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"cover\"]')||{textContent:''}).textContent")
         chk('G9 la portada dice «Reporte gerencial»', 'Reporte gerencial' in cover, cover[:120])
         for d, want in (('resumen', ['cover', 'summary', 'drivers', 'closing', 'decisions']),):

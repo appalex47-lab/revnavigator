@@ -18,7 +18,7 @@
  * Plan (schema deck_plan 1.1.0):
  *   { schema, version, profile, audience, depth,
  *     slides:     [{ order, id, sub?, block, type, title, reason }],
- *     excluded:   [{ block, title, kind: 'sin-datos'|'en-anexo'|'seleccion-persona'|'profundidad', reason }],
+ *     excluded:   [{ block, title, kind: 'sin-datos'|'en-anexo'|'fuera-de-perfil'|'seleccion-persona'|'profundidad', reason }],
  *     annex:      [{ block, sub, title }],                  // las láminas del plan que son anexos
  *     limitations:[{ block, kind, text?, code? }] }          // avisos que el reporte ya trae (no se inventa texto)
  */
@@ -63,7 +63,8 @@
       else if (p.annex) {
         const host = (slots.find((s) => s.block === p.id) || {}).embeddedIn, hostPage = host && report.pages.find((x) => x.id === host);
         excluded.push({ block: p.id, title: p.title, kind: 'en-anexo', reason: hostPage ? `Su contenido va dentro de «${hostPage.title}».` : 'Su contenido va dentro del anexo técnico.' });
-      } else if (ex.has(p.id)) excluded.push({ block: p.id, title: p.title, kind: 'seleccion-persona', reason: 'Fuera de la selección actual; se puede agregar con la casilla.' });
+      } else if (profile.strict && !slots.some((s) => s.block === p.id)) excluded.push({ block: p.id, title: p.title, kind: 'fuera-de-perfil', reason: `No forma parte del formato «${profile.label}».` });
+      else if (ex.has(p.id)) excluded.push({ block: p.id, title: p.title, kind: 'seleccion-persona', reason: 'Fuera de la selección actual; se puede agregar con la casilla.' });
       else if (tooDeep(p.id) && !inc.has(p.id)) excluded.push({ block: p.id, title: p.title, kind: 'profundidad', reason: `Entra desde la profundidad «${(profile.depths.find((d) => d.id === slots.find((x) => x.block === p.id).depth) || {}).label}»; la elegida es «${(profile.depths[dIdx] || {}).label}».` });
       else candidates.push({ p, i, added: tooDeep(p.id) });
     });
