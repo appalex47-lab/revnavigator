@@ -153,6 +153,12 @@
   }
 
   const CHARTS = { cumulative: chartCumulative, waterfall: chartWaterfall, hbar: chartHbar, range: chartRange, stacked: chartStacked, lines: chartLines };
+  /** Páginas de otros formatos (FP.reportOperativo…): cada una registra su cuerpo, su sección, su título con conclusión y si lleva titular aparte. */
+  const EXT = {};
+  function register(id, o) {
+    if (!id || !o || typeof o.body !== 'function') throw new Error('register(id, { body }) necesita un cuerpo.');
+    EXT[id] = o; BODY[id] = o.body; if (o.section) SECTION[id] = o.section;
+  }
   const chartHtml = (c) => `<figure class="rp-fig"><figcaption>${esc(c.title)}</figcaption>${(CHARTS[c.type] || (() => ''))(c)}</figure>`;
 
   /* ================= bloques HTML ================= */
@@ -413,15 +419,15 @@
     if (u.id === 'cover') {
       const per = (x.units.find((q) => q.id === 'cover').page.facts.find((f) => f.id === 'period') || {}).value || '';
       return `<section class="rp-page rp-page--cover" data-page="cover"${coverAttr()}>${coverDecoHtml()}<div class="rp-cover__in"><div class="rp-brand">${brandMark(true)}${brandLogo() ? '' : 'RevNavigator'}</div>
-        <div class="rp-cover__eyebrow">Reporte ejecutivo</div><h1 class="rp-cover__title">${esc(p.headline)}</h1><div class="rp-cover__rule"></div><p class="rp-cover__sub">${esc([per, p.businessName].filter(Boolean).join(' · '))}</p>
+        <div class="rp-cover__eyebrow">${x.report.profile && FP.reportProfiles.get(x.report.profile) ? `Reporte ${esc(FP.reportProfiles.get(x.report.profile).label.toLowerCase())}` : 'Reporte ejecutivo'}</div><h1 class="rp-cover__title">${esc(p.headline)}</h1><div class="rp-cover__rule"></div><p class="rp-cover__sub">${esc([per, p.businessName].filter(Boolean).join(' · '))}</p>
         <dl class="rp-cover__meta"><div><dt>Período analizado</dt><dd>${esc(per)}</dd></div><div><dt>Fecha de corte</dt><dd>${esc(x.cutoff)}</dd></div>${x.lastActual ? `<div><dt>Venta real hasta</dt><dd>${esc(x.lastActual)}</dd></div>` : ''}<div><dt>Alcance</dt><dd>${esc(p.scope || x.channelLabel)}</dd></div>${p.filterLabel ? `<div><dt>Filtro</dt><dd>${esc(p.filterLabel)}</dd></div>` : ''}</dl>${p.filterNote ? `<p class="rp-cover__note">${esc(p.filterNote)}</p>` : ''}</div>${brandLogo() ? '<div class="rp-cover__by">RevNavigator</div>' : ''}</section>`;
     }
     const body = u.id === 'summary' ? summaryBody(p, x) : u.id === 'closing' ? closingBody(p, x) : u.id === 'decisions' ? decisionsBody(p) : u.id === 'annex' ? annexBody(p, x, u.sub) : (BODY[u.id] ? BODY[u.id](p, x) : '');
-    const concl = u.id === 'annex' || !FP.reportCopy ? null : FP.reportCopy.title(p, x.report);   // título con conclusión si los datos la permiten; si no, el neutro
+    const concl = u.id === 'annex' || !FP.reportCopy ? null : (FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
     return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span><span class="rp-per">${esc(per)}</span></div>
-      <h2 class="rp-title">${esc(title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
+      <h2 class="rp-title">${esc(title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
       <div class="rp-body">${body}</div>${foot}</section>`;
   }
   function docHtml(report, opts = {}) {
@@ -614,5 +620,5 @@
   }
   if (typeof window !== 'undefined') { let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const el = document.getElementById('presentacion-view'); if (el) scale(el); }, 120); }); }
 
-  FP.reportView = { render, fitPages, docHtml, units, mountPrint, unmountPrint, print, signature, PW, PH, charts: CHARTS, spark };
+  FP.reportView = { render, fitPages, docHtml, units, mountPrint, unmountPrint, print, signature, register, PW, PH, charts: CHARTS, spark };
 })(typeof window !== 'undefined' ? window : globalThis);

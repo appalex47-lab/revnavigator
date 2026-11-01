@@ -16,7 +16,7 @@ Que la persona elija para quién es la presentación, de qué tipo y con qué pr
 
 **Profundidad** (declarada en el perfil, no en el código): cada bloque indica desde qué profundidad entra.
 - *Resumen*: portada, resumen, cierre y decisiones.
-- *Ejecutivo*: suma desempeño contra el plan, factores, quién suma y resta, y recuperación.
+- *Ejecutivo*: suma desempeño contra el plan, factores, quién suma y resta, categorías y recuperación (las categorías se movieron aquí porque el resumen las cita y necesitan su lámina de respaldo).
 - *Detallado*: todo lo que tiene datos, **idéntico al reporte de siempre**.
 La profundidad solo **elige entre las mismas páginas**: no cambia su letra ni su contenido (se respeta el tamaño mínimo de letra). La asignación de bloques a profundidades es una **decisión de producto mía**, revisable en `profiles.js`.
 

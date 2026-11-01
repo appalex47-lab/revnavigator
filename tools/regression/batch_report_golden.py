@@ -12,7 +12,7 @@ ROOT = os.path.abspath(sys.argv[1]); GOLD = os.path.join(ROOT, 'tools/regression
 CAP = """(()=>{
   const strip=(v)=>JSON.parse(JSON.stringify(v,(k,val)=>(k==='generatedAt'||k==='app')?undefined:val));
   const r=FP.app.state.rp.report, inp=window.__edIn||{};
-  FP.reportView.mountPrint(r,{exclude:[],tags:true});
+  FP.reportView.mountPrint(r,{exclude:[],tags:true,sel:(window.__sel||undefined)});
   const host=document.getElementById('rp-print-host');
   const pages=[...host.querySelectorAll('.rp-page')].map(p=>({page:p.dataset.page,title:((p.querySelector('.rp-title')||{}).textContent||'').trim(),text:p.textContent.replace(/\\s+/g,' ').trim(),svgs:p.querySelectorAll('svg').length,tables:p.querySelectorAll('table').length}));
   host.remove(); const st=document.getElementById('rp-print-style'); if(st)st.remove(); document.body.classList.remove('rp-printing');
@@ -26,6 +26,9 @@ async def snap():
         q = await boot(b); await generate(q); res['base'] = await q.evaluate(CAP)
         await month_prev(q); await generate(q); res['mes_anterior'] = await q.evaluate(CAP)
         q2 = await boot(b, patch=True); await generate(q2); res['excedente'] = await q2.evaluate(CAP)
+        # Fase 3 (aditivo): formato Operativo sobre los mismos datos del escenario base
+        await q.goto(U + '#presentacion'); await q.wait_for_selector('[data-action="rp-generate"]'); await q.click('[data-action="rp-audience"][data-id="operativo"]')
+        await generate(q); await q.evaluate("window.__sel=FP.reportSetupView.selectionOf(FP.app.state.rp)"); res['operativo'] = await q.evaluate(CAP); await q.evaluate("window.__sel=undefined")
         q3 = await boot(b)
         await q3.goto(U + '#presentacion'); await q3.wait_for_selector('[data-action="rp-generate"]')
         await q3.evaluate("FP.app.actions['pkg-context']({dataset:{key:'periodType',value:'quarter'},value:'quarter'})")

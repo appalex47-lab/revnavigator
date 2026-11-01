@@ -378,3 +378,22 @@
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .rp-prop__w { overflow-x:auto; }
 @media (max-width:720px) { .rp-prop th:nth-child(4), .rp-prop td:nth-child(4) { display:none; } }
+
+/* Fase 3 · formato Operativo: tabla densa por canal, barras agrupadas y acciones (colores de la paleta de la lámina, sin hex propios) */
+.rp-gb__ax { stroke:var(--line); stroke-width:1; }
+.rp-gb__r { fill:var(--navy); } .rp-gb__bad { fill:var(--red); }
+.rp-gb__p { fill:none; stroke:var(--grey); stroke-width:2; stroke-dasharray:4 3; }
+.rp-gb__t { fill:var(--ink); font-size:13.4px; } .rp-gb__v { font-weight:700; }
+.rp-op__t { width:100%; border-collapse:collapse; }
+.rp-op__t th, .rp-op__t td { padding:6px 7px; }
+.rp-op__t thead th { text-align:center; } .rp-op__t thead th[rowspan] { text-align:left; vertical-align:bottom; }
+.rp-op__t tbody th { text-align:left; font-weight:700; }
+.rp-op__t td.num, .rp-op__t th.num { white-space:nowrap; }
+.rp-op__t--big td, .rp-op__t--big th { padding:12px 8px; font-size:16px; }
+.rp-op__sub { display:block; font-size:13.4px; font-weight:400; color:var(--grey); }
+.rp-op__two { display:grid; grid-template-columns:1.5fr 1fr; gap:16px; align-items:start; margin-top:10px; }
+.rp-op__notes { margin-top:10px; }
+.rp-op .rp-row { margin-top:4px; }
+.rp-op .rp-row { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr); gap:18px; align-items:start; }
+.rp-op .rp-col-a, .rp-op .rp-col-b { min-width:0; width:auto; flex:none; }
+.rp-op__t tbody th { white-space:nowrap; }

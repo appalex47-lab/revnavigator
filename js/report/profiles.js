@@ -66,14 +66,14 @@
     // Profundidad: «detallado» es el reporte de siempre; «resumen» y «ejecutivo» solo eligen entre las MISMAS páginas (no cambian su letra ni su contenido).
     depths: [
       { id: 'resumen', label: 'Resumen', description: 'Portada, resumen, cierre y decisiones.' },
-      { id: 'ejecutivo', label: 'Ejecutivo', description: 'Agrega el desempeño contra el plan, los factores, quién suma y resta y la recuperación.' },
+      { id: 'ejecutivo', label: 'Ejecutivo', description: 'Agrega el desempeño contra el plan, los factores, quién suma y resta, las categorías y la recuperación.' },
       { id: 'detallado', label: 'Detallado', description: 'Todo lo que tiene datos: el reporte de siempre.' }
     ],
     defaultDepth: 'detallado',
     // Orden de lectura de la presentación. «reliability» no es una lámina propia: su contenido va dentro del Anexo B.
     slots: [
       { block: 'cover', type: 'portada', depth: 'resumen', required: true }, { block: 'summary', type: 'analisis', depth: 'resumen' }, { block: 'pacing', type: 'analisis', depth: 'ejecutivo' },
-      { block: 'drivers', type: 'analisis', depth: 'ejecutivo' }, { block: 'movers', type: 'analisis', depth: 'ejecutivo' }, { block: 'categories', type: 'analisis', depth: 'detallado' },
+      { block: 'drivers', type: 'analisis', depth: 'ejecutivo' }, { block: 'movers', type: 'analisis', depth: 'ejecutivo' }, { block: 'categories', type: 'analisis', depth: 'ejecutivo' },
       { block: 'trends', type: 'analisis', depth: 'detallado' }, { block: 'customers', type: 'analisis', depth: 'detallado' }, { block: 'traffic', type: 'analisis', depth: 'detallado' },
       { block: 'campaigns', type: 'analisis', depth: 'detallado' }, { block: 'seasonality', type: 'analisis', depth: 'detallado' }, { block: 'recovery', type: 'analisis', depth: 'ejecutivo' },
       { block: 'closing', type: 'cierre', depth: 'resumen' }, { block: 'decisions', type: 'cierre', depth: 'resumen' },

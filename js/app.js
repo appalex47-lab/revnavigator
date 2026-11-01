@@ -1402,7 +1402,7 @@
     const rcA = state.rc.analysis, store = state.rc.scenarioStore;
     const linked = rcA && store ? store.scenarios.filter((s) => (rcA.allScenarios || rcA.scenarios || []).some((x) => x.scenarioId === s.scenarioId)) : [];   // «Total digital»: escenarios de todos los canales (mismo periodo), cada uno con su canal
     const recovery = { actions: state.rc.plan && state.rc.plan.actions ? state.rc.plan.actions : [], scenarios: linked.map((s) => ({ name: s.name, type: s.type, channel: s.context ? s.context.channel : null, impact: s.expectedImpact ? s.expectedImpact.incrementalValue : null })) };
-    return FP.reportBuilder.build({
+    const src = {
       app: { name: C.app.name, version: C.app.version }, generatedAt: new Date().toISOString(), channel: ch, run, rf, rfMonth, diag, trafficDiag, trafficWeekly, selPacing, selection: monthOn ? { periodType: dxs.periodType, periodKey: monthSel } : null,
       focusData, trend: trendSnap || { priorities: an.priorities, rows: an.rows, context: an.context, share: an.share }, trendFilterLabel: rpF ? rpLabel : desc(an.filter), reportFilter: rpLabel, branchNames: (() => { const o = {}; try { (FP.productStore.geoOptions({}).branches || []).forEach((b) => { if (b.name && b.name !== b.code) o[b.code] = b.name; }); } catch (e) { /* sin nombres */ } return o; })(),
       product: monthOn && productByLevel ? productByLevel.category : pa.result, productByLevel, productFilterLabel: rpF ? rpLabel : (pa.result && pa.result.filter ? desc(pa.result.filter) : ''), customers, projection, profiles,
@@ -1410,7 +1410,9 @@
       quality: FP.coverage.summarize(state.store), lastActual: lastActualDate(), filters, recovery,
       options: { showTags: state.rp.options.showTags, showBusinessName: state.rp.options.showBusinessName },
       businessName: state.rp.options.showBusinessName && C.business ? C.business.name : null
-    });
+    };
+    // Los formatos con bloques propios (p. ej. Operativo) agregan sus páginas al reporte; con el reporte actual no se agrega nada.
+    return FP.reportBlocks.extend(FP.reportBuilder.build(src), src, FP.reportCatalog.resolve(state.rp.audience, state.rp.type));
   }
 
   /** Fase 10 · arma el paquete: los 7 exports (con datos o vacíos con aviso) + índice + LEEME. */
@@ -4701,12 +4703,12 @@
     'rp-audience'(el) {
       const rp = state.rp, C = FP.reportCatalog, a = C.audiences().find((x) => x.id === el.dataset.id), t = a && a.enabled ? C.types(a.id).find((x) => x.enabled) : null;
       if (!t || rp.audience === a.id) return;
-      const prof = C.resolve(a.id, t.id); Object.assign(rp, { audience: a.id, type: t.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [] }); render();
+      const prof = C.resolve(a.id, t.id); Object.assign(rp, { audience: a.id, type: t.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null }); render();
     },
     'rp-type'(el) {
       const rp = state.rp, C = FP.reportCatalog, prof = C.resolve(rp.audience, el.dataset.id);
       if (!prof || rp.type === el.dataset.id) return;
-      Object.assign(rp, { type: el.dataset.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [] }); render();
+      Object.assign(rp, { type: el.dataset.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [], report: null, status: 'idle', sig: null, gap: null }); render();
     },
     'rp-depth'(el) {
       const rp = state.rp, prof = FP.reportCatalog.resolve(rp.audience, rp.type);
