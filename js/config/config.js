@@ -250,7 +250,7 @@
         offers: 'offers',
         activation: 'activation', proposals: 'proposals', goals: 'goals', requests: 'requests', exposures: 'exposures',
         // Fase 7 (solo preferencias de navegación y guía)
-        uxSettings: 'uxSettings', reportBrand: 'reportBrand',
+        uxSettings: 'uxSettings', reportBrand: 'reportBrand', reportPrefs: 'reportPrefs',
         // Fase 8.1 (solo banderas y preferencias; los datos grandes viven en IndexedDB)
         storageMigration: 'storageMigration', productSettings: 'productSettings',
         // Fase 15 (enlaces de Google Sheets publicados; solo la URL, nunca claves)
@@ -576,7 +576,7 @@
       // S2: lo que NO se sincroniza solo (preferencias por dispositivo)
       autoSkipKeys: ['uxSettings', 'productSettings', 'productsCloud'],
       autoDebounceMs: 4000,
-      skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession']   // secretos y banderas locales: nunca viajan a la nube
+      skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'reportPrefs']   // secretos y banderas locales: nunca viajan a la nube
     },
     storageDb: {
       name: 'fp-data', version: 2,
