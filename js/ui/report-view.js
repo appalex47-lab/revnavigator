@@ -377,15 +377,10 @@
   }
 
   /* ================= páginas, numeración e impresión ================= */
+  /** Láminas del PDF: las decide el compositor (FP.reportComposer) con el perfil vigente; con «legacy» son exactamente las de siempre. */
   function units(report, exclude) {
-    const ex = new Set(exclude || []), out = [];
-    const ORDER = ['cover', 'summary', 'pacing', 'drivers', 'movers', 'categories', 'trends', 'customers', 'traffic', 'campaigns', 'seasonality', 'recovery', 'closing', 'decisions', 'reliability', 'annex'], rank = (id) => { const i = ORDER.indexOf(id); return i < 0 ? ORDER.length : i; };   // solo el orden de lectura de la presentación; el reporte conserva el suyo
-    report.pages.filter((p) => p.status === 'included' && !p.annex && !ex.has(p.id)).map((p, i) => ({ p, i })).sort((a, b) => rank(a.p.id) - rank(b.p.id) || a.i - b.i).map((o) => o.p).forEach((p) => {
-      if (p.id === 'annex') [['Anexo técnico A · Calidad de datos y brechas', 1], ['Anexo técnico B · Métodos, backtest y confiabilidad', 2], ['Anexo técnico C · Definiciones y límites', 3]].forEach(([t, s]) => out.push({ id: 'annex', sub: s, title: t, page: p }));
-      else out.push({ id: p.id, title: p.title, page: p });
-    });
-    out.forEach((u, i) => { u.number = i + 1; });
-    return out;
+    if (!FP.reportComposer) throw new Error('FP.reportComposer no está cargado (js/report/composer.js).');
+    return FP.reportComposer.units(report, exclude);
   }
   const dateOf = (iso) => fmt('date', iso);
   /** Evolución: «se muestran los 2 productos que más restan y los 2 que más suman; en total restan N y suman M». Los totales son los reales del análisis, no las filas visibles. */

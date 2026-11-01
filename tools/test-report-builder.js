@@ -15,7 +15,9 @@ if (process.env.RB_GOLDEN_OUT) {
       pages: r.pages.map((p) => ({ id: p.id, status: p.status, title: p.title, headline: p.headline || null, sha: crypto.createHash('sha256').update(canon(p)).digest('hex').slice(0, 16) })) });
     return r;
   };
-  process.on('exit', () => fs.writeFileSync(process.env.RB_GOLDEN_OUT, JSON.stringify(rec)));
+  const full = [];
+  const build2 = RB.build; RB.build = function (src) { const r = build2.apply(this, arguments); if (process.env.RB_REPORTS_OUT) full.push(JSON.parse(JSON.stringify(r))); return r; };
+  process.on('exit', () => { fs.writeFileSync(process.env.RB_GOLDEN_OUT, JSON.stringify(rec)); if (process.env.RB_REPORTS_OUT) fs.writeFileSync(process.env.RB_REPORTS_OUT, JSON.stringify(full)); });
 }
 const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const blk = (rev) => ({ revenue: rev, orders: null, trafficVolume: null, conversionRate: null, aov: null });
