@@ -14,7 +14,7 @@ t('el orden de lectura de LEGACY es el del reporte anterior', JSON.stringify(L.s
 t('los anexos A, B y C de LEGACY son los de siempre', JSON.stringify(L.annexes) === JSON.stringify([{ sub: 1, title: 'Anexo técnico A · Calidad de datos y brechas' }, { sub: 2, title: 'Anexo técnico B · Métodos, backtest y confiabilidad' }, { sub: 3, title: 'Anexo técnico C · Definiciones y límites' }]), L.annexes);
 t('«reliability» no es lámina propia: va dentro del bloque «annex»', L.slots.find((s) => s.block === 'reliability').embeddedIn === 'annex');
 /* La selección inicial de la vista previa vive hoy en app.js: el perfil debe coincidir con ella. */
-const app = fs.readFileSync('js/app.js', 'utf8'), m = /rp: \{ status: 'idle', report: null, error: null, exclude: \[([^\]]*)\]/.exec(app);
+const app = fs.readFileSync('js/app.js', 'utf8'), m = /rp: \{ status: 'idle', report: null, error: null, audience: '[^']*', type: '[^']*', depth: '[^']*', include: \[[^\]]*\], exclude: \[([^\]]*)\]/.exec(app);
 const appEx = m ? m[1].split(',').map((x) => x.trim().replace(/['"]/g, '')).filter(Boolean) : null;
 t('defaultExclude de LEGACY coincide con la selección inicial de app.js', JSON.stringify(L.defaultExclude) === JSON.stringify(appEx), { perfil: L.defaultExclude, app: appEx });
 t('los perfiles registrados están congelados', Object.isFrozen(L) && Object.isFrozen(L.slots) && Object.isFrozen(L.slots[0]) && !!throws(() => { 'use strict'; L.slots.push({}); }));
@@ -40,4 +40,18 @@ t('un perfil «planned» queda registrado pero no se lista por defecto', R.get('
 t('list() por defecto devuelve solo habilitados (hoy: LEGACY)', JSON.stringify(R.list().map((p) => p.id)) === JSON.stringify(['legacy']), R.list().map((p) => p.id));
 t('get de un id desconocido devuelve null', R.get('nada') === null);
 t('el perfil registrado es una copia: mutar el original no lo cambia', (() => { const o = ok(); o.id = 'copia'; const r = R.register(o); o.slots.push({ block: 'z', type: 'analisis' }); return r.slots.length === 3; })());
+
+/* ---- Fase 2: profundidades, defaultDepth y lámina obligatoria ---- */
+t('LEGACY declara 3 profundidades ordenadas (resumen, ejecutivo, detallado) y «detallado» por defecto (= el reporte de siempre)', JSON.stringify(L.depths.map((d) => d.id)) === JSON.stringify(['resumen', 'ejecutivo', 'detallado']) && L.defaultDepth === 'detallado', L.depths);
+t('LEGACY sirve el tipo «desempeno» y solo la portada es obligatoria', JSON.stringify(L.presentationTypes) === JSON.stringify(['desempeno']) && JSON.stringify(L.slots.filter((x) => x.required).map((x) => x.block)) === JSON.stringify(['cover']));
+t('todo bloque de LEGACY tiene una profundidad válida y «detallado» incluye a todos (no se pierde ninguna página)', L.slots.every((x) => L.depths.some((d) => d.id === x.depth)));
+const base2 = () => ({ ...ok(), depths: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], defaultDepth: 'a' });
+t('un perfil con profundidades es válido', P.validate(base2()).length === 0, P.validate(base2()));
+const v2 = {
+  'defaultDepth fuera de la lista': (p) => { p.defaultDepth = 'z'; }, 'profundidades sin defaultDepth': (p) => { delete p.defaultDepth; }, 'profundidad repetida': (p) => { p.depths.push({ id: 'a', label: 'Otra' }); },
+  'profundidad sin label': (p) => { p.depths[0] = { id: 'a' }; }, 'slot con profundidad inexistente': (p) => { p.slots[1].depth = 'z'; }, 'required no booleano': (p) => { p.slots[0].required = 'si'; },
+  'presentationTypes mal formado': (p) => { p.presentationTypes = [1]; }
+};
+Object.entries(v2).forEach(([n, f]) => { const p = base2(); f(p); t(`se rechaza: ${n}`, P.validate(p).length > 0, P.validate(p)); });
+t('un slot con depth en un perfil SIN profundidades se rechaza', P.validate({ ...ok(), slots: [{ block: 'a', type: 'portada', depth: 'x' }, { block: 'b', type: 'analisis' }, { block: 'annex', type: 'anexo' }] }).length > 0);
 console.log(bad ? `\n${bad} FALLAS` : '\nTODO OK'); process.exit(bad ? 1 : 0);

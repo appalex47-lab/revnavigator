@@ -378,9 +378,9 @@
 
   /* ================= páginas, numeración e impresión ================= */
   /** Láminas del PDF: las decide el compositor (FP.reportComposer) con el perfil vigente; con «legacy» son exactamente las de siempre. */
-  function units(report, exclude) {
+  function units(report, exclude, sel) {
     if (!FP.reportComposer) throw new Error('FP.reportComposer no está cargado (js/report/composer.js).');
-    return FP.reportComposer.units(report, exclude);
+    return FP.reportComposer.units(report, exclude, sel);
   }
   const dateOf = (iso) => fmt('date', iso);
   /** Evolución: «se muestran los 2 productos que más restan y los 2 que más suman; en total restan N y suman M». Los totales son los reales del análisis, no las filas visibles. */
@@ -425,7 +425,7 @@
       <div class="rp-body">${body}</div>${foot}</section>`;
   }
   function docHtml(report, opts = {}) {
-    const us = units(report, opts.exclude); NOANNEX = !us.some((q) => q.id === 'annex'); const cover = report.pages.find((p) => p.id === 'cover');
+    const us = units(report, opts.exclude, opts.sel); NOANNEX = !us.some((q) => q.id === 'annex'); const cover = report.pages.find((p) => p.id === 'cover');
     const sel = cover && cover.facts ? (cover.facts.find((f) => f.id === 'selection') || {}).value : '';
     const x = { report, tags: opts.tags === undefined ? report.options.showTags === true : Boolean(opts.tags), units: us, total: us.length, omitted: report.omitted.length, omittedList: report.omitted, gapsPage: (report.pages.find((q) => q.id === 'recovery' && q.status === 'included') || {}).gaps ? report.pages.find((q) => q.id === 'recovery') : null, relPage: report.pages.find((q) => q.id === 'reliability' && q.status === 'included') || null, channelLabel: report.context.channel === 'total' || !report.context.channel ? 'Total digital' : ({ ecommerce: 'Ecommerce', app: 'App', whatsapp: 'WhatsApp', llamadas: 'Llamadas' }[report.context.channel] || report.context.channel), cutoff: report.context.cutoff ? dateOf(report.context.cutoff) : NA, lastActual: report.context.lastActual && report.context.cutoff && report.context.lastActual < report.context.cutoff ? dateOf(report.context.lastActual) : null,
       selection: sel && !/^Sin filtros/.test(sel) ? cut(sel, 60) : 'Sin filtros' };
@@ -582,8 +582,9 @@
     const rp = state.rp, H = () => FP.ui.helpers;
     const ready = rp.status === 'ready' && rp.report;
     const stale = ready && rp.sig !== signature(state);
-    const doc = ready ? docHtml(rp.report, { exclude: rp.exclude, tags: rp.options.showTags }) : null;
-    const list = ready ? rp.report.pages.filter((p) => p.id !== 'cover') : [];
+    const SV = FP.reportSetupView, sel = SV.selectionOf(rp);
+    const doc = ready ? docHtml(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel }) : null;
+    const plan = ready ? FP.reportComposer.compose(rp.report, sel) : null;
     el.innerHTML = `
       <section class="panel" aria-labelledby="t-rp">
         <div class="panel__head"><div data-own-head>
@@ -591,7 +592,8 @@
           <p class="panel__desc">Un reporte ejecutivo en 16:9 con lo que la herramienta ya calculó: resultado, brecha, forecast, qué mirar y qué decidir, más un anexo para auditar. No calcula nada nuevo y se genera en este navegador, sin enviar datos a ningún servicio.</p>
         </div></div>
         <div class="panel__body stack">
-          <div><h3 class="panel__title">Periodo y canal</h3>
+          ${SV.stepsHtml(state)}
+          <div><h3 class="panel__title"><span class="rp-step__n">Paso 4</span> Periodo, canal y filtros</h3>
             <p class="field__hint">Son los mismos de Diagnóstico y Narrativa. Si eliges un mes, todo el reporte gira en torno a ese mes y canal, y el año aparece solo como contexto en el resumen y el cierre. Con semana o año, el pacing sigue siendo del año completo al corte.</p>
             ${FP.narrativeView.contextControls(state, 'rp', 'pkg-context', 'pkg-context')}</div>
           ${filterSelect(state)}
@@ -606,11 +608,7 @@
           <p class="field__hint">«Guardar como PDF» abre el cuadro de impresión del navegador: elige <strong>Guardar como PDF</strong>; el tamaño horizontal 16:9 ya viene definido. Si no salen los colores, activa «Gráficos de fondo».</p>
         </div>
       </section>
-      ${ready ? `<section class="panel" aria-labelledby="t-rp-pages"><div class="panel__head"><div><h3 class="panel__title" id="t-rp-pages">Páginas del reporte</h3>
-        <p class="panel__desc">${doc.total} página${doc.total === 1 ? '' : 's'} en el PDF${rp.report.omitted.length ? ` · ${rp.report.omitted.length} sin datos suficientes (listadas en el anexo)` : ''}. Quita las que no quieras incluir.</p></div></div>
-        <div class="panel__body"><ul class="rp-pagelist">${list.map((p) => p.status === 'included'
-          ? `<li><label class="check"><input type="checkbox" data-action="rp-toggle-page" data-id="${esc(p.id)}" ${rp.exclude.includes(p.id) ? '' : 'checked'} > ${esc(p.title)}</label></li>`
-          : `<li class="rp-pagelist__off"><span class="pill pill--na">Omitida</span> ${esc(p.title)} — ${esc(p.reason)}</li>`).join('')}</ul></div></section>
+      ${ready ? `${SV.proposalHtml(state, plan)}
       <section class="rp-preview" aria-label="Vista previa de la presentación">${doc.parts.map((h) => `<div class="rp-frame">${h}</div>`).join('')}</section>` : ''}`;
     if (ready) { scale(el); fitPages(el); }
   }

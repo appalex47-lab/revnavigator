@@ -71,4 +71,43 @@ t('un reporte sin páginas lanza', /no trae páginas/.test(throws(() => C.compos
 t('una página con annex:true no es lámina propia y se dice por qué', (() => { const r2 = mini(['cover', 'reliability', 'annex']); r2.pages[1].annex = true; const p = C.compose(r2); const e = p.excluded.find((x) => x.block === 'reliability'); return !p.slides.some((s) => s.block === 'reliability') && e.kind === 'en-anexo' && /annex/.test(e.reason); })());
 t('la persona puede quitar el anexo: no genera A, B ni C', (() => { const r2 = mini(['cover', 'annex']); return C.compose(r2, { exclude: ['annex'] }).slides.length === 1 && C.compose(r2).slides.length === 4; })());
 t('el aviso de rezago del resumen se lista con el texto que el reporte ya muestra', (() => { const r2 = mini(['summary']); r2.pages[0].lag = { last: '22 sep 2026', cutoff: '30 sep 2026', days: 8 }; const l = C.limitationsOf(r2)[0]; return l.kind === 'rezago' && l.text === 'Venta real hasta el 22 sep 2026 · faltan 8 días del corte'; })());
+
+/* ---- Fase 2: profundidad, bloques agregados y alternar ---- */
+const DEF = ['reliability', 'seasonality', 'annex'];
+const blocks = (plan) => plan.slides.map((x) => x.block).filter((b, i, a) => a.indexOf(b) === i);
+const ORDER_L = ['cover', 'summary', 'pacing', 'drivers', 'movers', 'categories', 'trends', 'customers', 'traffic', 'campaigns', 'seasonality', 'recovery', 'closing', 'decisions', 'annex'];
+let dOk = 0, dFull = 0, dSub = 0;
+reports.forEach((rep) => {
+  const full = C.compose(rep, { exclude: DEF }), det = C.compose(rep, { exclude: DEF, depth: 'detallado' }), ej = C.compose(rep, { exclude: DEF, depth: 'ejecutivo' }), res = C.compose(rep, { exclude: DEF, depth: 'resumen' });
+  if (JSON.stringify(full.slides) === JSON.stringify(det.slides)) dFull++;
+  const sub = (a, b) => blocks(a).every((x) => blocks(b).includes(x));
+  if (sub(res, ej) && sub(ej, det)) dSub++;
+  const okRes = blocks(res).every((b) => ['cover', 'summary', 'closing', 'decisions'].includes(b)), okEj = blocks(ej).every((b) => ['cover', 'summary', 'pacing', 'drivers', 'movers', 'recovery', 'closing', 'decisions'].includes(b));
+  const order = [res, ej, det].every((p) => JSON.stringify(blocks(p)) === JSON.stringify(ORDER_L.filter((b) => blocks(p).includes(b))));
+  if (okRes && okEj && order && res.depth === 'resumen' && det.depth === 'detallado' && full.depth === null) dOk++;
+});
+t('«detallado» da EXACTAMENTE las mismas láminas que sin profundidad (el reporte de siempre), en los 89 reportes', dFull === reports.length, dFull);
+t('cada profundidad contiene a la anterior (resumen ⊂ ejecutivo ⊂ detallado), con el orden del perfil', dSub === reports.length && dOk === reports.length, { dSub, dOk });
+t('con profundidad «resumen» solo entran portada, resumen, cierre y decisiones; con «ejecutivo» se suman pacing, factores, quién suma/resta y recuperación', dOk === reports.length);
+const withAll = reports.find((r) => ['categories', 'trends', 'customers', 'movers', 'pacing'].every((id) => (r.pages.find((p) => p.id === id) || {}).status === 'included'));
+t('hay un reporte con las páginas de análisis incluidas para probar la profundidad', !!withAll);
+const r1 = C.compose(withAll, { exclude: DEF, depth: 'resumen' }), cat = r1.excluded.find((e) => e.block === 'categories');
+t('lo que la profundidad deja fuera se explica: tipo «profundidad» y motivo con las dos profundidades', cat && cat.kind === 'profundidad' && /Detallado/.test(cat.reason) && /Resumen/.test(cat.reason), cat);
+t('un bloque sin datos sigue siendo «sin-datos» aunque la profundidad también lo deje fuera (el dato manda)', r1.excluded.filter((e) => e.kind === 'sin-datos').every((e) => withAll.pages.find((p) => p.id === e.block).status === 'omitted'));
+const add1 = C.compose(withAll, { exclude: DEF, depth: 'resumen', include: ['categories'] });
+t('la persona puede agregar un bloque que la profundidad dejó fuera; entra en su lugar y dice «Agregada por la persona»', blocks(add1).includes('categories') && add1.slides.find((s) => s.block === 'categories').reason === 'Agregada por la persona.' && JSON.stringify(blocks(add1)) === JSON.stringify(ORDER_L.filter((b) => blocks(add1).includes(b))), blocks(add1));
+t('quitar (exclude) siempre gana sobre agregar (include)', !blocks(C.compose(withAll, { depth: 'resumen', include: ['categories'], exclude: ['categories'] })).includes('categories'));
+t('una profundidad que el perfil no tiene lanza un error claro', /no tiene la profundidad/.test(throws(() => C.compose(withAll, { depth: 'enorme' })) || ''));
+t('una profundidad en un perfil sin profundidades se rechaza; sin depth no se filtra nada', (() => { FP.reportProfiles.register({ id: 'sinprof', label: 'Sin profundidades', status: 'enabled', slots: [{ block: 'cover', type: 'portada' }] }); return /no tiene la profundidad/.test(throws(() => C.compose(mini(['cover']), { profile: 'sinprof', depth: 'resumen' })) || '') && C.compose(mini(['cover']), { profile: 'sinprof' }).slides.length === 1; })());
+t('el plan trae la profundidad usada (o null)', C.compose(withAll, { depth: 'ejecutivo' }).depth === 'ejecutivo' && C.compose(withAll).depth === null);
+
+/* alternar */
+const sel0 = { profile: 'legacy', depth: 'detallado', exclude: DEF.slice(), include: [] };
+const tg = (sel, b) => C.toggle(withAll, sel, b);
+t('alternar un bloque incluido lo quita (exclude) sin modificar la selección de entrada', (() => { const copy = JSON.stringify(sel0); const n = tg(sel0, 'movers'); return n.exclude.includes('movers') && JSON.stringify(sel0) === copy; })());
+t('alternar otra vez un bloque quitado por la persona lo vuelve a poner', (() => { const a = tg(sel0, 'movers'); const b = tg({ ...sel0, exclude: a.exclude, include: a.include }, 'movers'); return !b.exclude.includes('movers'); })());
+t('alternar un bloque dejado fuera por la profundidad lo agrega (include); alternarlo de nuevo vuelve a dejarlo fuera SIN añadirlo a exclude', (() => { const s2 = { ...sel0, depth: 'resumen' }; const a = tg(s2, 'categories'); const b = tg({ ...s2, exclude: a.exclude, include: a.include }, 'categories'); return a.include.includes('categories') && !a.exclude.includes('categories') && !b.include.includes('categories') && !b.exclude.includes('categories'); })());
+t('alternar un bloque sin datos o la portada (obligatoria) no cambia nada', (() => { const om = withAll.pages.find((p) => p.status === 'omitted'); const a = tg(sel0, om.id), c = tg(sel0, 'cover'); return JSON.stringify(a) === JSON.stringify({ exclude: sel0.exclude, include: [] }) && JSON.stringify(c) === JSON.stringify({ exclude: sel0.exclude, include: [] }); })());
+t('alternar el contenido que va dentro del anexo (confiabilidad) no cambia nada: la casilla no tiene efecto (hallazgo D2 resuelto en la vista)', JSON.stringify(tg(sel0, 'reliability')) === JSON.stringify({ exclude: sel0.exclude, include: [] }));
+t('el motivo de lo que va dentro del anexo usa el título del anexo, sin jerga', (() => { const e = C.compose(withAll, { exclude: DEF }).excluded.find((x) => x.block === 'reliability'); return e && e.kind === 'en-anexo' && /«Anexo técnico/.test(e.reason) && !/bloque/.test(e.reason); })());
 console.log(bad ? `\n${bad} FALLAS` : '\nTODO OK'); process.exit(bad ? 1 : 0);
