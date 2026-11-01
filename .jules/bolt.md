@@ -5,3 +5,6 @@
 ## 2026-03-31 - Redundant Payload Generation in Export Preview Checks
 **Learning:** In `app.js`, `previewPackage` checks which export files are available to show status cards in the `#datos` view. Calling `EXPORT_BUILDERS` built full export payloads (forecasts, diagnostics, narratives, etc.) for each module, allocating megabytes of objects only to check availability (`e.obj ? true : false`) and discard the payload.
 **Action:** Pass a `previewOnly` flag to export builders when checking status/availability so expensive payload generation is bypassed when only metadata or status is needed.
+## 2026-03-30 - Linear Search and Map Instantiation in Record Sorting Comparators
+**Learning:** In `data-model.js` and `data-view.js`, `getChannel` performed `Array.find` scans per record, and `filtered` instantiated `new Map()` with Map `.get()` calls inside $O(N \log N)$ sort comparators for large datasets.
+**Action:** Cache static entity lookups in a Map/object index, pre-calculate sort order mappings outside sorting loops, and use fast property lookups in comparison callbacks.
