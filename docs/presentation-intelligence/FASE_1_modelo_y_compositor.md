@@ -60,9 +60,9 @@ FP.reportBuilder  (sin cambios, 964 líneas)   ← única fuente de cifras: pág
 |---|---|
 | `tools/selftest-node.js` | 233/233 |
 | Todas las `tools/test-*.js` | pasan (incluye 3 nuevas y las de Fase 0) |
-| `test-report-profiles` | 22 comprobaciones |
-| `test-report-composer` | equivalencia 712/712 y plan, declarativo y errores |
-| `test-report-content` | contrato, hallazgos, disponibilidad y registro de cifras |
+| `test-report-profiles` | 26 ✔ / 0 ✘ |
+| `test-report-composer` | 15 ✔ / 0 ✘ (equivalencia 712/712, plan, comportamiento declarativo y errores) |
+| `test-report-content` | 26 ✔ / 0 ✘ (contrato, hallazgos, disponibilidad y registro de cifras) |
 | `batch_report_composer` (nuevo) | 24 ✔ / 0 ✘ |
 | `batch_report_golden` | 4 ✔ / 0 ✘ |
 | `batch_presentacion` / `batch_pdf_fidelidad` / `batch_branding` / `batch_quarter` | 44 / 5 / 19 / 17 sin fallas |
