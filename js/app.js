@@ -95,7 +95,7 @@
     },
     // Fase 8.1: Categoría → Producto (resultados en memoria; datos en IndexedDB)
     pkg: { busy: false, last: null },
-    rp: { status: 'idle', report: null, error: null, exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false }, filter: null, sig: null, at: null },   // «Presentación (PDF)»
+    rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false }, filter: null, sig: null, at: null },   // «Presentación (PDF)»
     pa: { from: null, to: null, comparison: 'previous', channel: 'total', viewBy: 'category', drill: [], next: null, geo: {}, topN: 20, page: 1, result: null, loading: false, key: null,
       trace: null, counts: null, estimate: null, tests: null, testing: false, note: null },
     // Análisis 1: evolución histórica y patrones. La serie se calcula desde IndexedDB.
@@ -4696,8 +4696,31 @@
     'rp-gap-last'() { state.rp.gap = null; state.rp.gapOk = false; actions['fc-ref-last'](); },
     'rp-gap-load'() { state.rp.gap = null; root.location.hash = 'carga'; },
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
-    'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags }); },
-    'rp-toggle-page'(el) { const rp = state.rp, id = el.dataset.id; rp.exclude = rp.exclude.includes(id) ? rp.exclude.filter((x) => x !== id) : [...rp.exclude, id]; render(); },
+    'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp) }); },
+    /** Presentación · pasos 1 a 3: solo se puede elegir lo habilitado (un perfil que lo sirva); al cambiar audiencia o tipo, la selección vuelve a la del perfil. */
+    'rp-audience'(el) {
+      const rp = state.rp, C = FP.reportCatalog, a = C.audiences().find((x) => x.id === el.dataset.id), t = a && a.enabled ? C.types(a.id).find((x) => x.enabled) : null;
+      if (!t || rp.audience === a.id) return;
+      const prof = C.resolve(a.id, t.id); Object.assign(rp, { audience: a.id, type: t.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [] }); render();
+    },
+    'rp-type'(el) {
+      const rp = state.rp, C = FP.reportCatalog, prof = C.resolve(rp.audience, el.dataset.id);
+      if (!prof || rp.type === el.dataset.id) return;
+      Object.assign(rp, { type: el.dataset.id, depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [] }); render();
+    },
+    'rp-depth'(el) {
+      const rp = state.rp, prof = FP.reportCatalog.resolve(rp.audience, rp.type);
+      if (!prof || !(prof.depths || []).some((d) => d.id === el.dataset.id) || rp.depth === el.dataset.id) return;
+      rp.depth = el.dataset.id; render();
+    },
+    'rp-toggle-page'(el) {
+      const rp = state.rp; if (!rp.report) return;
+      const n = FP.reportComposer.toggle(rp.report, FP.reportSetupView.selectionOf(rp), el.dataset.id); rp.exclude = n.exclude; rp.include = n.include; render();
+    },
+    'rp-reset-selection'() {
+      const rp = state.rp, prof = FP.reportCatalog.resolve(rp.audience, rp.type);
+      if (prof) { Object.assign(rp, { depth: prof.defaultDepth || null, exclude: prof.defaultExclude.slice(), include: [] }); render(); }
+    },
     'rp-filter'(el) { const f = FP.productFilter.cascade(state.rp.filter || {}, el.dataset.key, el.value); state.rp.filter = Object.keys(f).length ? f : null; render(); },
     'rp-filter-clear'() { state.rp.filter = null; render(); },
     'rp-option'(el) { state.rp.options[el.dataset.key] = Boolean(el.checked); render(); },

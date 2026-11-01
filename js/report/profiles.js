@@ -8,9 +8,10 @@
  * con FP.reportProfiles.register() cuando puedan generar una presentación coherente; un perfil con status «planned» nunca se ofrece ni se compone.
  *
  * Contrato de un perfil (schema report_profile 1.0.0):
- *   { id, label, status: 'enabled'|'planned', audience: string|null, presentationTypes: string[], depths: string[],
- *     slots: [{ block, type: 'portada'|'analisis'|'cierre'|'anexo', embeddedIn?: string }],   // orden de lectura
- *     annexes: [{ sub, title }],                                                                // láminas en que se expande el bloque 'annex'
+ *   { id, label, status: 'enabled'|'planned', audience: string|null, presentationTypes: string[],        // tipos del catálogo (FP.reportCatalog) que sirve
+ *     depths: [{ id, label, description? }], defaultDepth,                                                  // de menor a mayor profundidad
+ *     slots: [{ block, type: 'portada'|'analisis'|'cierre'|'anexo', depth?, required?, embeddedIn? }],     // orden de lectura; depth = la mínima profundidad en que entra; required = la persona no la puede quitar
+ *     annexes: [{ sub, title }],                                                                            // láminas en que se expande el bloque 'annex'
  *     defaultExclude: string[] }                                                                // bloques apagados al abrir la vista previa
  */
 (function (root) {
@@ -35,6 +36,7 @@
       if (blocks.has(s.block)) add(`slots[${i}]: el bloque «${s.block}» está repetido.`);
       blocks.add(s.block);
       if (!TYPES.includes(s.type)) add(`slots[${i}] («${s.block}»): type debe ser ${TYPES.join(', ')}.`);
+      if (s.required !== undefined && typeof s.required !== 'boolean') add(`slots[${i}] («${s.block}»): required debe ser verdadero o falso.`);
       if (s.embeddedIn !== undefined && !(typeof s.embeddedIn === 'string' && (p.slots || []).some((x) => x.block === s.embeddedIn))) add(`slots[${i}] («${s.block}»): embeddedIn debe ser otro bloque del perfil.`);
     });
     (p.defaultExclude || []).forEach((b) => { if (!blocks.has(b)) add(`defaultExclude: «${b}» no es un bloque del perfil.`); });
@@ -43,7 +45,15 @@
       else p.annexes.forEach((a, i) => { if (!a || !Number.isInteger(a.sub) || typeof a.title !== 'string' || !a.title) add(`annexes[${i}] necesita sub (entero) y title.`); });
       if (Array.isArray(p.annexes) && p.annexes.length && !blocks.has('annex')) add('annexes requiere el bloque «annex» en slots.');
     }
-    ['presentationTypes', 'depths'].forEach((k) => { if (p[k] !== undefined && !Array.isArray(p[k])) add(`${k} debe ser una lista.`); });
+    if (p.presentationTypes !== undefined && (!Array.isArray(p.presentationTypes) || p.presentationTypes.some((x) => typeof x !== 'string' || !x))) add('presentationTypes debe ser una lista de ids (texto).');
+    const dIds = [];
+    if (p.depths !== undefined) {
+      if (!Array.isArray(p.depths)) add('depths debe ser una lista.');
+      else p.depths.forEach((d, i) => { if (!d || typeof d.id !== 'string' || !d.id || typeof d.label !== 'string' || !d.label) add(`depths[${i}] necesita id y label.`); else if (dIds.includes(d.id)) add(`depths[${i}]: «${d.id}» está repetida.`); else dIds.push(d.id); });
+    }
+    if (p.defaultDepth !== undefined && !dIds.includes(p.defaultDepth)) add('defaultDepth debe ser una de las profundidades del perfil.');
+    if (dIds.length && p.defaultDepth === undefined) add('Un perfil con profundidades necesita defaultDepth.');
+    (p.slots || []).forEach((s, i) => { if (s && s.depth !== undefined && !dIds.includes(s.depth)) add(`slots[${i}] («${s.block}»): depth debe ser una de las profundidades del perfil.`); });
     return bad;
   }
 
@@ -52,13 +62,22 @@
     schema: SCHEMA, version: VERSION, id: 'legacy', status: 'enabled',
     label: 'Reporte actual (compatibilidad)',
     description: 'El reporte ejecutivo que la aplicación genera hoy: mismas páginas, mismo orden, mismos textos.',
-    audience: null, presentationTypes: [], depths: [],
+    audience: null, presentationTypes: ['desempeno'],
+    // Profundidad: «detallado» es el reporte de siempre; «resumen» y «ejecutivo» solo eligen entre las MISMAS páginas (no cambian su letra ni su contenido).
+    depths: [
+      { id: 'resumen', label: 'Resumen', description: 'Portada, resumen, cierre y decisiones.' },
+      { id: 'ejecutivo', label: 'Ejecutivo', description: 'Agrega el desempeño contra el plan, los factores, quién suma y resta y la recuperación.' },
+      { id: 'detallado', label: 'Detallado', description: 'Todo lo que tiene datos: el reporte de siempre.' }
+    ],
+    defaultDepth: 'detallado',
     // Orden de lectura de la presentación. «reliability» no es una lámina propia: su contenido va dentro del Anexo B.
     slots: [
-      { block: 'cover', type: 'portada' }, { block: 'summary', type: 'analisis' }, { block: 'pacing', type: 'analisis' }, { block: 'drivers', type: 'analisis' },
-      { block: 'movers', type: 'analisis' }, { block: 'categories', type: 'analisis' }, { block: 'trends', type: 'analisis' }, { block: 'customers', type: 'analisis' },
-      { block: 'traffic', type: 'analisis' }, { block: 'campaigns', type: 'analisis' }, { block: 'seasonality', type: 'analisis' }, { block: 'recovery', type: 'analisis' },
-      { block: 'closing', type: 'cierre' }, { block: 'decisions', type: 'cierre' }, { block: 'reliability', type: 'anexo', embeddedIn: 'annex' }, { block: 'annex', type: 'anexo' }
+      { block: 'cover', type: 'portada', depth: 'resumen', required: true }, { block: 'summary', type: 'analisis', depth: 'resumen' }, { block: 'pacing', type: 'analisis', depth: 'ejecutivo' },
+      { block: 'drivers', type: 'analisis', depth: 'ejecutivo' }, { block: 'movers', type: 'analisis', depth: 'ejecutivo' }, { block: 'categories', type: 'analisis', depth: 'detallado' },
+      { block: 'trends', type: 'analisis', depth: 'detallado' }, { block: 'customers', type: 'analisis', depth: 'detallado' }, { block: 'traffic', type: 'analisis', depth: 'detallado' },
+      { block: 'campaigns', type: 'analisis', depth: 'detallado' }, { block: 'seasonality', type: 'analisis', depth: 'detallado' }, { block: 'recovery', type: 'analisis', depth: 'ejecutivo' },
+      { block: 'closing', type: 'cierre', depth: 'resumen' }, { block: 'decisions', type: 'cierre', depth: 'resumen' },
+      { block: 'reliability', type: 'anexo', depth: 'detallado', embeddedIn: 'annex' }, { block: 'annex', type: 'anexo', depth: 'detallado' }
     ],
     annexes: [
       { sub: 1, title: 'Anexo técnico A · Calidad de datos y brechas' },
