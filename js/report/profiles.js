@@ -12,7 +12,8 @@
  *     depths: [{ id, label, description? }], defaultDepth,                                                  // de menor a mayor profundidad
  *     slots: [{ block, type: 'portada'|'analisis'|'cierre'|'anexo', depth?, required?, embeddedIn? }],     // orden de lectura; depth = la mínima profundidad en que entra; required = la persona no la puede quitar
  *     annexes: [{ sub, title }],                                                                            // láminas en que se expande el bloque 'annex'
- *     defaultExclude: string[] }                                                                // bloques apagados al abrir la vista previa
+ *     defaultExclude: string[],                                                                 // bloques apagados al abrir la vista previa
+ *     strict?: boolean }                                                                        // true: una página del reporte que el perfil no lista queda fuera («fuera-de-perfil»)
  */
 (function (root) {
   'use strict';
@@ -45,6 +46,7 @@
       else p.annexes.forEach((a, i) => { if (!a || !Number.isInteger(a.sub) || typeof a.title !== 'string' || !a.title) add(`annexes[${i}] necesita sub (entero) y title.`); });
       if (Array.isArray(p.annexes) && p.annexes.length && !blocks.has('annex')) add('annexes requiere el bloque «annex» en slots.');
     }
+    if (p.strict !== undefined && typeof p.strict !== 'boolean') add('strict debe ser verdadero o falso.');
     if (p.presentationTypes !== undefined && (!Array.isArray(p.presentationTypes) || p.presentationTypes.some((x) => typeof x !== 'string' || !x))) add('presentationTypes debe ser una lista de ids (texto).');
     const dIds = [];
     if (p.depths !== undefined) {

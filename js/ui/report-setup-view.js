@@ -10,7 +10,7 @@
   const FP = (root.FP = root.FP || {});
   const esc = (v) => FP.ui.helpers.esc(v);
   const TYPE_LABEL = { portada: 'Portada', analisis: 'Análisis', cierre: 'Cierre', anexo: 'Anexo' };
-  const KIND_LABEL = { 'sin-datos': 'Sin datos', 'en-anexo': 'Dentro del anexo', 'seleccion-persona': 'Fuera de la selección', profundidad: 'Fuera de la profundidad elegida' };
+  const KIND_LABEL = { 'sin-datos': 'Sin datos', 'en-anexo': 'Dentro del anexo', 'fuera-de-perfil': 'No es de este formato', 'seleccion-persona': 'Fuera de la selección', profundidad: 'Fuera de la profundidad elegida' };
   const LIM_LABEL = { confiabilidad: 'Hay una advertencia de confiabilidad del forecast (detalle en el anexo técnico B).', 'periodo-parcial': 'Incluye un período parcial.' };
 
   /** Selección que consumen el compositor y la vista: perfil, profundidad y bloques quitados o agregados. Lanza si la elección no corresponde a un perfil habilitado. */

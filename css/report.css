@@ -410,3 +410,14 @@
 .rp-sem-tile__n { font-size:28px; font-weight:800; color:var(--navy); } .rp-sem-tile__l { font-size:14px; }
 .rp-op__blk { margin-bottom:10px; }
 .rp-warnmark { color:var(--orange); font-weight:700; }
+/* Fase 6 · formato Directivo */
+.rp-vd { display:grid; grid-template-columns:repeat(3,1fr); gap:26px; margin-top:26px; }
+.rp-vd__k { border-top:5px solid var(--navy); padding-top:12px; }
+.rp-vd__l { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:15px; color:var(--grey); }
+.rp-vd__v { font-size:60px; font-weight:800; line-height:1.05; margin-top:8px; font-variant-numeric:tabular-nums; color:var(--navy); }
+.rp-vd__s { font-size:15px; color:var(--grey); margin-top:6px; }
+.rp-dir__chips { display:flex; gap:14px; margin:6px 0 14px; } .rp-dir__chips .rp-sem { padding:6px 14px; border:1px solid #E1E7F0; border-radius:10px; background:var(--sky); font-size:16px; }
+.rp-dir { display:flex; justify-content:space-between; align-items:baseline; font-size:20px; padding:9px 0; border-bottom:1px solid #E1E7F0; font-variant-numeric:tabular-nums; }
+.rp-dir--tot { font-weight:700; margin-bottom:12px; }
+.rp-dir__cols { display:grid; grid-template-columns:1fr 1fr; gap:34px; margin-top:8px; }
+.rp-dir__h { font-size:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); margin:0 0 6px; font-weight:800; }

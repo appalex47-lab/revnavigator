@@ -11,13 +11,13 @@ async def main():
         await q.goto(U + '#presentacion'); await q.wait_for_selector('[data-action="rp-generate"]'); await q.evaluate("(()=>{const d=document.getElementById('tour-offer');if(d)d.remove()})()")
         # ---- pasos 1 a 3 antes de generar
         st = await q.evaluate("""(()=>{const g=(id)=>[...document.querySelectorAll('#'+id+' .rp-choice')].map(b=>({t:b.querySelector('.rp-choice__t').innerText,on:b.getAttribute('aria-pressed'),dis:b.getAttribute('aria-disabled'),na:!!b.querySelector('.rp-choice__na'),title:b.title}));return {a:g('rp-s1'),t:g('rp-s2'),d:g('rp-s3'),sel:document.getElementById('rp-selected').innerText}})()""")
-        chk('S1 paso 1: 4 audiencias; «Reporte actual» está elegida; «Operativo» y «Gerencial» están habilitadas sin elegir; Directivo dice «Próximamente» y explican por qué', [x['t'] for x in st['a']] == ['Reporte actual', 'Operativo', 'Gerencial', 'Directivo'] and st['a'][0]['on'] == 'true' and st['a'][0]['dis'] is None and all(x['on'] == 'false' and x['dis'] is None and not x['na'] for x in st['a'][1:3]) and all(x['dis'] == 'true' and x['na'] and 'Todavía no está disponible' in x['title'] for x in st['a'][3:]), st['a'])
+        chk('S1 paso 1: 4 audiencias; «Reporte actual» está elegida; «Operativo», «Gerencial» y «Directivo» están habilitadas sin elegir', [x['t'] for x in st['a']] == ['Reporte actual', 'Operativo', 'Gerencial', 'Directivo'] and st['a'][0]['on'] == 'true' and st['a'][0]['dis'] is None and all(x['on'] == 'false' and x['dis'] is None and not x['na'] for x in st['a'][1:]), st['a'])
         chk('S2 paso 2: 6 tipos; solo «Desempeño comercial» habilitado y elegido; los demás «Próximamente»', len(st['t']) == 6 and st['t'][0]['t'] == 'Desempeño comercial' and st['t'][0]['on'] == 'true' and all(x['dis'] == 'true' and x['na'] for x in st['t'][1:]), st['t'])
         chk('S3 paso 3: Resumen, Ejecutivo y Detallado; Detallado elegido', [x['t'] for x in st['d']] == ['Resumen', 'Ejecutivo', 'Detallado'] and [x['on'] for x in st['d']] == ['false', 'false', 'true'], st['d'])
         chk('S4 la línea «Se armará» resume la elección', 'Reporte actual' in st['sel'] and 'Desempeño comercial' in st['sel'] and 'Detallado' in st['sel'], st['sel'])
         # lo no habilitado no se puede elegir
         s0 = await q.evaluate("JSON.stringify([FP.app.state.rp.audience,FP.app.state.rp.type,FP.app.state.rp.depth])")
-        await q.click('#rp-s1 .rp-choice--off >> nth=0', force=True); await q.click('#rp-s2 .rp-choice--off >> nth=1', force=True); await q.wait_for_timeout(300)
+        await q.click('#rp-s2 .rp-choice--off >> nth=1', force=True); await q.wait_for_timeout(300)
         chk('S5 hacer clic en una opción no habilitada no cambia nada ni da error', await q.evaluate("JSON.stringify([FP.app.state.rp.audience,FP.app.state.rp.type,FP.app.state.rp.depth])") == s0 and not q._errs, q._errs)
         # ---- propuesta
         await generate(q); await q.wait_for_timeout(400)

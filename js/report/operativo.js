@@ -54,9 +54,10 @@
     { id: 'conversionRate', label: 'Conversión', fmt: 'pct2' }, { id: 'aov', label: 'Ticket promedio', fmt: 'money' }
   ];
   const cellOf = (b) => (b ? { actual: num(b.actual), plan: num(b.plan), gap: num(b.gap), gapPct: num(b.gapPct) } : { actual: null, plan: null, gap: null, gapPct: null });
+  /** Fila del periodo en una serie (anual, mes, semana o trimestre). */
+  const rowOf = (S, per) => (!S ? null : per.kind === 'year' ? S.annual : (S[per.coll] || []).find((r) => r.key === per.key) || null);
   function toDateOf(S, per) {
-    if (!S) return null;
-    const row = per.kind === 'year' ? S.annual : (S[per.coll] || []).find((r) => r.key === per.key);
+    const row = rowOf(S, per);
     return row && row.toDate ? { td: row.toDate, counted: num(row.countedDays) } : null;
   }
   const NAME = { conversionRate: () => 'conversión', aov: () => 'ticket', orders: () => 'pedidos', trafficVolume: (row) => String(row.noun || 'volumen').toLowerCase() };
@@ -246,5 +247,5 @@
   FP.reportBlocks.register('funnel', funnel);
   FP.reportBlocks.register('actions', actions);
 
-  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, rangeOf, toDateOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
+  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, rangeOf, rowOf, toDateOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
 })(typeof window !== 'undefined' ? window : globalThis);
