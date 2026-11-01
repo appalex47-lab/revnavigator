@@ -31,6 +31,7 @@
     const d = state.dx.settings;
     const y = state.year;
     if (d.periodType === 'year') return [[String(y), `Año ${y}`]];
+    if (d.periodType === 'quarter') return [1, 2, 3, 4].map((q) => [`${y}-Q${q}`, `Q${q} ${y} (${MONTHS[(q - 1) * 3].slice(0, 3).toLowerCase()}–${MONTHS[q * 3 - 1].slice(0, 3).toLowerCase()})`]);
     if (d.periodType === 'month') return MONTHS.map((m, i) => [`${y}-${String(i + 1).padStart(2, '0')}`, `${m} ${y}`]);
     const run = state.fc.run;
     const weeks = run ? run.total.weeks.map((w) => [w.key, `${w.key} (${w.weekStart} a ${w.weekEnd})`]) : [];
@@ -57,14 +58,14 @@
     const methOpts = Object.entries(cfg.attributionMethods);
     // Chips de filtros activos: se leen de los mismos valores y listas que los selectores (no hay otra fuente)
     const lab = (opts, cur) => { const o = opts.find(([v]) => String(v) === String(cur)); return o ? o[1] : String(cur); };
-    const chips = [['Comparación', lab(cmpOpts, d.comparison)], ['Periodo', `${lab([['month', 'Mes'], ['week', 'Semana'], ['year', 'Año']], d.periodType)} · ${lab(keyOpts, d.periodKey)}`],
+    const chips = [['Comparación', lab(cmpOpts, d.comparison)], ['Periodo', `${lab([['month', 'Mes'], ['week', 'Semana'], ['quarter', 'Q'], ['year', 'Año']], d.periodType)} · ${lab(keyOpts, d.periodKey)}`],
       ['Canal', lab(chOpts, d.channel)], ['Métrica', lab(metOpts, d.metric)], ['Método', lab(methOpts, d.method)]];
     $('dx-controls').innerHTML = `
       <details class="disclosure dx-filters" id="dx-filters"${filtersAreOpen() ? ' open' : ''}>
         <summary><span>Filtros</span><span class="dx-filters__chips" aria-label="Filtros activos">${chips.map(([k, v]) => `<span class="ds-badge" data-chip="${esc(k)}"><span class="dx-filters__k">${esc(k)}:</span> ${esc(v)}</span>`).join('')}</span></summary>
       <div class="filters">
         ${sel('dx-cmp', 'comparison', cmpOpts, d.comparison, 'Comparación')}
-        <div class="field"><span class="field__hint">Periodo</span>${H().segmented('dx-period-type', [['month', 'Mes'], ['week', 'Semana'], ['year', 'Año']], d.periodType)}</div>
+        <div class="field"><span class="field__hint">Periodo</span>${H().segmented('dx-period-type', [['month', 'Mes'], ['week', 'Semana'], ['quarter', 'Q'], ['year', 'Año']], d.periodType)}</div>
         ${sel('dx-key', 'periodKey', keyOpts, d.periodKey, 'Cuál')}
         ${sel('dx-ch', 'channel', chOpts, d.channel, 'Canal')}
         ${sel('dx-metric', 'metric', metOpts, d.metric, 'Métrica')}

@@ -52,7 +52,7 @@ async def main():
         c, q, u = await fresh(b, dt.datetime(2026, 10, 1, 9, 0)); q.on('pageerror', lambda e: errs.append(str(e)))
         await q.goto(u + '#narrativa'); await q.wait_for_timeout(900)
         ctl = await q.evaluate("[!!document.getElementById('nx-key'), !!document.getElementById('nx-ch'), document.querySelectorAll('#nx-controls [data-action=\"dx-period-type\"]').length, document.querySelector('label[for=\"nx-key\"]').innerText, document.querySelector('label[for=\"nx-ch\"]').innerText]")
-        chk('P-2 la Narrativa tiene sus propios controles: periodo (mes, semana, año), «Cuál» y «Canal», con etiqueta', ctl == [True, True, 3, 'Cuál', 'Canal'], ctl)
+        chk('P-2 la Narrativa tiene sus propios controles: periodo (mes, semana, Q, año), «Cuál» y «Canal», con etiqueta', ctl == [True, True, 4, 'Cuál', 'Canal'], ctl)
         await q.select_option('#nx-ch', 'app'); await q.wait_for_timeout(700)
         await q.click('#nx-controls [data-action="dx-period-type"][data-value="year"]'); await q.wait_for_timeout(900)
         n2 = await q.evaluate("[document.getElementById('nx-controls').innerText.replace(/\\s+/g,' '), FP.app.state.dx.settings.channel, FP.app.state.dx.settings.periodType, FP.app.state.nx.narrative && FP.app.state.nx.narrative.channel.id]")
@@ -69,7 +69,7 @@ async def main():
             except Exception: pass
         await q.goto(u + '#paquete'); await q.wait_for_timeout(900)
         has = await q.evaluate("[!!document.getElementById('pkg-key'), !!document.getElementById('pkg-ch'), document.querySelectorAll('#package-view [data-action=\"pkg-context\"][data-key=\"periodType\"]').length, document.getElementById('pkg-key').value]")
-        chk('P-3 la página del paquete trae periodo, «Cuál» y «Canal», y arranca en el último mes con venta real', has == [True, True, 3, '2026-09'], has)
+        chk('P-3 la página del paquete trae periodo, «Cuál» y «Canal», y arranca en el último mes con venta real', has == [True, True, 4, '2026-09'], has)
         await q.select_option('#pkg-ch', 'app'); await q.wait_for_timeout(600)
         await q.select_option('#pkg-key', '2026-08'); await q.wait_for_timeout(800)
         st = await q.evaluate("({dx:[FP.app.state.dx.settings.channel,FP.app.state.dx.settings.periodKey], rc:[FP.app.state.rc.settings.channel,FP.app.state.rc.settings.periodKey], pa:[FP.app.state.pa.channel,FP.app.state.pa.from,FP.app.state.pa.to]})")

@@ -28,7 +28,7 @@ let m = inc('movers', { minus: [{ type: 'Palanca', name: 'AOV', value: -74174 },
 t('movers: prefiere canal', T(m, rep(m)) === 'Ecommerce es lo que más resta y WhatsApp lo que más suma', T(m, rep(m)));
 m = inc('movers', { minus: [], plus: [] }); t('movers vacío: neutro', T(m, rep(m)) === null);
 let tr = inc('trends', { kpis: [{ id: 'drag', value: -13239 }, { id: 'comp', value: 0 }], tables: [{ rows: [{ entity: 'Theta Cae' }] }] });
-t('evolución: caída sin compensación', T(tr, rep(tr)) === 'Theta Cae concentra la mayor caída (total −$13.2K); nada suma de forma medible', T(tr, rep(tr)));
+t('evolución: caída sin compensación', T(tr, rep(tr)) === 'Theta Cae concentra la mayor caída (total −$13.2K)', T(tr, rep(tr)));
 let ca = inc('categories', { charts: [{ items: [{ label: 'Cardio', value: -7840 }, { label: 'Diabetes', value: -3189 }] }] });
 t('categorías: mayor descenso', T(ca, rep(ca)) === 'Cardio concentra el mayor descenso (−$7.8K)', T(ca, rep(ca)));
 let cu = inc('customers', { lapsed: { count: 12, base: 50, month: '2026-09' } }); t('clientes: no regresaron', /^12 de 50 clientes del mes anterior/.test(T(cu, rep(cu)) || ''), T(cu, rep(cu)));

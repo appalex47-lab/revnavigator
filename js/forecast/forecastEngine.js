@@ -166,6 +166,9 @@
     return [...groups.entries()].map(([key, list]) => ({ key, ...P().summarizePeriod(list, cutoff) }));
   }
 
+  /** Clave del Q de una fila diaria (año-Qn, año fiscal = calendario). */
+  const quarterOf = (r) => `${r.month.slice(0, 4)}-Q${Math.ceil(+r.month.slice(5, 7) / 3)}`;
+
   function dayView(r, cfg) {
     const pacing = r.counted ? P().blockGap(r.plan, r.actual) : null;
     let status;
@@ -185,13 +188,14 @@
     P().accumulate(days);
     const annual = P().summarizePeriod(days, cutoff);
     const months = groupSummaries(days, (r) => r.month, cutoff);
+    const quarters = groupSummaries(days, quarterOf, cutoff);
     const weeks = groupSummaries(days, (r) => r.weekKey, cutoff).map((w) => {
       const wi = Cal().getCalendarDay(w.firstDate);
       return { ...w, weekStart: wi.weekStart, weekEnd: wi.weekEnd, crossesMonths: w.firstDate.slice(0, 7) !== w.lastDate.slice(0, 7) };
     });
     const confidence = forecastConfidence(methodId, mi, rows);
     return {
-      days, months, weeks, annual, indices, confidence, historyAdequacy: historyAdequacy(confidence),
+      days, months, quarters, weeks, annual, indices, confidence, historyAdequacy: historyAdequacy(confidence),
       assumptions: FM().describeAssumptions(methodId, mi, cfg),
       projectedDays: proj.filter((p) => p.source !== 'actual').length,
       fallbackDays: proj.filter((p) => p.fallback).length,
@@ -347,6 +351,7 @@
       days: totalDays,
       annual: totalAnnual,
       months: groupSummaries(totalDays, (r) => r.month, cutoff),
+      quarters: groupSummaries(totalDays, quarterOf, cutoff),
       weeks: groupSummaries(totalDays, (r) => r.weekKey, cutoff).map((w) => {
         const wi = Cal().getCalendarDay(w.firstDate);
         return { ...w, weekStart: wi.weekStart, weekEnd: wi.weekEnd, crossesMonths: w.firstDate.slice(0, 7) !== w.lastDate.slice(0, 7) };

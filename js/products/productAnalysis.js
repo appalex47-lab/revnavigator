@@ -31,7 +31,7 @@
    */
   function calendarType(from, to, periodType) {
     const TE = FP.temporalEngine; if (!TE) return null;
-    const types = periodType && ['year', 'month', 'week'].includes(periodType) ? [periodType] : ['year', 'month'];
+    const types = periodType && ['year', 'quarter', 'month', 'week'].includes(periodType) ? [periodType] : ['year', 'month'];
     for (const t of types) {
       if (from !== TE.startOf(from, t)) continue;
       const end = TE.endOf(from, t);
@@ -48,7 +48,7 @@
     }
     if (cal) {
       const r = TE.shiftRange({ from, to }, cal.t, -1, cal.partial);
-      const nm = { year: 'año anterior', month: 'mes anterior', week: 'semana anterior' }[cal.t];
+      const nm = { year: 'año anterior', quarter: 'Q anterior', month: 'mes anterior', week: 'semana anterior' }[cal.t];
       return { from: r.from, to: r.to, label: cal.partial ? `${nm} (mismos días)` : nm, calendar: cal.t };
     }
     const n = daysBetween(from, to);

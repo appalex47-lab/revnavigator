@@ -26,6 +26,13 @@ async def main():
         chk('PR-2 genera el reporte: portada, resumen, pacing, confiabilidad y anexo', st['s'] == 'ready' and st['ids'][:2] == ['cover', 'summary'] and 'reliability' in st['ids'] and 'closing' in st['ids'] and 'annex' in st['ids'], st)
         chk('PR-3 toda página omitida trae su motivo', all(r for _, r in st['om']), st['om'])
         chk('PR-4 la vista previa dibuja las páginas del reporte', st['n'] >= 5, st)
+        # Etapa 1: rezago visible en el resumen, lámina de decisiones y títulos balanceados
+        lag = await q.evaluate("(()=>{const r=FP.app.state.rp.report,sm=r.pages.find(p=>p.id==='summary'),c=r.context;return {lag:sm&&sm.lag,cut:c.cutoff,chip:(document.querySelector('#view-presentacion .rp-lag')||{innerText:''}).innerText}})()")
+        chk('PR-12 si la venta real llega antes del corte, el resumen lo dice en un aviso visible', (not lag['lag']) or ('Venta real hasta el' in lag['chip'] and str(lag['lag']['days']) in lag['chip']), lag)
+        dec = await q.evaluate("(()=>{const r=FP.app.state.rp.report,d=r.pages.find(p=>p.id==='decisions'),ids=r.included;return {st:d&&d.status,rows:d&&d.rows,order:ids.indexOf('decisions')-ids.indexOf('closing'),dom:document.querySelectorAll('#view-presentacion .rp-t--dec tbody tr').length}})()")
+        chk('PR-13 hay lámina de decisiones justo después del cierre, con responsable por asignar', dec['st'] == 'included' and dec['order'] == 1 and len(dec['rows']) >= 2 and all(r['who'] == 'Por asignar' and r['what'] and r['why'] for r in dec['rows']) and dec['dom'] == len(dec['rows']), dec)
+        tw = await q.evaluate("getComputedStyle(document.querySelector('#view-presentacion .rp-title')).textWrap")
+        chk('PR-14b los títulos usan reparto balanceado (sin palabras sueltas)', 'balance' in tw, tw)
         # desborde y tamaño mínimo de letra en cada página
         await q.evaluate("FP.reportView.mountPrint(FP.app.state.rp.report,{exclude:[],tags:true})"); await q.emulate_media(media='print')
         ov = await q.evaluate("[...document.querySelectorAll('#rp-print-host .rp-page')].map((p,i)=>{const b=p.querySelector('.rp-body');return b&&b.scrollHeight>b.clientHeight+1?i+1:0}).filter(Boolean)")

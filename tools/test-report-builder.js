@@ -4,6 +4,21 @@ const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Ma
 ctx.FP = { config: { currency: 'MXN', confidenceLabels: { excellent: 'Excelente', sufficient: 'Suficiente', limited: 'Limitada', insufficient: 'Insuficiente' } } };
 ['js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const RB = ctx.FP.reportBuilder; let bad = 0;
+/* Línea base del armador (Presentation Intelligence · Fase 0): con RB_GOLDEN_OUT=<archivo> se registra, por cada llamada a build(), la huella de cada página
+   (id, estado, título, titular y SHA-256 de su contenido canónico). No cambia nada del comportamiento de la prueba. Lo usa tools/test-report-golden.js. */
+if (process.env.RB_GOLDEN_OUT) {
+  const crypto = require('crypto'), orig = RB.build, rec = [];
+  const canon = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => { o[kk] = x[kk]; return o; }, {}) : x));
+  RB.build = function (src) {
+    const r = orig.apply(this, arguments);
+    rec.push({ n: rec.length, schema: r.schema + '@' + r.schemaVersion, included: r.included, omitted: r.omitted.map((o) => [o.id, o.reason]), total: r.total,
+      pages: r.pages.map((p) => ({ id: p.id, status: p.status, title: p.title, headline: p.headline || null, sha: crypto.createHash('sha256').update(canon(p)).digest('hex').slice(0, 16) })) });
+    return r;
+  };
+  const full = [];
+  const build2 = RB.build; RB.build = function (src) { const r = build2.apply(this, arguments); if (process.env.RB_REPORTS_OUT) full.push(JSON.parse(JSON.stringify(r))); return r; };
+  process.on('exit', () => { fs.writeFileSync(process.env.RB_GOLDEN_OUT, JSON.stringify(rec)); if (process.env.RB_REPORTS_OUT) fs.writeFileSync(process.env.RB_REPORTS_OUT, JSON.stringify(full)); });
+}
 const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const blk = (rev) => ({ revenue: rev, orders: null, trafficVolume: null, conversionRate: null, aov: null });
 const toDate = (actual, plan) => ({ revenue: { plan, actual, gap: actual !== null && plan !== null ? actual - plan : null, gapPct: actual !== null && plan ? (actual - plan) / plan : null, compliance: actual !== null && plan ? actual / plan : null } });

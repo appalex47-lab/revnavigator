@@ -13,11 +13,11 @@
   const daysIn = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const add = (date, type, n) => {
     const x = d(date); if (!x) return null;
-    if (type === 'year' || type === 'month') {
+    if (type === 'year' || type === 'month' || type === 'quarter') {
       // Mueve el mes/año conservando el día, acotado al último día del mes destino
       // (31-mar − 1 mes = 28/29-feb; 29-feb − 1 año = 28-feb). Sin el acotado JS desborda a marzo.
       const day = x.getUTCDate(); x.setUTCDate(1);
-      if (type === 'year') x.setUTCFullYear(x.getUTCFullYear() + n); else x.setUTCMonth(x.getUTCMonth() + n);
+      if (type === 'year') x.setUTCFullYear(x.getUTCFullYear() + n); else x.setUTCMonth(x.getUTCMonth() + (type === 'quarter' ? 3 * n : n));
       x.setUTCDate(Math.min(day, daysIn(x.getUTCFullYear(), x.getUTCMonth())));
     }
     else if (type === 'week') x.setUTCDate(x.getUTCDate() + n * 7);
@@ -28,6 +28,7 @@
     const x = d(date); if (!x) return null;
     if (type === 'year') x.setUTCMonth(0, 1);
     else if (type === 'month') x.setUTCDate(1);
+    else if (type === 'quarter') x.setUTCMonth(Math.floor(x.getUTCMonth() / 3) * 3, 1);
     else if (type === 'week') return add(date, 'day', 1 - (Cal().getDateAttributes(date).dayOfWeekIndex || 1));
     return iso(x);
   }
@@ -35,6 +36,7 @@
     const x = d(date); if (!x) return null;
     if (type === 'year') x.setUTCMonth(11, 31);
     else if (type === 'month') { x.setUTCMonth(x.getUTCMonth() + 1, 0); }
+    else if (type === 'quarter') { x.setUTCMonth(Math.floor(x.getUTCMonth() / 3) * 3 + 3, 0); }
     else if (type === 'week') return add(startOf(date, 'week'), 'day', 6);
     return iso(x);
   }
@@ -43,6 +45,7 @@
     if (!key) return null;
     if (type === 'year') return { from: `${key}-01-01`, to: `${key}-12-31`, key };
     if (type === 'month') return { from: `${key}-01`, to: endOf(`${key}-01`, 'month'), key };
+    if (type === 'quarter') { const r = Cal().quarterRange(key); return r ? { from: r.from, to: r.to, key } : null; }
     if (type === 'week') {
       const ymd = key.includes('-W') ? (() => {
         const [y, w] = key.split('-W').map(Number);
@@ -61,7 +64,7 @@
   }
   function focusRange(type, key, maxDate) { return clampRange(rangeForKey(key, type), maxDate); }
   const spanDays = (r) => Math.round((d(r.to) - d(r.from)) / 86400000);
-  const isFullPeriod = (range, type) => ['year', 'month', 'week'].includes(type) && range.from === startOf(range.from, type) && range.to === endOf(range.from, type);
+  const isFullPeriod = (range, type) => ['year', 'quarter', 'month', 'week'].includes(type) && range.from === startOf(range.from, type) && range.to === endOf(range.from, type);
   /**
    * Desplaza un rango n períodos de `type`.
    *  - Rango = período completo  → devuelve el período completo destino (Mar 1–31 −1 mes = Feb 1–28).
@@ -75,7 +78,7 @@
     let to, truncated = false;
     if (preserveDuration) {
       to = add(from, 'day', Math.max(0, spanDays(range)));
-      if (['year', 'month', 'week'].includes(type)) { const cap = endOf(from, type); if (to > cap) { to = cap; truncated = true; } }
+      if (['year', 'quarter', 'month', 'week'].includes(type)) { const cap = endOf(from, type); if (to > cap) { to = cap; truncated = true; } }
     } else if (isFullPeriod(range, type)) to = endOf(from, type);
     else to = add(range.to, type, n);
     return { from, to, key: periodKey(from, type), partial: false, truncated };
@@ -86,6 +89,7 @@
     const prev = shiftRange(current, type, -1, sameDuration);
     const yoy = shiftRange(current, 'year', -1, sameDuration);
     if (type === 'year') out.push({ id: 'yoy', label: 'Año anterior (YoY)', range: prev });
+    else if (type === 'quarter') out.push({ id: 'qoq', label: 'Q anterior (QoQ)', range: prev }, { id: 'yoy', label: 'Mismo Q año anterior (YoY)', range: yoy });
     else if (type === 'month') out.push({ id: 'mom', label: 'Mes anterior (MoM)', range: prev }, { id: 'yoy', label: 'Mismo mes año anterior (YoY)', range: yoy });
     else if (type === 'week') out.push({ id: 'wow', label: 'Semana anterior (WoW)', range: prev }, { id: 'yoy', label: 'Misma semana año anterior (YoY)', range: yoy });
     else if (type === 'day') out.push({ id: 'dod', label: 'Día anterior (DoD)', range: shiftRange(current, 'day', -1) }, { id: 'wow', label: 'Mismo día semana anterior (WoW)', range: shiftRange(current, 'day', -7) }, { id: 'yoy', label: 'Mismo día año anterior (YoY)', range: shiftRange(current, 'year', -1) });

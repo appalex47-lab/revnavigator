@@ -338,7 +338,8 @@
     const band = p.focus ? `<div class="rp-since">${p.focus.spark ? `<div class="rp-since__g">${focusSpark(p.focus.spark)}<div class="rp-since__k"><i class="k1"></i>${esc(p.focus.entity)} <i class="k2"></i>Resto del negocio</div></div>` : ''}<div class="rp-since__t">${esc(p.focus.text)}</div></div>` : '';
     const boldNum = (t) => esc(t).replace(/(\$[\d.,]+[MK]?|[+−-]?\d+(?:\.\d+)? ?%)/g, '<b>$1</b>');
     const mv = p.movers ? movCard(p.movers) : '';
-    return `<div class="rp-sm"><div class="rp-sm__l">${p.narrative ? `<p class="rp-lead">${boldNum(p.narrative)}</p>` : ''}${band}${p.filterStrip ? `<p class="rp-yr rp-yr--f">${esc(p.filterStrip)}</p>` : ''}</div>
+    const lag = p.lag ? `<p class="rp-lag"><span class="rp-chip rp-chip--w">Venta real hasta el ${esc(p.lag.last)} · faltan ${p.lag.days} ${p.lag.days === 1 ? 'día' : 'días'} del corte</span></p>` : '';
+    return `<div class="rp-sm"><div class="rp-sm__l">${lag}${p.narrative ? `<p class="rp-lead">${boldNum(p.narrative)}</p>` : ''}${band}${p.filterStrip ? `<p class="rp-yr rp-yr--f">${esc(p.filterStrip)}</p>` : ''}</div>
       <div class="rp-sm__r"><ol class="rp-finds rp-finds--stack">${cards}</ol>${mv}</div></div>
       ${p.yearStrip ? `<p class="rp-yr rp-yr--bottom"><span>En el año</span>${esc(p.yearStrip.replace(/^En el año \d{4}: ?/, ''))}</p>` : ''}
       ${p.review ? `<div class="rp-callout rp-callout--info"><strong>Qué revisar primero.</strong> ${esc(p.review.text)}</div>` : ''}`;
@@ -346,6 +347,9 @@
   const movCard = (m) => { const col = (arr, tone, ttl) => `<div class="rp-mc__c"><div class="rp-mc__t rp-mc__t--${tone}">${ttl}</div>${arr.map((i) => `<div class="rp-mc__r"><span><em>${esc(i.type)}</em> ${esc(i.name)}</span><b class="${tone === 'p' ? 'rp-pos' : 'rp-neg'}">${esc(fmt('smoneyC', i.value))}</b></div>`).join('') || '<div class="rp-mc__e">Nada medible</div>'}</div>`;
     return `<div class="rp-mc">${col(m.plus, 'p', 'Qué suma')}${col(m.minus, 'm', 'Qué resta')}</div>`; };
 
+  function decisionsBody(p) {
+    return `<div class="rp-dec"><table class="rp-t rp-t--dec"><thead><tr><th>Decisión</th><th>Por qué</th><th>Responsable</th><th>Cuándo</th></tr></thead><tbody>${(p.rows || []).map((r) => `<tr><td><b>${esc(r.what)}</b></td><td>${esc(r.why)}</td><td class="rp-pend">${esc(r.who)}</td><td>${esc(r.when)}</td></tr>`).join('')}</tbody></table><p class="rp-small">${esc(p.note || '')}</p></div>`;
+  }
   function closingBody(p, x) {
     const tx = dx;
     return `<div class="rp-close">${p.blocks.map((b, i) => `<section class="rp-cl rp-cl--${i + 1}"><h3 class="rp-cl__t">${esc(b.title)}</h3>${b.big ? `<div class="rp-cl__big">${esc(b.big)}</div><div class="rp-cl__u">${esc(b.unit)}</div>` : ''}${b.list ? `<ul class="rp-cl__list">${b.list.map((i) => `<li><span><em>${esc(i.type)}</em> ${esc(i.name)}</span><b class="${i.value < 0 ? 'rp-neg' : 'rp-pos'}">${esc(fmt('smoneyC', i.value))}</b></li>`).join('')}</ul>` : ''}${b.text ? `<p class="rp-cl__x">${esc(tx(b.text))}</p>` : ''}</section>`).join('')}</div>`;
@@ -363,25 +367,20 @@
         <div class="rp-col-h">${x.gapsPage ? T('Las brechas del reporte: qué mide cada una', [{ key: 'name', label: 'Brecha', kind: 'text' }, { key: 'what', label: 'Cómo se calcula', kind: 'text' }, { key: 'period', label: 'Período / horizonte', kind: 'text' }, { key: 'value', label: 'Valor', kind: 'smoney', num: true, tone: true }], x.gapsPage.gaps) + `<p class="rp-small">${esc(x.gapsPage.gapsNote || '')}</p>` : ''}${T('Páginas omitidas y motivo', [{ key: 'title', label: 'Página', kind: 'text' }, { key: 'reason', label: 'Motivo', kind: 'text' }], p.omitted.length ? p.omitted : [{ title: 'Ninguna', reason: 'Todas las páginas tuvieron datos suficientes.' }])}</div></div>`;
     }
     if (sub === 2) {
-      return `<div class="rp-row"><div class="rp-col-h">${T('Comparación completa de métodos (sensibilidad; el método elegido no cambia)', [{ key: 'method', label: 'Método', kind: 'text' }, { key: 'status', label: 'Datos', kind: 'text' }, { key: 'forecast', label: 'Cierre', kind: 'moneyC', num: true }, { key: 'gap', label: 'vs. meta', kind: 'smoney', num: true, tone: true }, { key: 'days', label: 'Días', kind: 'int', num: true }, { key: 'fallback', label: 'Fallback', kind: 'int', num: true }], p.methods)}
-        <p class="rp-small">${esc(p.methods.filter((m) => m.reasons).map((m) => `${m.method}: ${m.reasons}`).join(' · '))}</p>${x.relPage ? relBlock(x.relPage) : ''}</div>
+      return `<div class="rp-row"><div class="rp-col-h">${T('Comparación completa de métodos (sensibilidad; el método elegido no cambia)', [{ key: 'method', label: 'Método', kind: 'text' }, { key: 'status', label: 'Datos', kind: 'text' }, { key: 'forecast', label: 'Cierre', kind: 'moneyC', num: true }, { key: 'gap', label: 'vs. meta', kind: 'smoney', num: true, tone: true }, { key: 'days', label: 'Días', kind: 'int', num: true }, { key: 'fallback', label: 'Días con respaldo', kind: 'int', num: true }], p.methods)}
+        <p class="rp-small">${esc(p.methods.filter((m) => m.reasons).map((m) => `${m.method}: ${m.reasons}`).join(' · '))}</p></div>
         <div class="rp-col-h">${p.backtest.length ? T('Error histórico (WAPE a 7 días)', [{ key: 'method', label: 'Método', kind: 'text' }, { key: 'wape', label: 'Método', kind: 'pct', num: true }, { key: 'plan', label: 'Plan', kind: 'pct', num: true }], p.backtest) : ''}
-        <p class="rp-small">${esc(p.backtestNote)}</p>${T('Supuestos del forecast y del reporte', [{ key: 'item', label: 'Supuesto', kind: 'text' }, { key: 'value', label: 'Valor', kind: 'text' }], p.assumptions)}</div></div>`;
+        <p class="rp-small">${esc(p.backtestNote)}</p>${T('Supuestos del forecast y del reporte', [{ key: 'item', label: 'Supuesto', kind: 'text' }, { key: 'value', label: 'Valor', kind: 'text' }], p.assumptions)}${x.relPage ? relBlock(x.relPage) : ''}</div></div>`;
     }
     return `<div class="rp-row"><div class="rp-col-h"><div class="rp-tbl__t">Definiciones</div><dl class="rp-defs">${p.definitions.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>
       <div class="rp-col-h"><div class="rp-tbl__t">Limitaciones de interpretación</div><ul class="rp-notes rp-notes--l">${p.limits.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div></div>`;
   }
 
   /* ================= páginas, numeración e impresión ================= */
+  /** Láminas del PDF: las decide el compositor (FP.reportComposer) con el perfil vigente; con «legacy» son exactamente las de siempre. */
   function units(report, exclude) {
-    const ex = new Set(exclude || []), out = [];
-    const ORDER = ['cover', 'summary', 'pacing', 'drivers', 'movers', 'categories', 'trends', 'customers', 'traffic', 'campaigns', 'seasonality', 'recovery', 'closing', 'reliability', 'annex'], rank = (id) => { const i = ORDER.indexOf(id); return i < 0 ? ORDER.length : i; };   // solo el orden de lectura de la presentación; el reporte conserva el suyo
-    report.pages.filter((p) => p.status === 'included' && !p.annex && !ex.has(p.id)).map((p, i) => ({ p, i })).sort((a, b) => rank(a.p.id) - rank(b.p.id) || a.i - b.i).map((o) => o.p).forEach((p) => {
-      if (p.id === 'annex') [['Anexo técnico A · Calidad de datos y brechas', 1], ['Anexo técnico B · Métodos, backtest y confiabilidad', 2], ['Anexo técnico C · Definiciones y límites', 3]].forEach(([t, s]) => out.push({ id: 'annex', sub: s, title: t, page: p }));
-      else out.push({ id: p.id, title: p.title, page: p });
-    });
-    out.forEach((u, i) => { u.number = i + 1; });
-    return out;
+    if (!FP.reportComposer) throw new Error('FP.reportComposer no está cargado (js/report/composer.js).');
+    return FP.reportComposer.units(report, exclude);
   }
   const dateOf = (iso) => fmt('date', iso);
   /** Evolución: «se muestran los 2 productos que más restan y los 2 que más suman; en total restan N y suman M». Los totales son los reales del análisis, no las filas visibles. */
@@ -392,8 +391,8 @@
     const all = [by.drag ? `${by.drag.dataset.all} ${+by.drag.dataset.all === 1 ? 'resta' : 'restan'}` : null, by.comp ? `${by.comp.dataset.all} ${+by.comp.dataset.all === 1 ? 'suma' : 'suman'}` : null].filter(Boolean).join(' y ');
     return `Esta lámina muestra ${shown}; en total, ${all}.`;
   };
-  const TITLES = { movers: 'Qué resta y qué suma', summary: 'Resumen ejecutivo', pacing: 'Desempeño contra el plan y proyección de cierre', drivers: 'Qué explica la diferencia: tráfico, conversión y ticket', trends: 'Evolución: qué cae y qué compensa', categories: 'Categorías y productos: dónde se concentra el cambio', customers: 'Clientes, recurrencia y valor', traffic: 'Tráfico y conversión por segmento', recovery: 'Recuperación: lo que falta para la meta', seasonality: 'Estacionalidad y meta del siguiente año', closing: 'Cierre ejecutivo | Qué nos llevamos de este periodo' };
-  const SECTION = { summary: 'Resumen ejecutivo', pacing: 'Desempeño comercial', drivers: 'Qué explica la diferencia', movers: 'Qué suma y qué resta', trends: 'Evolución y movimientos', categories: 'Categorías y productos', customers: 'Clientes y recurrencia', traffic: 'Tráfico y conversión', campaigns: 'Campañas', recovery: 'Recuperación y prioridades', closing: 'Cierre ejecutivo', reliability: 'Método y confiabilidad', seasonality: 'Estacionalidad' };
+  const TITLES = { movers: 'Qué resta y qué suma', summary: 'Resumen ejecutivo', pacing: 'Desempeño contra el plan y proyección de cierre', drivers: 'Qué explica la diferencia: tráfico, conversión y ticket', trends: 'Evolución: qué cae y qué compensa', categories: 'Categorías y productos: dónde se concentra el cambio', customers: 'Clientes, recurrencia y valor', traffic: 'Tráfico y conversión por segmento', recovery: 'Recuperación: lo que falta para la meta', seasonality: 'Estacionalidad y meta del siguiente año', closing: 'Cierre ejecutivo | Qué nos llevamos de este periodo', decisions: 'Decisiones: qué hacemos con esto' };
+  const SECTION = { summary: 'Resumen ejecutivo', pacing: 'Desempeño comercial', drivers: 'Qué explica la diferencia', movers: 'Qué suma y qué resta', trends: 'Evolución y movimientos', categories: 'Categorías y productos', customers: 'Clientes y recurrencia', traffic: 'Tráfico y conversión', campaigns: 'Campañas', recovery: 'Recuperación y prioridades', closing: 'Cierre ejecutivo', decisions: 'Decisiones', reliability: 'Método y confiabilidad', seasonality: 'Estacionalidad' };
   const DECO = '<svg class="rp-deco" width="640" height="420" viewBox="0 0 640 420" aria-hidden="true"><g fill="#fff" opacity=".10"><rect x="330" y="250" width="34" height="170"/><rect x="380" y="210" width="34" height="210"/><rect x="430" y="165" width="34" height="255"/><rect x="480" y="120" width="34" height="300"/><rect x="530" y="70" width="34" height="350"/><rect x="580" y="20" width="34" height="400"/></g><g fill="none" stroke="#8DB6E8" stroke-width="2.5" opacity=".55"><path d="M0 330 L90 290 L180 308 L270 230 L360 250 L450 160 L540 150 L640 60"/></g><circle cx="640" cy="60" r="7" fill="#8DB6E8" opacity=".8"/></svg>';
   /** Fondo de portada elegido en la marca: sin marca (o «Gráfica ascendente») queda el dibujo de siempre. */
   function brandCover() { const b = FP.brand && FP.brand.active && FP.brand.active(); return b && b.main ? b : null; }
@@ -417,7 +416,7 @@
         <div class="rp-cover__eyebrow">Reporte ejecutivo</div><h1 class="rp-cover__title">${esc(p.headline)}</h1><div class="rp-cover__rule"></div><p class="rp-cover__sub">${esc([per, p.businessName].filter(Boolean).join(' · '))}</p>
         <dl class="rp-cover__meta"><div><dt>Período analizado</dt><dd>${esc(per)}</dd></div><div><dt>Fecha de corte</dt><dd>${esc(x.cutoff)}</dd></div>${x.lastActual ? `<div><dt>Venta real hasta</dt><dd>${esc(x.lastActual)}</dd></div>` : ''}<div><dt>Alcance</dt><dd>${esc(p.scope || x.channelLabel)}</dd></div>${p.filterLabel ? `<div><dt>Filtro</dt><dd>${esc(p.filterLabel)}</dd></div>` : ''}</dl>${p.filterNote ? `<p class="rp-cover__note">${esc(p.filterNote)}</p>` : ''}</div>${brandLogo() ? '<div class="rp-cover__by">RevNavigator</div>' : ''}</section>`;
     }
-    const body = u.id === 'summary' ? summaryBody(p, x) : u.id === 'closing' ? closingBody(p, x) : u.id === 'annex' ? annexBody(p, x, u.sub) : (BODY[u.id] ? BODY[u.id](p, x) : '');
+    const body = u.id === 'summary' ? summaryBody(p, x) : u.id === 'closing' ? closingBody(p, x) : u.id === 'decisions' ? decisionsBody(p) : u.id === 'annex' ? annexBody(p, x, u.sub) : (BODY[u.id] ? BODY[u.id](p, x) : '');
     const concl = u.id === 'annex' || !FP.reportCopy ? null : FP.reportCopy.title(p, x.report);   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');

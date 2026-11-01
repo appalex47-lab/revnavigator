@@ -338,3 +338,12 @@
 
 .rp-t .rp-rest td { font-style:italic; color:var(--muted,#6b7a90); border-top:1px dashed var(--line); }
 .rp-t .rp-rest-total td { font-weight:700; border-top:1.5px solid var(--navy); }
+
+/* Etapa 1 · mejoras de la presentación: rezago visible, decisiones y títulos sin palabras sueltas */
+.rp-title { text-wrap:balance; }
+.rp-lag { margin:0 0 8px; flex:none; }
+.rp-chip--w { background:#FFF1E0; color:#9A5B00; }
+.rp-dec { padding-top:6px; }
+.rp-t--dec th, .rp-t--dec td { font-size:16px; padding:11px 8px; }
+.rp-t--dec td b { font-size:17px; }
+.rp-pend { color:#8a94a6; font-style:italic; }

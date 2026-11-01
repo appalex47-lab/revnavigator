@@ -69,6 +69,11 @@
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     return m ? `${m[3]} ${MONTHS[+m[2] - 1].toLowerCase()} ${m[1]}` : NA;
   }
+  /** Rezago: la venta real llega antes del corte (null si está al día). */
+  function lagOf(s) {
+    if (!(s.lastActual && s.run && s.run.cutoff && s.lastActual < s.run.cutoff)) return null;
+    return { last: dateLabel(s.lastActual), cutoff: dateLabel(s.run.cutoff), days: Math.max(1, Math.round((Date.parse(s.run.cutoff) - Date.parse(s.lastActual)) / 86400000)) };
+  }
   function dateTimeLabel(iso) {
     const d = new Date(iso); if (!iso || isNaN(d)) return NA;
     const p = (n) => String(n).padStart(2, '0');
@@ -78,7 +83,7 @@
   const dShort = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? `${m[3]} ${MONTHS[+m[2] - 1].toLowerCase()}` : NA; };
   const rangeLabel = (a, b) => (!a || !b ? null : a === b ? dateLabel(a) : `${dShort(a)} – ${dateLabel(b)}`);
   const addDay = (iso, n) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); if (!m) return null; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + n)); return d.toISOString().slice(0, 10); };
-  const periodEnd = (per) => { if (!per) return null; if (per.type === 'year') return `${per.key}-12-31`; if (per.type === 'month' && /^\d{4}-\d{2}$/.test(per.key || '')) { const [y, m] = per.key.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10); } return null; };
+  const periodEnd = (per) => { if (!per) return null; if (per.type === 'year') return `${per.key}-12-31`; if (per.type === 'quarter') { const q = FP.calendar.quarterRange(per.key); return q ? q.to : null; } if (per.type === 'month' && /^\d{4}-\d{2}$/.test(per.key || '')) { const [y, m] = per.key.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10); } return null; };
   const FMT = { smoneyC, pct2, text: (v) => (v === null || v === undefined || v === '' ? NA : String(v)), money, moneyC, smoney: smoneyExact, pct, spct, int, num2, pp, date: dateLabel };
   const fmt = (kind, v) => (FMT[kind] || FMT.text)(v);
   const chLabel = (id) => CH_LABEL[id] || id || NA;
@@ -99,16 +104,20 @@
   const MONTH_FULL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const monthName = (key) => {
     let m = /^(\d{4})-(\d{2})$/.exec(key || ''); if (m) return `${MONTH_FULL[+m[2] - 1][0].toUpperCase()}${MONTH_FULL[+m[2] - 1].slice(1)} ${m[1]}`;
-    m = /^(\d{4})-W(\d{2})$/.exec(key || ''); return m ? `Semana ${+m[2]} de ${m[1]}` : null;
+    m = /^(\d{4})-W(\d{2})$/.exec(key || ''); if (m) return `Semana ${+m[2]} de ${m[1]}`;
+    m = /^(\d{4})-Q([1-4])$/.exec(key || ''); return m ? `Q${m[2]} ${m[1]}` : null;
   };
   const isWeekKey = (k) => /^\d{4}-W\d{2}$/.test(k || '');
+  const isQKey = (k) => /^\d{4}-Q[1-4]$/.test(k || '');
+  /** Cómo se dice el periodo dentro de una frase: «la semana», «el mes», «el Q3»; con «de»: «de la semana», «del mes», «del Q3». */
+  const theOf = (k) => (isWeekKey(k) ? { the: 'la semana', of: 'de la semana' } : isQKey(k) ? { the: `el Q${k.slice(6)}`, of: `del Q${k.slice(6)}` } : { the: 'el mes', of: 'del mes' });
   /** «septiembre» / «la semana 41»: cómo se nombra el período dentro de una frase. */
-  const periodLow = (key) => (isWeekKey(key) ? `la semana ${+key.slice(6)}` : (monthName(key) || '').split(' ')[0].toLowerCase());
+  const periodLow = (key) => (isWeekKey(key) ? `la semana ${+key.slice(6)}` : isQKey(key) ? monthName(key) : (monthName(key) || '').split(' ')[0].toLowerCase());
   /** Clave del mes (AAAA-MM) o la semana (AAAA-Wnn) seleccionada si el forecast la cubre; si no (año o fuera del año del forecast), null y el reporte usa la lectura anual. */
   function selMonth(s) {
     const sel = s.selection, S = series(s.run, s.channel);
     if (!sel || !S) return null;
-    const coll = sel.periodType === 'month' && /^\d{4}-\d{2}$/.test(sel.periodKey || '') ? 'months' : sel.periodType === 'week' && isWeekKey(sel.periodKey) ? 'weeks' : null;
+    const coll = sel.periodType === 'month' && /^\d{4}-\d{2}$/.test(sel.periodKey || '') ? 'months' : sel.periodType === 'week' && isWeekKey(sel.periodKey) ? 'weeks' : sel.periodType === 'quarter' && isQKey(sel.periodKey) ? 'quarters' : null;
     if (!coll || !Array.isArray(S[coll])) return null;
     return S[coll].some((m) => m.key === sel.periodKey) ? sel.periodKey : null;
   }
@@ -124,14 +133,14 @@
     const filters = (s.filters || []).filter((f) => f && f.label);
     // Título editorial según canal y período: mes cerrado → resultados; mes abierto → avance y cierre estimado; semana; año acumulado.
     const sm = selMonth(s), subj = s.channel === 'total' || !s.channel ? 'Ventas digitales' : `Ventas de ${chLabel(s.channel)}`;
-    const cutoff = run && run.cutoff, mEnd = sm && !isWeekKey(sm) ? periodEnd({ type: 'month', key: sm }) : null;
+    const cutoff = run && run.cutoff, mEnd = sm && !isWeekKey(sm) ? periodEnd({ type: isQKey(sm) ? 'quarter' : 'month', key: sm }) : null;
     // «al corte» solo cuando el período aún no está completo: mes cerrado → solo el mes; mes abierto o semana → al corte; año completo → solo el año; año con meses sin cerrar o días sin dato → al corte.
     const AN = (series(run, s.channel) || {}).annual, yEnd = run && run.year ? `${run.year}-12-31` : null;
     const yearOpen = Boolean(cutoff && yEnd && cutoff < yEnd) || Boolean(AN && isNum(AN.missingActualDays) && AN.missingActualDays > 0);
     const wkRow = sm && isWeekKey(sm) ? ((series(run, s.channel) || {}).weeks || []).find((w) => w.key === sm) : null;
     const wEnd = wkRow ? (wkRow.weekEnd || wkRow.lastDate || null) : null;
     const closed = sm ? (isWeekKey(sm) ? Boolean(cutoff && wEnd && cutoff >= wEnd) : Boolean(cutoff && mEnd && cutoff >= mEnd)) : false;
-    const headline = sm ? (closed ? `${subj}: ${(monthName(sm) || '').toLowerCase()}` : (isWeekKey(sm) ? `${subj}: acumulado de ${periodLow(sm)} al corte` : `${subj}: acumulado de ${periodLow(sm)} al corte y cierre estimado`))
+    const headline = sm ? (closed ? `${subj}: ${isQKey(sm) ? monthName(sm) : (monthName(sm) || '').toLowerCase()}` : (isWeekKey(sm) ? `${subj}: acumulado de ${periodLow(sm)} al corte` : `${subj}: acumulado de ${periodLow(sm)} al corte y cierre estimado`))
       : (run && run.year ? (yearOpen ? `${subj}: acumulado ${run.year} al corte y cierre estimado` : `${subj}: ${run.year}`) : `${subj}: acumulado del período al corte`);
     return page('cover', 'Portada', {
       headline,
@@ -168,14 +177,14 @@
   }
 
   function pageMonthPacing(s, S, mk) {
-    const wk = isWeekKey(mk), coll = wk ? 'weeks' : 'months', lw = periodLow(mk), uDel = wk ? 'de la semana' : 'del mes', the = wk ? 'la semana' : 'el mes';   // el nombre del mes va en la etiqueta y el titular; en el resto de la lámina se dice «el mes»
+    const wk = isWeekKey(mk), qk = isQKey(mk), coll = wk ? 'weeks' : qk ? 'quarters' : 'months', lw = periodLow(mk), { of: uDel, the } = theOf(mk);   // el nombre del mes va en la etiqueta y el titular; en el resto de la lámina se dice «el mes»
     const M = S[coll].find((m) => m.key === mk), name = monthName(mk), cutIso = s.run.cutoff;
     const tr = M.toDate && M.toDate.revenue, fg = M.forecastGap && M.forecastGap.revenue;
     if (!tr || !isNum(tr.actual) || !(M.countedDays > 0)) return omit('pacing', 'Pacing y forecast', `${name} todavía no tiene días contados con venta real hasta la fecha de corte.`);
     const hasPlan = isNum(tr.plan), closed = M.status === 'closed' || (M.lastDate && cutIso && M.lastDate <= cutIso);
     const fcM = M.forecast && isNum(M.forecast.revenue) ? M.forecast.revenue : null, planM = M.plan && isNum(M.plan.revenue) ? M.plan.revenue : null;
     // acumulado diario del mes: real (días contados), plan y forecast
-    const days = (S.days || []).filter((d) => (wk ? d.weekKey : d.month) === mk).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const days = (S.days || []).filter((d) => (wk ? d.weekKey : qk ? `${d.month.slice(0, 4)}-Q${Math.ceil(+d.month.slice(5, 7) / 3)}` : d.month) === mk).sort((a, b) => (a.date < b.date ? -1 : 1));
     const labels = days.map((d) => String(+d.date.slice(8, 10))); let p = 0, a = 0, f = 0, pOk = true, aOk = true, fOk = true, cut = -1; const plan = [], actual = [], fc = [];
     days.forEach((d, i) => {
       const pv = d.plan && d.plan.revenue, av = d.actual && d.actual.revenue, fv = d.forecast && d.forecast.revenue;
@@ -201,7 +210,7 @@
       kpis: [
         kpi('real', 'Venta real a la fecha', tr.actual, 'moneyC', TAG.obs, { sub: `${M.countedDays} días contados` }),
         kpi('plan', 'Plan esperado al corte', hasPlan ? tr.plan : null, 'moneyC', TAG.calc, { sub: 'de los mismos días' }),
-        kpi('compliance', wk ? 'Cumplimiento de la semana' : 'Cumplimiento del mes', hasPlan ? tr.compliance : null, 'pct', TAG.calc, { tone: hasPlan ? toneOfGap(tr.gap) : 'neutral', sub: hasPlan ? `Brecha ${smoney(tr.gap)}` : null }),
+        kpi('compliance', `Cumplimiento ${uDel}`, hasPlan ? tr.compliance : null, 'pct', TAG.calc, { tone: hasPlan ? toneOfGap(tr.gap) : 'neutral', sub: hasPlan ? `Brecha ${smoney(tr.gap)}` : null }),
         kpi('forecast', `Cierre estimado ${uDel}`, fcM, 'moneyC', TAG.est, { sub: isNum(fg && fg.gap) ? `vs. plan ${uDel} ${smoneyC(fg.gap)}` : (planM !== null ? `plan ${uDel} ${moneyC(planM)}` : `Método ${s.run.method ? s.run.method.id : '—'}`) })
       ],
       charts: [{ type: 'cumulative', id: 'cum', title: 'Venta acumulada por día: real, plan y cierre estimado', labels, plan, actual, forecast: fc, cutIndex: cut }],
@@ -568,7 +577,7 @@
     const mk = selMonth(s), mname = mk ? monthName(mk) : null;
     const rf = mk ? s.rfMonth : s.rf, R = rf ? (s.channel === 'total' ? rf.total : (rf.channels || {})[s.channel]) : null;
     const h = R && R.horizon;
-    if (mk && (!h || h.type !== 'month' || h.key !== mk)) return omit('recovery', 'Recuperación y plan de acción', (isWeekKey(mk) ? `La recuperación se calcula contra el mes en curso o el año, no contra una semana; ${mname} se lee sin esa lámina.` : `La recuperación se calcula solo para el mes en curso; ${mname} no es el mes abierto a la fecha de corte.`));
+    if (mk && (!h || h.type !== 'month' || h.key !== mk)) return omit('recovery', 'Recuperación y plan de acción', (isWeekKey(mk) ? `La recuperación se calcula contra el mes en curso o el año, no contra una semana; ${mname} se lee sin esa lámina.` : isQKey(mk) ? `La recuperación se calcula contra el mes en curso o el año, no contra un Q; ${mname} se lee sin esa lámina.` : `La recuperación se calcula solo para el mes en curso; ${mname} no es el mes abierto a la fecha de corte.`));
     if (!h || !isNum(h.target)) return omit('recovery', 'Recuperación y plan de acción', 'No hay meta que cubra el horizonte: sin meta no hay brecha pendiente ni requerimiento diario.');
     const hs = R.horizonSummary || {};
     const pr = hs.pressure && hs.pressure.revenue ? hs.pressure.revenue : null;
@@ -597,7 +606,7 @@
       net: netGap !== null ? { gap: netGap, shortfall: h.remaining, surplus: h.surplus, daily: days > 0 ? netGap / days : null, dailyChannels: reqDaily } : null,
       ctx: `Horizonte ${hz || 'resto del año'} · ${int(days)} días restantes`,
       gaps: gapsRows, gapsNote: 'Las brechas responden preguntas distintas (otro período y otra referencia): no se suman ni tienen por qué coincidir.',
-      question: mk ? `¿Qué tendría que pasar de aquí al cierre ${isWeekKey(mk) ? 'de la semana' : 'del mes'} para cumplir su plan?` : '¿Qué tendría que pasar de aquí al cierre para cumplir la meta?',
+      question: mk ? `¿Qué tendría que pasar de aquí al cierre ${theOf(mk).of} para cumplir su plan?` : '¿Qué tendría que pasar de aquí al cierre para cumplir la meta?',
       headline: met ? `La meta del horizonte ya está cubierta (excedente ${money(h.surplus)}).` : netGap !== null && days > 0 ? `Los canales por debajo de ${mk ? 'su plan' : 'su meta'} necesitan ${moneyC(h.remaining)}: ${moneyC(reqDaily)} diarios en ${days === 1 ? 'el día restante' : `los ${int(days)} días restantes`}. En neto, al total le faltan ${moneyC(netGap)}, porque el excedente de otros canales (${moneyC(h.surplus)}) no se resta. Es el ritmo requerido, no una predicción.` : `Para alcanzar ${mk ? `el plan de ${periodLow(mk)}` : 'la meta'}, faltan ${moneyC(h.remaining)}. En ${days === 1 ? 'el día restante' : `los ${int(days)} días restantes`}, sería necesario vender un promedio de ${moneyC(reqDaily)} diarios${pr && isNum(pr.pressure) ? ` (${spct(pr.pressure)} vs. el plan diario restante)` : ''}. Es el ritmo requerido, no una predicción.`,
       kpis: netGap !== null ? [
         kpi('target', mk ? `Plan de ${periodLow(mk)}` : h.type === 'year' ? `Meta anual ${h.key}` : 'Meta del horizonte', h.target, 'moneyC', TAG.calc),
@@ -699,7 +708,7 @@
     out.sel = pc && pc.selection ? { real: (kp(pc, 'real') || {}).value, prev: (kp(pc, 'prev') || {}).value, pct: (kp(pc, 'change') || {}).value, period: pc.periodLabel, base: pc.baseLabel, baseRef: pc.baseRef, filter: pc.filterLabel } : null;
     out.cutoff = s.run && s.run.cutoff ? dateLabel(s.run.cutoff) : null;
     out.movers = by.movers ? { minus: by.movers.minus, plus: by.movers.plus } : null;
-    out.mk = selMonth(s); out.mname = out.mk ? monthName(out.mk) : null; out.mlow = out.mk ? periodLow(out.mk) : null; out.the = out.mk ? (isWeekKey(out.mk) ? 'la semana' : 'el mes') : null; out.of = out.mk ? (isWeekKey(out.mk) ? 'de la semana' : 'del mes') : null; out.year = out.mk ? yearLine(s) : null;
+    out.mk = selMonth(s); out.mname = out.mk ? monthName(out.mk) : null; out.mlow = out.mk ? periodLow(out.mk) : null; out.the = out.mk ? theOf(out.mk).the : null; out.of = out.mk ? theOf(out.mk).of : null; out.year = out.mk ? yearLine(s) : null;
     out.scopeWord = out.mk ? out.mlow : 'año';
     out.focus = focusInsight(s);
     out.driverMain = (() => { const dv = by.drivers; const rows = dv && dv.tables[0] ? dv.tables[0].rows.filter((r) => isNum(r.contribution)) : []; const m = rows.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))[0]; return m ? { name: m.driver, value: m.contribution } : null; })();
@@ -776,9 +785,11 @@
     else if (R.worst) sent.push(`La principal área de atención es ${R.worst.channel} (${smoney(R.worst.gap)} frente al plan).`);
     if (R.pc && isNum(R.pc.forecast)) sent.push(`Al ritmo actual, ${R.mk ? R.the : 'el año'} cerraría en ${moneyC(R.pc.forecast)}${R.pc.forecastSub && !R.mk ? ` (${R.pc.forecastSub})` : ''}${R.material && !noteShown ? ', cifra que depende del método de proyección' : ''}.`);
     else if (R.rec && isNum(R.rec.remaining)) sent.push(`Para cumplir ${R.mk ? `el plan ${R.of}` : 'la meta'} faltan ${moneyC(R.rec.remaining)}.`);
+    /* Rezago: la venta real llega antes del corte. Se dice en la lámina, no solo en el pie. */
+    const lag = lagOf(s);
     const yp = yearPhrase(R);
     const review = R.focus || s.reportFilter ? null : R.drag ? `Revisar primero ${R.drag.entity}: es la que más resta (${smoneyC(R.drag.impact)}) ${trPer}.` : (R.rec && rv && rv.headline.includes('vs. el plan diario') ? 'Revisar si el ritmo diario requerido para cumplir la meta es alcanzable.' : null);
-    return page('summary', 'Resumen ejecutivo', { question: '¿Qué debo saber si solo leo una página?', headline: 'Lo más importante, en una mirada', narrative: sent.length ? sent.join(' ') : null, yearStrip: yp || null, movers: R.movers && (R.movers.minus.length || R.movers.plus.length) ? { minus: [...R.movers.minus].sort((a, b) => a.rank - b.rank).slice(0, 2), plus: [...R.movers.plus].sort((a, b) => a.rank - b.rank).slice(0, 2) } : null, filterStrip: s.reportFilter ? `Filtro activo: ${s.reportFilter}. ${R.sel ? 'Venta, categorías, evolución y clientes muestran solo esa selección (la venta contra el periodo de referencia, no contra el plan); el diagnóstico y la recuperación son del total del negocio.' : 'Categorías, evolución y clientes muestran solo esa selección; el pacing y el forecast son del total del negocio.'}` : null, focus: R.focus ? { entity: R.focus.entity, level: R.focus.level, spark: R.focus.spark, text: [R.focus.sinceLabel ? `${R.focus.entity} ${focusSince(R.focus)}${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.` : `${R.focus.entity} es la ${R.focus.level} que más arrastra${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.`, `Aporta ${smoneyC(R.focus.loss)} de los ${smoneyC(R.focus.totalDrag)} que caen las ${R.focus.level === 'categoría' ? 'categorías' : 'entidades'}.`, yoyPhrase(R.focus)].filter(Boolean).join(' ') } : null, items: out, review: review ? { text: review, basis: 'Regla determinista sobre los cálculos de las páginas siguientes; no es una recomendación causal.' } : null, sources: ['Cálculos de las páginas siguientes'], tags: [TAG.obs, TAG.calc, TAG.est] });
+    return page('summary', 'Resumen ejecutivo', { question: '¿Qué debo saber si solo leo una página?', headline: 'Lo más importante, en una mirada', lag, narrative: sent.length ? sent.join(' ') : null, yearStrip: yp || null, movers: R.movers && (R.movers.minus.length || R.movers.plus.length) ? { minus: [...R.movers.minus].sort((a, b) => a.rank - b.rank).slice(0, 2), plus: [...R.movers.plus].sort((a, b) => a.rank - b.rank).slice(0, 2) } : null, filterStrip: s.reportFilter ? `Filtro activo: ${s.reportFilter}. ${R.sel ? 'Venta, categorías, evolución y clientes muestran solo esa selección (la venta contra el periodo de referencia, no contra el plan); el diagnóstico y la recuperación son del total del negocio.' : 'Categorías, evolución y clientes muestran solo esa selección; el pacing y el forecast son del total del negocio.'}` : null, focus: R.focus ? { entity: R.focus.entity, level: R.focus.level, spark: R.focus.spark, text: [R.focus.sinceLabel ? `${R.focus.entity} ${focusSince(R.focus)}${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.` : `${R.focus.entity} es la ${R.focus.level} que más arrastra${restPhrase(R.focus) ? `, mientras ${restPhrase(R.focus)}` : ''}.`, `Aporta ${smoneyC(R.focus.loss)} de los ${smoneyC(R.focus.totalDrag)} que caen las ${R.focus.level === 'categoría' ? 'categorías' : 'entidades'}.`, yoyPhrase(R.focus)].filter(Boolean).join(' ') } : null, items: out, review: review ? { text: review, basis: 'Regla determinista sobre los cálculos de las páginas siguientes; no es una recomendación causal.' } : null, sources: ['Cálculos de las páginas siguientes'], tags: [TAG.obs, TAG.calc, TAG.est] });
   }
 
   /* ---------------- 13 · Cierre ejecutivo ---------------- */
@@ -904,8 +915,28 @@
     });
   }
 
+
+  /* ---------------- 14 · Decisiones ---------------- */
+  /** Decisiones sugeridas por regla a partir de los mayores aportes a la brecha, el rezago de datos y las acciones ya registradas en Recuperar.
+   *  Son sugerencias: no se guardan ni se ejecutan; el responsable queda por asignar (la herramienta no registra dueños todavía). */
+  function pageDecisions(s, pages) {
+    const by = Object.fromEntries(pages.filter((p) => p.status === 'included').map((p) => [p.id, p]));
+    const R = readout(s, by); if (!R.pc && !R.sel) return omit('decisions', 'Decisiones', 'Sin resultados de pacing no hay base para proponer decisiones.');
+    const rows = [], F = R.focus, vs = R.sel ? 'la referencia' : 'el plan';
+    if (F) rows.push({ what: `Revisar ${F.entity}`, why: `Concentra ${pct(F.share, 0)} de lo que se pierde (${smoneyC(F.loss)})`, when: 'Esta semana' });
+    else if (R.drag) rows.push({ what: `Revisar ${R.drag.entity}`, why: `Mayor arrastre ${trendWhen(by, R)}: ${smoneyC(R.drag.impact)}`, when: 'Esta semana' });
+    else if (R.worst) rows.push({ what: `Revisar ${R.worst.channel}`, why: `${smoneyC(R.worst.gap)} frente a ${vs}`, when: 'Esta semana' });
+    if (R.best) rows.push({ what: `Mantener ${R.best.channel}`, why: `${smoneyC(R.best.gap)} sobre ${vs}`, when: 'Seguimiento' });
+    const lag = lagOf(s);
+    if (lag) rows.push({ what: 'Completar la venta real que falta', why: `Faltan ${lag.days} ${lag.days === 1 ? 'día' : 'días'} del corte; hasta entonces el cierre depende del método`, when: 'Hoy' });
+    else if (R.rec && isNum(R.rec.daily)) rows.push({ what: `Sostener ${moneyC(R.rec.daily)} por día`, why: `Para ${R.mk ? `cerrar ${R.the}` : 'la meta'}${isNum(R.rec.days) ? ` con ${Number(R.rec.days) === 1 ? 'el día restante' : `los ${int(R.rec.days)} días restantes`}` : ''}`, when: 'Hasta el cierre' });
+    (R.rec && R.rec.actions ? R.rec.actions.filter((a) => a && a.title) : []).slice(0, 2).forEach((a) => rows.push({ what: `Acción del plan: ${a.title}`, why: 'Registrada en Recuperar', when: 'Según el plan' }));
+    if (!rows.length) return omit('decisions', 'Decisiones', 'No hay hallazgos que sustenten una decisión.');
+    return page('decisions', 'Decisiones', { question: 'Qué decidimos hoy', headline: '', rows: rows.slice(0, 4).map((r) => ({ ...r, who: 'Por asignar' })), note: 'Sugeridas por regla a partir de los mayores aportes y de los avisos de datos; no se guardan ni se ejecutan. El responsable queda por asignar.', sources: ['Reglas de la herramienta'], tags: [TAG.est] });
+  }
+
   /* ---------------- ensamblado ---------------- */
-  const ORDER = ['cover', 'summary', 'pacing', 'reliability', 'drivers', 'categories', 'trends', 'movers', 'customers', 'traffic', 'campaigns', 'recovery', 'seasonality', 'closing', 'annex'];
+  const ORDER = ['cover', 'summary', 'pacing', 'reliability', 'drivers', 'categories', 'trends', 'movers', 'customers', 'traffic', 'campaigns', 'recovery', 'seasonality', 'closing', 'decisions', 'annex'];
   function build(src) {
     const s = { channel: 'total', options: {}, filters: [], ...src };
     s.options = { includeAnnex: true, showTags: false, showBusinessName: false, ...(s.options || {}) };
@@ -916,6 +947,7 @@
     const rel = all.find((p) => p.id === 'reliability'), pac = all.find((p) => p.id === 'pacing');
     if (rel && rel.status === 'included' && rel.warning && pac && pac.status === 'included') pac.caveat = 'El cierre estimado depende del método de proyección: los métodos con datos suficientes difieren de forma importante (detalle en el anexo técnico).';
     all.push(pageClosing(s, all));
+    all.push(pageDecisions(s, all));
     const annex = pageAnnex(s, all, adv);
     const pages = [...all, annex].filter((p) => p.id !== 'annex' || s.options.includeAnnex || true);   // el anexo siempre existe: lista las omisiones
     const included = pages.filter((p) => p.status === 'included');

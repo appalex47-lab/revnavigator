@@ -269,7 +269,7 @@
    */
   function contextControls(state, idp, keyAction, typeAction, extra = '') {
     const esc = H().esc, s = state.dx.settings, C = FP.config;
-    const typeBtns = [['month', 'Mes'], ['week', 'Semana'], ['year', 'Año']].map(([v, l]) =>
+    const typeBtns = [['month', 'Mes'], ['week', 'Semana'], ['quarter', 'Q'], ['year', 'Año']].map(([v, l]) =>
       `<button type="button" data-action="${typeAction}" ${typeAction === 'pkg-context' ? 'data-key="periodType" ' : ''}data-value="${v}" aria-pressed="${s.periodType === v}">${esc(l)}</button>`).join('');
     const sel = (id, key, opts, cur, label) => `<div class="field"><label for="${id}" class="field__hint">${esc(label)}</label>
       <select id="${id}" data-action="${keyAction}" data-key="${key}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
