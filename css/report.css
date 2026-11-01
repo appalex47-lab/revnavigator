@@ -409,3 +409,4 @@
 .rp-sem-tile { display:flex; align-items:baseline; gap:10px; padding:8px 16px; border:1px solid #E1E7F0; border-radius:10px; background:var(--sky); }
 .rp-sem-tile__n { font-size:28px; font-weight:800; color:var(--navy); } .rp-sem-tile__l { font-size:14px; }
 .rp-op__blk { margin-bottom:10px; }
+.rp-warnmark { color:var(--orange); font-weight:700; }

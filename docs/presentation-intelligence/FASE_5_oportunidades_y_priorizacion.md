@@ -19,3 +19,6 @@ La herramienta no tiene costos, márgenes, inversión ni atribución. Por eso **
 - Valor en venta, no en utilidad. Con costos/márgenes cargados en el futuro se podría ampliar.
 - La «parte de la brecha» ignora los canales sobre el plan, por eso la suma de brechas por canal puede ser mayor que la brecha del total digital (la lámina muestra ambas).
 - Solo está en Gerencial; Directivo la reutilizará en la Fase 6 con otra redacción.
+
+## Aviso de supuestos
+Si el impacto simulado de una acción supera la brecha del periodo de su canal (o del total digital, si es del total), o el canal no está por debajo del plan, la acción lleva ⚠ y la lámina muestra «Revisa los supuestos». Es solo informativo: no cambia ningún monto ni el orden.

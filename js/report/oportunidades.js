@@ -39,6 +39,11 @@
     const act = O.actions(src), rows = act.status === 'included' ? act.rows.slice().sort((a, b) => (b.impact ? b.impact.value : -Infinity) - (a.impact ? a.impact.value : -Infinity)) : [];
     if (!gaps.length && !rows.length) return omit('Ningún canal queda por debajo de su plan a la fecha y no hay acciones registradas: no hay oportunidad que priorizar.');
 
+    // Aviso informativo (no cambia ningún monto ni el orden): el impacto simulado de una acción es mayor que la brecha del periodo que busca cubrir.
+    // Se compara con la brecha de su canal (o con la del total digital si la acción es del total); sin brecha por debajo del plan, el escenario no tiene contra qué compararse.
+    const refGap = (r) => { if (r.channel === 'Total digital') return totalGap && totalGap.gap < 0 ? Math.abs(totalGap.gap) : 0; const g = gaps.find((x) => x.label === r.channel); return g ? Math.abs(g.gap) : 0; };
+    rows.forEach((r) => { r.warn = Boolean(r.impact) && r.impact.value > refGap(r); });
+    const warned = rows.filter((r) => r.warn);
     const money = (v) => fmt('moneyC', Math.abs(v)), lead = gaps[0], top = rows.find((r) => r.impact);
     const parts = [];
     if (lead) parts.push(gaps.length === 1 ? `La brecha de ${money(lead.gap)} está en ${lead.label}` : `${lead.label} concentra ${fmt('pct', lead.share)} de la brecha por canal (${money(lead.gap)} de ${money(sumNeg)})`);
@@ -53,10 +58,11 @@
       'Los montos son venta, no utilidad: la herramienta no tiene costos ni márgenes, por eso no se calcula margen, ROI, ROAS ni CAC.',
       'El orden es por monto. La urgencia y la evidencia son la prioridad descriptiva de Recuperar, no una puntuación propia.'
     ];
+    const warning = warned.length ? `El impacto simulado de ${warned.length === 1 ? 'una acción supera' : `${warned.length} acciones superan`} la brecha del periodo de su canal (o no hay brecha por debajo del plan): revisa los supuestos del escenario. Es solo un aviso; no cambia ningún monto ni el orden.` : null;
     if (gaps.length > MAX_GAPS) notes.push(`Se muestran ${MAX_GAPS} de ${gaps.length} canales por debajo del plan.`);
     if (rows.length > MAX_ACTIONS) notes.push(`Se muestran ${MAX_ACTIONS} de ${rows.length} acciones, de mayor a menor impacto simulado.`);
     return { id, title, status: 'included', question: '¿Dónde está la oportunidad y qué la puede recuperar?', conclusion, headline: conclusion, ctx: per.label, kpis: [], tables: [], charts: [],
-      gaps: gaps.slice(0, MAX_GAPS), gapsTotal: gaps.length, totalGap, actions: rows.slice(0, MAX_ACTIONS), actionsTotal: rows.length, notes,
+      gaps: gaps.slice(0, MAX_GAPS), gapsTotal: gaps.length, totalGap, actions: rows.slice(0, MAX_ACTIONS), actionsTotal: rows.length, warning, notes,
       sources: ['Pacing y forecast (series por canal)', 'Plan de acciones (Recuperar)'], tags: [TAG().obs, TAG().calc, TAG().est] };
   }
 
