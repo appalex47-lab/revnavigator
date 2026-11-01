@@ -6217,7 +6217,7 @@
   /** Borra los datos de este navegador y recarga. No toca la nube. */
   async function wipeLocalData(step) {
     const st = async (label, pct) => { if (step) { step(label, pct); await tick(); } };
-    wiping = true; await st('Guardando lo pendiente', 5);
+    wiping = true; if (FP.changeStore && FP.changeStore.halt) FP.changeStore.halt(); await st('Guardando lo pendiente', 5);
     clearTimeout(autoTimer); autoPending.clear();
     FP.cloud.setAuto(false); state.cloud.auto.on = false;
     await repo.flush();
