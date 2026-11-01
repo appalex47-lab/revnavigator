@@ -74,9 +74,19 @@
       <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
   }
 
+  function funnelBody(p) {
+    const row = (s, i) => `<tr><th scope="row">${esc(s.label)}</th><td class="num">${esc(f('int', s.cur))}</td><td class="num">${isNum(s.base) ? esc(f('int', s.base)) : '<span class="rp-na">No disponible</span>'}</td><td class="num ${cls(s.deltaPct)}">${isNum(s.deltaPct) ? arrow(s.deltaPct) + esc(f('spct', s.deltaPct)) : '—'}</td>
+      <td class="num">${i ? esc(f('pct2', s.rateCur)) : '—'}</td><td class="num ${cls(s.deltaPp)}">${i && isNum(s.deltaPp) ? arrow(s.deltaPp) + esc(FP.reportOperativo.pp2(s.deltaPp / 100)) : '—'}</td><td>${i && p.weakest === s.transition ? tag('Paso más débil', 'est') : ''}</td></tr>`;
+    const g = p.groups.length ? `<table class="rp-t rp-op__t"><caption>${esc(p.groupLevel)}s con mayor caída de conversión de ficha</caption><thead><tr><th scope="col">${esc(p.groupLevel)}</th><th scope="col" class="num">Conversión</th><th scope="col" class="num">Referencia</th><th scope="col" class="num">Cambio</th></tr></thead><tbody>${p.groups.map((x) => `<tr><th scope="row">${esc(x.key)}</th><td class="num">${esc(f('pct2', x.cr))}</td><td class="num">${esc(f('pct2', x.base))}</td><td class="num ${cls(x.deltaPp)}">${arrow(x.deltaPp)}${esc(FP.reportOperativo.pp2(x.deltaPp / 100))}</td></tr>`).join('')}</tbody></table>` : '';
+    return `<div class="rp-op"><div><table class="rp-t rp-op__t"><caption class="sr-only">Pasos del embudo</caption><thead><tr><th scope="col">Paso</th><th scope="col" class="num">Periodo</th><th scope="col" class="num">Referencia</th><th scope="col" class="num">Cambio</th><th scope="col" class="num">Tasa del paso</th><th scope="col" class="num">vs ref.</th><th scope="col"></th></tr></thead><tbody>${p.steps.map(row).join('')}</tbody></table>
+      ${isNum(p.cr.cur) ? `<p class="rp-small">Conversión de ficha (compra ÷ vistas): <strong>${esc(f('pct2', p.cr.cur))}</strong>${isNum(p.cr.base) ? ` · referencia ${esc(f('pct2', p.cr.base))}` : ''}.</p>` : ''}</div><div class="rp-op__grp">${g}</div>
+      <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
+  }
+
   FP.reportView.charts.groupbars = chartGroupBars;
   const title = (p) => p.conclusion || null;
   FP.reportView.register('channelPacing', { section: 'Pacing por canal', body: channelBody, title, noHeadline: true });
   FP.reportView.register('evolution', { section: 'Evolución de venta y pedidos', body: evolutionBody, title, noHeadline: true });
+  FP.reportView.register('funnel', { section: 'Embudo de fichas de producto', body: funnelBody, title, noHeadline: true });
   FP.reportView.register('actions', { section: 'Acciones y responsables', body: actionsBody, title, noHeadline: true });
 })(typeof window !== 'undefined' ? window : globalThis);

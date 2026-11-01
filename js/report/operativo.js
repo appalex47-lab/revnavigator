@@ -2,10 +2,11 @@
  * operativo.js — Formato OPERATIVO (Presentation Intelligence · Fase 3).
  *
  * Audiencia: analistas y coordinadores. Objetivo: entender el desempeño, encontrar desviaciones y definir acciones concretas.
- * Reutiliza las páginas que ya arma FP.reportBuilder y agrega tres bloques propios:
+ * Reutiliza las páginas que ya arma FP.reportBuilder y agrega cuatro bloques propios:
  *   channelPacing  Pacing por canal: venta, pedidos, volumen (sesiones, conversaciones o llamadas), conversión y ticket, cada uno contra su plan.
  *   evolution      Evolución de venta y pedidos por semana, mes o día contra el plan de los mismos días.
  *   actions        Acciones, responsables y fechas: las acciones ya registradas en Recuperar.
+ *   funnel         Embudo de fichas de producto (GA4): vistas → carrito → checkout → compra contra la referencia.
  *
  * Reglas (las mismas del resto de la herramienta):
  *   - NO calcula con fórmulas nuevas: toma los bloques que ya trae cada serie del forecast (real, plan, brecha y brecha % de los días contados).
@@ -188,6 +189,35 @@
     });
   }
 
+
+  /* ===================== 4 · Embudo de fichas de producto ===================== */
+  /** Embudo GA4 por producto (vistas → carrito → checkout → compra) del periodo contra su referencia, con el motor que ya usa Producto y evolución. */
+  function funnel(src) {
+    const id = 'funnel', title = 'Embudo de fichas de producto', FE = FP.funnelEngine, PL = src.productByLevel || {}, r = PL.category || src.product;
+    if (!FE) return omit(id, title, 'El motor del embudo no está disponible.');
+    if (!r || !r.total || !r.total.current) return omit(id, title, 'No hay datos de embudo por producto cargados para el periodo (vistas, carrito, checkout y compra de GA4).');
+    const cur = FE.pick(r.total.current);
+    if (!cur) return omit(id, title, 'El embudo por producto no está completo en el periodo: falta alguno de los pasos (vistas, carrito, checkout o compra).');
+    const base = FE.pick(r.total.baseline), cmp = FE.compare(cur, base), pr = r.period || {}, bl = r.baseline || {};
+    const range = (p) => (p && p.from && p.to ? `${fmt('date', p.from)} al ${fmt('date', p.to)}` : null);
+    const w = cmp.weakest, d = cmp.cr.deltaPp, refTxt = bl.label || range(bl) || 'su referencia';
+    let conclusion;
+    if (w) conclusion = `El paso «${w.label}» es el más débil: su tasa cae ${Math.abs(w.deltaPp).toFixed(2)} pp contra ${String(refTxt).toLowerCase()}`;
+    else if (isNum(d)) conclusion = `La conversión de ficha pasa de ${fmt('pct2', cmp.cr.base)} a ${fmt('pct2', cmp.cr.cur)} (${pp2(d / 100)}) y ningún paso cae más de ${FE.WEAK_PP} pp`;
+    else conclusion = `Conversión de ficha del periodo: ${fmt('pct2', cmp.cr.cur)}; no hay referencia con embudo completo para compararla`;
+    // Grupos (categorías) cuya conversión de ficha más cae: misma aritmética, solo ordena.
+    const groups = (r.rows || []).map((x) => { const c = FE.pick(x.current), b = FE.pick(x.baseline); if (!c || !b) return null; const rc = FE.rates(c), rb = FE.rates(b); return isNum(rc.cr) && isNum(rb.cr) ? { key: String(x.key), cr: rc.cr, base: rb.cr, deltaPp: (rc.cr - rb.cr) * 100, views: c.views } : null; }).filter(Boolean)
+      .sort((a, b) => a.deltaPp - b.deltaPp).slice(0, 4);
+    const notes = ['Las compras son compras de GA4 (artículos), no pedidos: su tasa no es la conversión de pedidos de «Pacing por canal».', `Un paso se marca débil si su tasa cae más de ${FE.WEAK_PP} pp contra la referencia. Es aritmética: no explica por qué cayó.`];
+    if (!base) notes.push('Sin referencia con embudo completo: se muestran las tasas del periodo, sin comparación.');
+    return page(id, title, {
+      question: '¿En qué paso de la ficha se pierde la venta?', conclusion, headline: conclusion, ctx: `${range(pr) || 'Periodo'} vs. ${refTxt}`,
+      steps: cmp.steps.map((s) => ({ id: s.id, label: s.label, transition: s.transition, cur: s.cur, base: s.base, deltaPct: s.deltaPct, rateCur: s.rateCur, rateBase: s.rateBase, deltaPp: s.deltaPp })), cr: cmp.cr, weakest: w ? w.label : null,
+      groups, groupLevel: { category: 'Categoría', subcategory: 'Subcategoría', product: 'Producto' }[r.level] || 'Grupo', notes,
+      sources: ['Producto y evolución (embudo GA4 por producto)'], tags: [TAG().obs, TAG().calc]
+    });
+  }
+
   /* ===================== Perfil OPERATIVO ===================== */
   const legacy = FP.reportProfiles.get('legacy');
   const S = (block, type, depth, o) => ({ block, type, depth, ...(o || {}) });
@@ -202,7 +232,7 @@
     defaultDepth: 'detallado',
     slots: [
       S('cover', 'portada', 'resumen', { required: true }), S('summary', 'analisis', 'resumen'), S('pacing', 'analisis', 'ejecutivo'), S('channelPacing', 'analisis', 'resumen'),
-      S('evolution', 'analisis', 'ejecutivo'), S('drivers', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'),
+      S('evolution', 'analisis', 'ejecutivo'), S('funnel', 'analisis', 'ejecutivo'), S('drivers', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'),
       S('categories', 'analisis', 'detallado'), S('customers', 'analisis', 'detallado'), S('campaigns', 'analisis', 'detallado'), S('movers', 'analisis', 'ejecutivo'),
       S('recovery', 'analisis', 'ejecutivo'), S('actions', 'analisis', 'resumen'), S('seasonality', 'analisis', 'detallado'), S('closing', 'cierre', 'resumen'),
       S('decisions', 'cierre', 'resumen'), S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
@@ -213,7 +243,8 @@
   FP.reportProfiles.register(PROFILE);
   FP.reportBlocks.register('channelPacing', channelPacing);
   FP.reportBlocks.register('evolution', evolution);
+  FP.reportBlocks.register('funnel', funnel);
   FP.reportBlocks.register('actions', actions);
 
-  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, channelPacing, evolution, actions, flagsOf, pp2 };
+  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
 })(typeof window !== 'undefined' ? window : globalThis);

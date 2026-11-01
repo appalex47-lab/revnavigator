@@ -20,16 +20,23 @@ Primera audiencia nueva de Presentation Intelligence: **Operativo** (analistas y
 - **Evolución de venta y pedidos** — por semana (mes), día (semana) o mes (trimestre/año): real contra plan de los mismos días contados; semanas parciales marcadas; ticket = venta ÷ pedidos del grupo.
 - **Acciones, responsables y fechas** — acciones ya registradas en Recuperar que cruzan el periodo; responsable vacío = «Por asignar»; impacto simulado rotulado *Estimado* y sin sumar entre acciones; prioridad descriptiva, no ranking.
 
-Profundidades: Resumen = portada, pacing por canal, acciones; Ejecutivo suma pacing, evolución, factores, suma/resta, recuperación; Detallado = todo con datos.
+- **Embudo de fichas de producto** — vistas → carrito → checkout → compra contra la referencia, tasa y cambio en pp por paso, paso más débil y categorías con mayor caída de conversión de ficha.
+
+Profundidades: Resumen = portada, pacing por canal, acciones; Ejecutivo suma pacing, evolución, embudo, factores, suma/resta, recuperación; Detallado = todo con datos.
 
 ## Reglas respetadas
 Sin fórmulas nuevas (solo suma de días contados de la propia serie y venta ÷ pedidos). Dato ausente = `null` → «No disponible», nunca cero. Sin datos suficientes la lámina se omite con motivo (aparece en la propuesta y en el Anexo A). Umbrales (0.5 % bajo plan, 1 % «más floja») en `FP.config.reports.operativo`, provisionales y congelados. Sin dependencias nuevas; `reportBuilder.js` no cambió.
 
 ## Limitaciones conocidas
-- Embudo diferido (no hay etapas de funnel por canal en las series; se revisará con el análisis de productos).
+- Embudo: se agregó la lámina «Embudo de fichas de producto» (GA4 por producto, con `funnelEngine`). Es por producto, no por canal, y sus compras son artículos GA4, no pedidos. Sin datos de embudo cargados se omite con motivo.
 - `recoveryPercent` es una fracción de la brecha (impacto ÷ brecha; verificado en `scenarioEngine.js`); se muestra como «% de la brecha», rotulado Estimado.
 - Los textos son plantillas; no explican causas.
 - D1 («Al corte del null») quedó corregido después (ver cierre de Fase 3).
 
 ## Criterios de aceptación y resultado
 Ver el reporte de fase entregado con esta rama: pruebas Node (todas), batch_report_operativo / setup / golden / composer, regresión completa, lint ≤ 193.
+
+## Cierre posterior
+- D1 corregido (sin corte, el resumen omite «Al corte del…»).
+- Umbrales editables en la pantalla de la presentación (sesión).
+- Embudo agregado; en pantalla real se prueba con datos inyectados con la forma de `productStore`, porque el ejemplo de la prueba no trae embudo.

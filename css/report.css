@@ -400,3 +400,6 @@
 .rp-th-box { margin-top:12px; }
 .rp-th { display:flex; flex-direction:column; gap:4px; margin:8px 0; }
 .rp-th__in input { width:84px; }
+.rp-op__grp { margin-top:14px; width:62%; }
+.rp-op__t caption:not(.sr-only) { text-align:left; font-weight:700; color:var(--navy); padding:0 0 6px; caption-side:top; }
+.rp-op__t td.num, .rp-op__t th.num { white-space:nowrap; }

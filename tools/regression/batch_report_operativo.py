@@ -4,7 +4,7 @@ import sys, asyncio
 sys.argv = sys.argv[:2]
 from ed_common import *
 from recovery_state import prepare
-NEW = ['channelPacing', 'evolution', 'actions']
+NEW = ['channelPacing', 'evolution', 'actions']  # el embudo depende de datos GA4 por producto: se prueba aparte
 PAGES = "[...document.querySelectorAll('#view-presentacion .rp-frame .rp-page')].map(p=>p.dataset.page)"
 async def gen(f):
     await f.click('[data-action="rp-generate"]'); await f.wait_for_timeout(200)
@@ -35,6 +35,8 @@ async def main():
         chk('O8 Evolución: gráfica de barras agrupadas y tabla con Días, Venta, Pedidos y Ticket', await f.evaluate("!!document.querySelector('#view-presentacion .rp-page[data-page=\"evolution\"] svg .rp-gb__r')") and all(k in txt['evolution'] for k in ['Días', 'Venta', 'Pedidos', 'Ticket']), txt['evolution'][:300])
         chk('O9 Acciones: ID, acción, canal, responsable (o «Por asignar»), ventana, estado e impacto rotulado «Estimado»', all(k in txt['actions'] for k in ['Responsable', 'Ventana', 'Estado', 'Estimado']), txt['actions'][:300])
         chk('O10 ningún valor «null», «undefined» o «NaN» en las láminas nuevas', not any(w in v for v in txt.values() for w in ['null', 'undefined', 'NaN']), {k: v for k, v in txt.items() if any(w in v for w in ['null', 'undefined', 'NaN'])})
+        om = await f.evaluate("FP.app.state.rp.report.omitted.find(o=>o.id==='funnel')")
+        chk('O10b sin embudo GA4 cargado, la lámina de embudo se omite con su motivo (no se inventa)', om and 'embudo' in om['reason'].lower(), om)
         # impresión 16:9 y sin desborde
         geo = await f.evaluate("""(()=>{const r=FP.app.state.rp.report, h=FP.reportView.mountPrint(r,{exclude:[],tags:true,sel:FP.reportSetupView.selectionOf(FP.app.state.rp)});
           h.style.cssText='display:block;position:absolute;left:0;top:0;visibility:hidden'; const out=['channelPacing','evolution','actions'].map(id=>{const pg=h.querySelector('.rp-page[data-page="'+id+'"]');if(!pg)return {id,miss:true};const b=pg.getBoundingClientRect(),body=pg.querySelector('.rp-body')||pg;
@@ -65,6 +67,17 @@ async def main():
         chk('O21 un valor inválido no cambia el umbral y avisa', await f.evaluate("FP.app.state.rp.options.thresholds.belowPlanPct") == 0.2)
         await f.fill('.rp-th input[data-key="belowPlanPct"]', ''); await f.dispatch_event('.rp-th input[data-key="belowPlanPct"]', 'change'); await f.wait_for_timeout(300)
         chk('O22 vaciar el campo vuelve al valor provisional', await f.evaluate("FP.app.state.rp.options.thresholds.belowPlanPct") is None)
+        # con datos de embudo (inyectados con la forma real de productStore) la lámina se dibuja completa y cabe en 16:9
+        await f.evaluate('''(()=>{const M=(v,c,k,p,r)=>({views:{value:v},addToCart:{value:c},beginCheckout:{value:k},purchasesGa4:{value:p},revenue:{value:r}});
+          const prod={level:'category',period:{from:'2026-09-01',to:'2026-09-22'},baseline:{label:'Agosto 2026'},total:{current:M(10000,1000,500,100,50000),baseline:M(10000,1000,600,120,60000)},rows:[{key:'Zapatos',current:M(5000,500,200,30,1),baseline:M(5000,500,250,50,1)},{key:'Bolsas',current:M(5000,500,300,70,1),baseline:M(5000,500,350,70,1)}]};
+          const r=FP.app.state.rp.report; const i=r.pages.findIndex(p=>p.id==='funnel'); r.pages[i]=FP.reportOperativo.funnel({productByLevel:{category:prod}}); r.included.push('funnel'); FP.app.render();})()''')
+        await f.wait_for_timeout(400)
+        ft = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"funnel\"]')||{textContent:''}).textContent.replace(/\\s+/g,' ')")
+        chk('O10c con datos de embudo la lámina muestra pasos, tasas, paso más débil y aclara que no son pedidos', all(k in ft for k in ['Vistas de ficha', 'Inició checkout', 'Paso más débil', 'no pedidos', 'Categorías con mayor caída']), ft[:300])
+        g2 = await f.evaluate('''(()=>{const r=FP.app.state.rp.report,h=FP.reportView.mountPrint(r,{exclude:[],tags:true,sel:FP.reportSetupView.selectionOf(FP.app.state.rp)});h.style.cssText='display:block;position:absolute;left:0;top:0;visibility:hidden';
+          const pg=h.querySelector('.rp-page[data-page="funnel"]');const b=pg.getBoundingClientRect();const o={w:Math.round(b.width),h:Math.round(b.height),ov:pg.getAttribute('data-overflow'),wide:[...pg.querySelectorAll('table')].filter(t=>t.getBoundingClientRect().right>b.right+1).length};
+          h.remove();document.getElementById('rp-print-style')&&document.getElementById('rp-print-style').remove();document.body.classList.remove('rp-printing');return o})()''')
+        chk('O10d la lámina de embudo en impresión es 1122×630, sin desborde ni tablas fuera del marco', g2['w'] == 1122 and g2['h'] == 630 and g2['ov'] is None and g2['wide'] == 0, g2)
         # volver al reporte actual: las láminas nuevas desaparecen
         await f.click('[data-action="rp-audience"][data-id="actual"]'); await f.wait_for_timeout(300); await gen(f)
         chk('O16 volver a «Reporte actual» y generar quita las láminas nuevas', not set(NEW) & set(await f.evaluate(PAGES)), await f.evaluate(PAGES))
