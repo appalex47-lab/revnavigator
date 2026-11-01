@@ -181,10 +181,15 @@
     const lastD = new Int32Array(nc).fill(-1), lastBefore = new Int32Array(nc).fill(-1), firstD = new Int32Array(nc).fill(-1), rev = new Float64Array(nc), revBefore = new Float64Array(nc);
     const refA = maxDay - 90, refC = maxDay - 182;
     const chCnt = new Array(nc), firstCh = new Int8Array(nc).fill(-1), lastCh = new Int8Array(nc).fill(-1);
+    /* Reactivación: situación de cada cliente hace `RW` días (D0) y qué hizo después; pedidos y venta de los últimos RW días. */
+    const RW = P.o.reactivationWindow || 180, D0 = maxDay - RW, ordCnt = new Int32Array(nc), lastB0 = new Int32Array(nc).fill(-1), aftN = new Int32Array(nc), aftRev = new Float64Array(nc);
+    let ordLastW = 0;
     for (let p = 0; p < n; p++) {
       const i = P.order[p], c = L.cust[i];
       if (chId >= 0 && L.ch[i] !== chId) continue;
       const d = L.day[i];
+      ordCnt[c]++;
+      if (d <= D0) lastB0[c] = d; else { aftN[c]++; aftRev[c] += L.rev[i]; ordLastW++; }
       if (firstD[c] < 0) { firstD[c] = d; firstCh[c] = L.ch[i]; }
       lastD[c] = d; lastCh[c] = L.ch[i]; rev[c] += L.rev[i];
       if (d <= refA) lastBefore[c] = d;
@@ -202,6 +207,7 @@
     }
     const lostOk = span > 180, prevOk = refA - P.minDay >= 90 && pt >= 30;
     const recency = { active: a, risk: r, lost: lostOk ? l : null, total, lostOk, prevActiveShare: prevOk ? pa / pt : null, sufficient: lostOk };
+    const reactivation = reactivationOf({ L, nc, maxDay, span, RW, D0, lastD, lastB0, aftN, aftRev, ordCnt, rev, lastCh, ordLastW, minBase: P.o.reactivationMinBase || 30, r, l, lostOk, minDay: P.minDay });
     /* Concentración: venta acumulada por cliente de mayor a menor. */
     const vals = []; for (let c = 0; c < nc; c++) if (lastD[c] >= 0 && rev[c] > 0) vals.push(rev[c]);
     vals.sort((x, y) => y - x);
@@ -244,7 +250,66 @@
       channels = { byCount, totalCustomers: totalC, combos: comboList, multiShare: totalC ? multi / totalC : null, multiCustomers: multi, multiRevenuePerCustomer: multi ? multiRev / multi : null, singleRevenuePerCustomer: single ? singleRev / single : null,
         multiTimes: multi && single && singleRev > 0 ? (multiRev / multi) / (singleRev / single) : null, matrix };
     }
-    return { recency, concentration, channels, spanDays: span };
+    return { recency, concentration, channels, reactivation, spanDays: span };
+  }
+
+  /** Reactivación: cuántos clientes están en riesgo o perdidos, cuántos de los parecidos volvieron antes y cuánto valdría si se repitiera.
+   *  Base observada: clientes que hace RW días (D0) llevaban más de 90 sin comprar; «volvieron» = pidieron otra vez en los RW días siguientes.
+   *  Es un escenario descriptivo (misma tasa y misma venta por cliente), no una predicción. Sin historia suficiente no se calcula. */
+  function reactivationOf(q) {
+    const { L, nc, maxDay, RW, D0, lastD, lastB0, aftN, aftRev, ordCnt, rev, lastCh, ordLastW, minBase, r, l, lostOk, minDay } = q;
+    const group = r + (lostOk ? l : 0);
+    let base = 0, ret = 0, retRev = 0, retOrd = 0;
+    if (D0 - minDay >= RW) {
+      for (let c = 0; c < nc; c++) {
+        if (lastB0[c] < 0 || D0 - lastB0[c] <= 90) continue;
+        base++;
+        if (aftN[c] > 0) { ret++; retRev += aftRev[c]; retOrd += aftN[c]; }
+      }
+    }
+    const rateOk = base >= minBase;
+    const rate = rateOk ? ret / base : null;
+    const revPer = rateOk && ret > 0 ? retRev / ret : null, ordPer = rateOk && ret > 0 ? retOrd / ret : null;
+    const hasPot = rate !== null && revPer !== null && group > 0;
+    const potCustomers = hasPot ? group * rate : null;
+    const potRevenue = hasPot ? group * rate * revPer : null, potOrders = hasPot ? group * rate * ordPer : null;
+    /* Los que más valen: en riesgo o perdidos, por venta acumulada. */
+    const top = [];
+    for (let c = 0; c < nc; c++) {
+      if (lastD[c] < 0) continue;
+      const age = maxDay - lastD[c];
+      if (age <= 90 || rev[c] <= 0) continue;
+      if (top.length < 10 || rev[c] > top[top.length - 1].revenue) {
+        top.push({ id: L.customers[c], group: age > 180 ? 'lost' : 'risk', last: isoOf(lastD[c]), days: age, orders: ordCnt[c], revenue: rev[c], channel: L.channels[lastCh[c]] });
+        top.sort((x, y) => y.revenue - x.revenue); if (top.length > 10) top.pop();
+      }
+    }
+    return { windowDays: RW, group, risk: r, lost: lostOk ? l : null, lostOk, history: maxDay - minDay + 1,
+      base, returned: ret, rate, rateOk, minBase, revenuePerReturned: revPer, ordersPerReturned: ordPer,
+      potentialCustomers: potCustomers, potentialRevenue: potRevenue, potentialOrders: potOrders,
+      ordersLastWindow: ordLastW, ordersPct: hasPot && ordLastW > 0 ? potOrders / ordLastW : null, top };
+  }
+
+  /** Lista completa de clientes en riesgo y perdidos (para llevar al CRM), de mayor a menor venta acumulada. Solo con el ID anonimizado del libro. */
+  function lapsedList(ledger, options) {
+    const L = ledger; if (!L || !L.key.length) return { status: 'no_ledger', rows: [] };
+    const P = prepare(L, options), n = L.key.length, nc = L.customers.length, maxDay = P.maxDay;
+    const chId = options && options.channel && options.channel !== 'total' ? L.channels.indexOf(options.channel) : -1;
+    const lastD = new Int32Array(nc).fill(-1), lastCh = new Int8Array(nc).fill(-1), cnt = new Int32Array(nc), rev = new Float64Array(nc);
+    for (let p = 0; p < n; p++) {
+      const i = P.order[p], c = L.cust[i];
+      if (chId >= 0 && L.ch[i] !== chId) continue;
+      lastD[c] = L.day[i]; lastCh[c] = L.ch[i]; cnt[c]++; rev[c] += L.rev[i];
+    }
+    const rows = [];
+    for (let c = 0; c < nc; c++) {
+      if (lastD[c] < 0) continue;
+      const age = maxDay - lastD[c];
+      if (age <= 90) continue;
+      rows.push({ id: L.customers[c], group: age > 180 ? 'lost' : 'risk', last: isoOf(lastD[c]), days: age, orders: cnt[c], revenue: rev[c], channel: L.channels[lastCh[c]] });
+    }
+    rows.sort((x, y) => (y.revenue - x.revenue) || (x.days - y.days) || (x.id < y.id ? -1 : 1));
+    return { status: 'ok', rows, maxDay: isoOf(maxDay), lostOk: maxDay - P.minDay + 1 > 180 };
   }
 
   function analyze(ledger, options) {
@@ -368,5 +433,5 @@
     return { status: 'ok', options: o, summary, monthly, cohorts: cohortList, pooled, byFirstChannel: channels, extras: extrasOf(L, P, chId), channelsAvailable: L.channels.slice(), maxDay: isoOf(P.maxDay), minDay: isoOf(P.minDay) };
   }
 
-  FP.customerEngine = { DEFAULTS, SEGMENTS, dayNum, isoOf, monthOf, emptyLedger, draftLedger, mergeInto, removeBatch, prepare, analyze };
+  FP.customerEngine = { DEFAULTS, SEGMENTS, dayNum, isoOf, monthOf, emptyLedger, draftLedger, mergeInto, removeBatch, prepare, analyze, lapsedList };
 })(typeof window !== 'undefined' ? window : globalThis);

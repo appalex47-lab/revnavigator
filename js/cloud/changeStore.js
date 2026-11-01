@@ -12,7 +12,7 @@
   const MAX_SNAPS = 30;
   const E = () => FP.changeEngine;
   const empty = () => ({ rows: [], snaps: {}, lastVisit: null });
-  let memo = null, visitBase = null, lastBuilt = null, lastNote = null;
+  let memo = null, visitBase = null, lastBuilt = null, lastNote = null, halted = false;
 
   function load() {
     if (memo) return memo;
@@ -20,6 +20,7 @@
     return memo;
   }
   function save() {
+    if (halted) return;   // cierre de sesión en curso: nada vuelve a escribirse (ni una sincronización pendiente ni el «pagehide»)
     const m = load(); const days = Object.keys(m.snaps).sort(); days.slice(0, Math.max(0, days.length - MAX_SNAPS)).forEach((d) => delete m.snaps[d]);
     try { root.localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ }
   }
@@ -94,12 +95,15 @@
   }
 
   /** Guarda la última foto construida como «mi última visita» (al cerrar o esconder la pestaña). */
-  function markVisit() { if (!lastBuilt) return; const m = load(); m.lastVisit = lastBuilt; save(); }
+  function markVisit() { if (halted || !lastBuilt) return; const m = load(); m.lastVisit = lastBuilt; save(); }
   if (root.document && root.addEventListener) {
     boot();
     root.addEventListener('pagehide', markVisit);
     root.document.addEventListener('visibilitychange', () => { if (root.document.visibilityState === 'hidden') markVisit(); });
   }
 
-  FP.changeStore = { sync, update, markVisit, boot, localToday, _reset() { memo = null; visitBase = null; lastBuilt = null; }, _state: () => load(), note: () => lastNote };
+  /** Al cerrar sesión: deja de escribir y borra lo guardado, para que ninguna escritura pendiente reviva la cola tras el borrado. */
+  function halt() { halted = true; memo = null; visitBase = null; lastBuilt = null; try { root.localStorage.removeItem(KEY); } catch (e) { /* nada */ } }
+
+  FP.changeStore = { halt, sync, update, markVisit, boot, localToday, _reset() { memo = null; visitBase = null; lastBuilt = null; }, _state: () => load(), note: () => lastNote };
 })(typeof window !== 'undefined' ? window : globalThis);

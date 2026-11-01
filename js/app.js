@@ -3781,6 +3781,37 @@
       state.ux.routeCtx = { channel: ch, periodType: 'month', periodKey: m, comparison: 'actual_vs_previous' };
       actions.go({ dataset: { view: 'diagnostico' } });
     },
+    /** Clientes y LTV → CSV con todos los clientes en riesgo y perdidos (ID anonimizado del libro). Se arma en el navegador; no se sube ni se guarda. */
+    'cu-export-lapsed'() {
+      const cu = state.cu;
+      FP.customerStore.load().then((ledger) => {
+        const lst = ledger ? FP.customerEngine.lapsedList(ledger, { channel: cu.opts.channel === 'total' ? null : cu.opts.channel }) : null;
+        if (!lst || lst.status !== 'ok' || !lst.rows.length) { FP.ui.toast('No hay clientes en riesgo o perdidos para descargar.'); return; }
+        /* Un ID que empieza con = + - @ se leería como fórmula en Excel: se antepone un apóstrofo. */
+        const q = (v) => { let t = v === null || v === undefined ? '' : String(v); if (/^[=+\-@]/.test(t)) t = "'" + t; return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+        const GL = { risk: 'En riesgo', lost: 'Perdido' }, ch = (id) => { try { return FP.dataModel.getChannel(id).label; } catch (e) { return id; } };
+        const head = ['id_cliente', 'grupo', 'ultimo_pedido', 'dias_sin_comprar', 'pedidos', 'venta_acumulada', 'canal_ultimo_pedido'];
+        const meta = [['# corte', lst.maxDay], ['# canal', cu.opts.channel === 'total' ? 'Todos los canales' : ch(cu.opts.channel)], ['# nota', 'IDs anonimizados tal como vienen en el archivo de ventas; en riesgo = 91 a 180 dias sin pedido, perdido = mas de 180']];
+        const csv = '﻿' + [...meta.map((m) => m.map(q).join(',')), head.join(','), ...lst.rows.map((r) => [r.id, GL[r.group], r.last, r.days, r.orders, +r.revenue.toFixed(2), ch(r.channel)].map(q).join(','))].join('\n');
+        FP.exporter.download(`clientes_en_riesgo_y_perdidos_${cu.opts.channel || 'total'}_${lst.maxDay}.csv`, csv, 'text/csv');
+        FP.ui.toast(`Descargué ${lst.rows.length.toLocaleString('es-MX')} clientes. El archivo se generó en tu navegador.`);
+      }).catch((e) => FP.ui.toast('No pude armar la lista: ' + e.message));
+    },
+    /** Clientes y LTV → Recuperar con el escenario «Reactivación de clientes» precargado (% extra de pedidos). Nada se guarda: el usuario revisa y guarda. */
+    'cu-to-recovery'() {
+      const r = state.cu.result, rx = r && r.extras && r.extras.reactivation;
+      if (!rx || rx.ordersPct === null) return;
+      const ch = state.cu.opts.channel || 'total', mk = r.maxDay.slice(0, 7), rs = state.rc.settings;
+      if (state.rc.imported) { state.rc.imported = null; }
+      rs.channel = ch; rs.periodType = 'month'; rs.periodKey = mk;
+      const rg = periodRange('month', mk), cutoff = state.fc.run && state.fc.run.cutoff;
+      rs.applyTo = rg && cutoff && rg.to <= cutoff ? 'all' : 'future';
+      saveRecoverySettings();
+      const pct = +(rx.ordersPct * 100).toFixed(2);
+      state.rc.draft = { ...emptyDraft(), trafficPct: pct, target: 'channel', name: `Reactivación de clientes (+${pct.toFixed(1)} % de pedidos)` };
+      state.rc.fromDx = { source: 'clientes', hypId: '', hyp: '', alt: '', period: `${rx.windowDays} días`, channel: ch === 'total' ? 'Todos los canales' : ch, pct, orders: Math.round(rx.potentialOrders), revenue: rx.potentialRevenue, rate: rx.rate };
+      actions.go({ dataset: { view: 'recovery' } });
+    },
     /** Clientes y LTV → Cross-sell. */
     'cu-to-cross'() { actions.go({ dataset: { view: 'crosssell' } }); },
     /** Clientes y LTV → Producto y evolución con el mismo canal y el último mes cerrado. */
@@ -6186,7 +6217,7 @@
   /** Borra los datos de este navegador y recarga. No toca la nube. */
   async function wipeLocalData(step) {
     const st = async (label, pct) => { if (step) { step(label, pct); await tick(); } };
-    wiping = true; await st('Guardando lo pendiente', 5);
+    wiping = true; if (FP.changeStore && FP.changeStore.halt) FP.changeStore.halt(); await st('Guardando lo pendiente', 5);
     clearTimeout(autoTimer); autoPending.clear();
     FP.cloud.setAuto(false); state.cloud.auto.on = false;
     await repo.flush();
