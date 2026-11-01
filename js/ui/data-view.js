@@ -20,17 +20,39 @@
    * El orden de canal se precalcula (antes se pedía el canal en cada comparación del ordenamiento).
    */
   let lastFilter = { key: null, list: null };
+
+  /**
+   * Orden de canales precalculado (Bolt performance optimization: evita instanciar un new Map y
+   * realizar llamadas a Map.get en cada comparación de Array.sort al filtrar grandes colecciones).
+   */
+  let cachedChannelOrders = null;
+  function getChannelOrders() {
+    if (!cachedChannelOrders) {
+      const orders = {};
+      C().channels.forEach((c) => {
+        const ch = FP.dataModel.getChannel(c.id);
+        orders[c.id] = ch ? ch.order : 0;
+      });
+      cachedChannelOrders = orders;
+    }
+    return cachedChannelOrders;
+  }
+
   function filtered(state) {
     const f = state.dataFilters;
     const key = `${FP.dataStore.signature(state.store, f.dataType)}|${f.dataType}|${f.channel}|${f.status}|${f.from}|${f.to}`;
     if (lastFilter.key === key) return lastFilter.list;
-    const order = new Map(C().channels.map((c) => [c.id, FP.dataModel.getChannel(c.id).order]));
+    const order = getChannelOrders();
     const list = FP.dataStore.records(state.store, f.dataType).filter((r) =>
       (!f.channel || r.channel === f.channel) &&
       (f.status === 'all' || r.status === f.status) &&
       (!f.from || r.date >= f.from) &&
       (!f.to || r.date <= f.to)
-    ).sort((a, b) => (a.date === b.date ? order.get(a.channel) - order.get(b.channel) : a.date < b.date ? -1 : 1));
+    ).sort((a, b) => {
+      if (a.date < b.date) return -1;
+      if (a.date > b.date) return 1;
+      return (order[a.channel] || 0) - (order[b.channel] || 0);
+    });
     lastFilter = { key, list };
     return list;
   }
@@ -102,15 +124,23 @@
     $('data-batches').innerHTML = list.length ? `<div class="table-wrap"><table class="table ds-table">
       <thead><tr><th>Archivo</th><th>Tipo</th><th>Importado</th><th class="num">Filas</th><th class="num">Importadas</th>
         <th class="num">Rechazadas</th><th class="num">Errores</th><th class="num">Advertencias</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
-      <tbody>${list.map((b) => `<tr>
+      <tbody>${list.map((b) => {
+        let errs = 0, warns = 0;
+        const issList = b.issues || [];
+        for (let j = 0; j < issList.length; j++) {
+          if (issList[j].severity === 'error') errs++;
+          else if (issList[j].severity === 'warning') warns++;
+        }
+        return `<tr>
         <td><strong>${esc(b.fileName)}</strong></td>
         <td>${esc(C().dataTypes[b.dataType].label)}</td>
         <td class="num">${esc(b.importedAt.slice(0, 16).replace('T', ' '))}</td>
         <td class="num">${F().integer(b.rowCount)}</td><td class="num">${F().integer(b.accepted)}</td><td class="num">${F().integer(b.rejected)}</td>
-        <td class="num">${F().integer(b.issues.filter((i) => i.severity === 'error').length)}</td>
-        <td class="num">${F().integer(b.issues.filter((i) => i.severity === 'warning').length)}</td>
+        <td class="num">${F().integer(errs)}</td>
+        <td class="num">${F().integer(warns)}</td>
         <td><button type="button" class="btn btn--small btn--quiet" data-action="remove-batch" data-id="${b.id}">Quitar</button></td>
-      </tr>`).join('')}</tbody></table></div>
+      </tr>`;
+      }).join('')}</tbody></table></div>
       <p class="field__hint">Quitar un archivo borra sus registros y su registro de errores. Úsalo para reemplazar una carga con duplicados o errores.</p>`
       : '<div class="empty"><strong>Sin archivos importados</strong>Los archivos aparecen aquí después de confirmar la importación.</div>';
   }
