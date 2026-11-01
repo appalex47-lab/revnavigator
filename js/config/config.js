@@ -589,6 +589,11 @@
       operativo: {
         belowPlanPct: 0.005,   // un indicador está «bajo el plan» (o «por encima») cuando se aparta ≥ 0.5 % de su plan; menos se considera ruido
         weakPct: 0.01          // una semana, mes o día es «la más floja» solo si su venta queda ≥ 1 % bajo el plan; si no, el periodo está en línea
+      },
+      /** Formato Gerencial (PROVISIONAL): semáforo de cumplimiento por canal contra el plan a la fecha. */
+      gerencial: {
+        okPct: 0.01,           // «en meta»: la venta real está por encima del plan o a menos de 1 % por debajo
+        alertPct: 0.05         // «fuera de meta»: la venta real queda 5 % o más bajo el plan; entre ambos, «en seguimiento»
       }
     },
     products: {

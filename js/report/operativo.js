@@ -246,5 +246,5 @@
   FP.reportBlocks.register('funnel', funnel);
   FP.reportBlocks.register('actions', actions);
 
-  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
+  FP.reportOperativo = { PROFILE_ID, METRICS, periodOf, rangeOf, toDateOf, channelPacing, evolution, funnel, actions, flagsOf, pp2 };
 })(typeof window !== 'undefined' ? window : globalThis);
