@@ -213,6 +213,26 @@
   }
 
 
+  /* ---------- Cierre técnico (hallazgo 4): detección de conflictos de sincronización ----------
+     Para las claves en `cloud.conflictKeys` (p. ej. reportPrefs: ediciones de la presentación), «gana la última escritura» podía borrar en silencio lo que otra persona
+     (u otro navegador) escribió. Ahora cada navegador recuerda la fecha de la nube con la que se sincronizó por última vez (la «base», en localStorage, fuera de los
+     datos del equipo). Hay CONFLICTO cuando este navegador cambió la clave desde esa base Y la nube también cambió Y el contenido es distinto: no se escribe nada
+     (ni local ni en la nube) hasta que la persona elija. Límite conocido: no hay escritura condicional en el servidor, así que dos subidas simultáneas
+     (dentro de la misma fracción de segundo) siguen siendo posibles; la ventana es la de una consulta y una subida. */
+  const BASE_KEY = 'fp.cloudBase';
+  const baseMap = () => { try { return JSON.parse(root.localStorage.getItem(BASE_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const getBase = (k) => baseMap()[k] || null;
+  const setBase = (k, iso) => { try { const m = baseMap(); m[k] = iso; root.localStorage.setItem(BASE_KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ } };
+  const clearBases = () => { try { root.localStorage.removeItem(BASE_KEY); } catch (e) { /* sin storage */ } };
+  const isConflictKey = (key) => (cfg().conflictKeys || []).includes(String(key).split(':')[0]);
+  const sameData = (a, b) => JSON.stringify(a && a.data) === JSON.stringify(b && b.data);
+  /** Descarga y arma el sobre completo de una clave de la nube (null si está incompleto o ilegible). */
+  async function fetchEnv(session, key, total, fetchImpl) {
+    const parts = await rest(`${cfg().table}?select=part,payload&key=eq.${encodeURIComponent(key)}&order=part.asc`, { fetchImpl, session });
+    if (!parts || parts.length < total || Array.from({ length: total }, (_, i) => parts.find((x) => x.part === i)).some((x) => !x)) return null;
+    try { return JSON.parse(parts.slice().sort((a, b) => a.part - b.part).map((x) => x.payload).join('')); } catch (e) { return null; }
+  }
+
   /** Sube un sobre (partido en trozos) y borra trozos sobrantes de una subida anterior más larga. */
   async function putKey(session, key, env, fetchImpl) {
     const table = cfg().table, text = JSON.stringify(env), parts = split(text, cfg().chunkChars), at = (env && env.savedAt && !isNaN(Date.parse(env.savedAt))) ? new Date(env.savedAt).toISOString() : new Date().toISOString();   // updated_at = fecha de guardado del dato: base de «gana el más nuevo»
@@ -221,6 +241,7 @@
       await rest(`${table}?on_conflict=team_id,key,part`, { method: 'POST', body: rows.slice(b, b + 4), prefer: 'resolution=merge-duplicates,return=minimal', fetchImpl, session });
     }
     await rest(`${table}?key=eq.${encodeURIComponent(key)}&part=gte.${parts.length}`, { method: 'DELETE', fetchImpl, session });
+    setBase(key, at);   // este navegador y la nube coinciden en esta fecha
     return { text, parts: parts.length, at };
   }
 
@@ -308,22 +329,42 @@
     return !(isDataKey && isDataKey(key)) && !cfg().skipKeys.includes(b) && !cfg().autoSkipKeys.includes(b);
   }
 
-  /** Sube solo estas claves (sin tocar ni borrar las demás de la nube). */
-  async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress } = {}) {
+  /**
+   * Sube solo estas claves (sin tocar ni borrar las demás de la nube).
+   * Las claves de `conflictKeys` no se suben si la nube cambió desde la última sincronización de este navegador y su contenido es distinto: se devuelven en
+   * `conflicts` ({ key, local, cloud, cloudAt }) y NO se escribe nada. `force` (lista de claves) omite esa revisión: solo para cuando la persona ya eligió conservar la suya.
+   */
+  async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress, force = [] } = {}) {
     const se = await ensureSession({ fetchImpl, captchaImpl }); if (!se.ok) return se;
-    let n = 0;
-    try { for (const key of keys) { const env = await provider.read(key); if (!env) continue; await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); } }
-    catch (e) { return { ok: false, error: e.message }; }
-    return { ok: true, pushed: n, at: new Date().toISOString() };
+    let n = 0; const conflicts = [];
+    try {
+      let at = null;
+      for (const key of keys) {
+        const env = await provider.read(key); if (!env) continue;
+        if (isConflictKey(key) && !force.includes(key)) {
+          if (!at) { const cl = await listKeys({ fetchImpl }); if (!cl.ok) return { ok: false, error: cl.error }; at = cl.at || {}; }
+          const cloudIso = at[key], base = getBase(key);
+          if (cloudIso && (!base || Date.parse(cloudIso) > Date.parse(base) + 2000)) {   // la nube cambió desde nuestra última sincronización
+            const meta = await rest(`${cfg().table}?select=total&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
+            const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
+            if (!cloud) return { ok: false, error: `No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.` };
+            if (sameData(env, cloud)) { setBase(key, cloudIso); continue; }   // mismo contenido: nada que subir ni que resolver
+            conflicts.push({ key, local: env, cloud, cloudAt: cloudIso }); continue;
+          }
+        }
+        await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length });
+      }
+    } catch (e) { return { ok: false, error: e.message }; }
+    return { ok: true, pushed: n, at: new Date().toISOString(), conflicts };
   }
 
   /**
    * Trae las claves chicas que en la nube son MÁS NUEVAS que las locales (gana la última escritura; gracias a updated_at
-   * del primer trozo). `provider`: { keys, read, write(key, envelope) }. Devuelve { ok, applied:[keys], pushedNewer:[keys] }.
+   * del primer trozo). `provider`: { keys, read, write(key, envelope) }. Devuelve { ok, applied:[keys], conflicts:[{ key, local, cloud, cloudAt }] }: las claves en conflicto NO se aplican ni se suben.
    */
   async function pullNewer(provider, isDataKey, { fetchImpl } = {}) {
-    const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: true, applied: [], none: true };
-    const session = se.session, applied = [];
+    const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: true, applied: [], conflicts: [], none: true };
+    const session = se.session, applied = [], conflicts = [];
     try {
       const metas = await rest(`${cfg().table}?select=key,total,updated_at&part=eq.0`, { fetchImpl, session });
       for (const m of metas || []) {
@@ -331,14 +372,17 @@
         const local = await provider.read(m.key);
         const localAt = local && local.savedAt ? Date.parse(local.savedAt) : 0, cloudAt = Date.parse(m.updated_at);
         if (!(cloudAt > localAt + 2000)) continue;
-        const parts = await rest(`${cfg().table}?select=part,payload&key=eq.${encodeURIComponent(m.key)}&order=part.asc`, { fetchImpl, session });
-        if (!parts || parts.length < m.total || Array.from({ length: m.total }, (_, i) => parts.find((x) => x.part === i)).some((x) => !x)) continue;   // incompleta: no se toca lo local
-        let env; try { env = JSON.parse(parts.slice().sort((a, b) => a.part - b.part).map((x) => x.payload).join('')); } catch (e) { continue; }
-        if (local && JSON.stringify(local) === JSON.stringify(env)) continue;   // mismo contenido: nada que aplicar
-        await provider.write(m.key, env); applied.push(m.key);
+        const env = await fetchEnv(session, m.key, m.total, fetchImpl); if (!env) continue;   // incompleta o ilegible: no se toca lo local
+        if (local && JSON.stringify(local) === JSON.stringify(env)) { setBase(m.key, m.updated_at); continue; }   // mismo contenido: nada que aplicar
+        if (local && isConflictKey(m.key)) {
+          const base = getBase(m.key);
+          const dirty = !base || localAt > Date.parse(base) + 2000;   // este navegador cambió la clave desde su última sincronización (o nunca se sincronizó)
+          if (dirty && !sameData(local, env)) { conflicts.push({ key: m.key, local, cloud: env, cloudAt: m.updated_at }); continue; }   // NO se pisa: la persona decide
+        }
+        await provider.write(m.key, env); setBase(m.key, m.updated_at); applied.push(m.key);
       }
-    } catch (e) { return { ok: false, error: e.message, applied }; }
-    return { ok: true, applied };
+    } catch (e) { return { ok: false, error: e.message, applied, conflicts }; }
+    return { ok: true, applied, conflicts };
   }
 
   /** Compara lo subido con lo que hay en la nube (claves, tamaño y suma de verificación). */
@@ -445,5 +489,5 @@
     return { ok: true };
   }
 
-  FP.cloud = { setRetryHook: (f) => { retryHook = f; }, listKeys, rest, consumeAuthHash, redirectUrl, autoOn, setAuto, isAutoKey, pushKeys, pullNewer, loginPassword, changePassword, loadTeam, validEmail, getCaptchaToken, loadSession, ensureSession, signOut, upload, download, downloadProgress, verify, pruneKeys, remove, planCleanup, currentRefs, deleteChunks, chunkRefsOfText, digest, split };
+  FP.cloud = { setRetryHook: (f) => { retryHook = f; }, listKeys, rest, consumeAuthHash, redirectUrl, autoOn, setAuto, isAutoKey, pushKeys, pullNewer, getBase, setBase, clearBases, isConflictKey, loginPassword, changePassword, loadTeam, validEmail, getCaptchaToken, loadSession, ensureSession, signOut, upload, download, downloadProgress, verify, pruneKeys, remove, planCleanup, currentRefs, deleteChunks, chunkRefsOfText, digest, split };
 })(typeof window !== 'undefined' ? window : globalThis);

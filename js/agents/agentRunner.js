@@ -201,7 +201,7 @@
   async function callAI(ctx, opts) {
     const owners = ctx.responsables, user = JSON.stringify(ctx, null, 2), agent = opts.agent || 'analista';
     const call = async (extra) => {
-      const r = await FP.cohereClient.chatJson({ audit: { purpose: PURPOSE[agent] }, system: RULES[agent], user: extra ? `${user}\n\n${extra}` : user, schema: RESPONSE_SCHEMA, apiKey: opts.apiKey, model: opts.model, fetchImpl: opts.fetchImpl });
+      const r = await FP.cohereClient.chatJson({ audit: { purpose: PURPOSE[agent] }, system: RULES[agent], user: extra ? `${user}\n\n${extra}` : user, schema: RESPONSE_SCHEMA, model: opts.model, fetchImpl: opts.fetchImpl });
       if (!r.ok) return { fail: { status: r.status || 'unavailable', errors: r.errors || ['No se pudo consultar la IA.'], errorKind: r.errorKind || null } };
       const p = FP.cohereClient.parseJson(r.text);
       if (!p.ok) return { fail: { status: 'invalid', errors: ['La IA respondió en un formato no válido.'] } };
@@ -234,7 +234,7 @@
     const ctx = buildContext(det, FP.agents.analista.OWNERS, agent), key = `${agent}|${keyOf(ctx)}`;
     if (!opts.force && cache.has(key)) return cache.get(key);
     let r;
-    try { r = await callAI(ctx, { agent, apiKey: state.dx && state.dx.apiKey, model: state.dx && state.dx.model, fetchImpl: opts.fetchImpl }); }
+    try { r = await callAI(ctx, { agent, model: state.dx && state.dx.model, fetchImpl: opts.fetchImpl }); }
     catch (e) { r = { status: 'unavailable', errors: [String(e && e.message || e)] }; }
     if (r.status !== 'ok') return { ...det0, ai: { status: r.status, errors: r.errors || [], errorKind: r.errorKind || null } };
     const m = merge(det, r.items, r.lectura);
@@ -283,7 +283,7 @@
     const ctx = { pregunta: q, ...buildContext(det, FP.agents.analista.OWNERS, agent) };
     const user = JSON.stringify(ctx, null, 2);
     const call = async (extra) => {
-      const r = await FP.cohereClient.chatJson({ audit: { purpose: `${PURPOSE[agent]} · pregunta` }, system: askRulesFor(agent), user: extra ? `${user}\n\n${extra}` : user, schema: ASK_SCHEMA, apiKey: state.dx && state.dx.apiKey, model: state.dx && state.dx.model, fetchImpl: opts.fetchImpl });
+      const r = await FP.cohereClient.chatJson({ audit: { purpose: `${PURPOSE[agent]} · pregunta` }, system: askRulesFor(agent), user: extra ? `${user}\n\n${extra}` : user, schema: ASK_SCHEMA, model: state.dx && state.dx.model, fetchImpl: opts.fetchImpl });
       if (!r.ok) return { fail: { ok: false, errors: r.errors || ['No se pudo consultar la IA.'] } };
       const p = FP.cohereClient.parseJson(r.text);
       if (!p.ok || !p.value || typeof p.value.answer !== 'string') return { fail: { ok: false, errors: ['La IA respondió en un formato no válido.'] } };

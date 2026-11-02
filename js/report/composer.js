@@ -19,7 +19,7 @@
  * Plan (schema deck_plan 1.1.0):
  *   { schema, version, profile, audience, depth,
  *     slides:     [{ order, id, sub?, block, type, title, reason }],
- *     excluded:   [{ block, title, kind: 'sin-datos'|'en-anexo'|'fuera-de-perfil'|'seleccion-persona'|'profundidad', reason }],
+ *     excluded:   [{ block, title, kind: 'sin-datos'|'en-anexo'|'fuera-de-perfil'|'duplicada'|'seleccion-persona'|'profundidad', reason }],
  *     annex:      [{ block, sub, title }],                  // las láminas del plan que son anexos
  *     limitations:[{ block, kind, text?, code? }] }          // avisos que el reporte ya trae (no se inventa texto)
  */
@@ -53,7 +53,8 @@
     if (!profile) throw new Error(`Perfil de presentación desconocido: «${o.profile}».`);
     if (profile.status !== 'enabled') throw new Error(`El perfil «${profile.id}» todavía no está habilitado.`);
     if (!report || !Array.isArray(report.pages)) throw new Error('El reporte no trae páginas.');
-    const ex = new Set(o.exclude || []), inc = new Set(o.include || []), slots = profile.slots;
+    const slots = profile.slots, required = new Set(slots.filter((s) => s.required).map((s) => s.block));
+    const ex = new Set((o.exclude || []).filter((b) => !required.has(b))), inc = new Set(o.include || []);   // una lámina obligatoria (la portada) nunca se puede excluir, venga de donde venga la selección
     const depths = (profile.depths || []).map((d) => d.id), dIdx = o.depth === undefined || o.depth === null ? -1 : depths.indexOf(o.depth);
     if (o.depth !== undefined && o.depth !== null && dIdx < 0) throw new Error(`El perfil «${profile.id}» no tiene la profundidad «${o.depth}».`);
     const depthOf = (id) => { const s = slots.find((x) => x.block === id); return s && s.depth ? depths.indexOf(s.depth) : -1; };
@@ -62,7 +63,10 @@
     const typeOf = (id) => { const s = slots.find((x) => x.block === id); return s ? s.type : 'analisis'; };
     const excluded = [], candidates = [];
 
+    const seen = new Set();
     report.pages.forEach((p, i) => {
+      if (seen.has(p.id)) { excluded.push({ block: p.id, title: p.title, kind: 'duplicada', reason: 'La página está repetida en el reporte; solo se usa la primera.' }); return; }   // nunca dos láminas con el mismo id
+      seen.add(p.id);
       if (p.status !== 'included') excluded.push({ block: p.id, title: p.title, kind: 'sin-datos', reason: p.reason });
       else if (p.needs === 'edits' && !hasEdits(o.edits, profile.id)) excluded.push({ block: p.id, title: p.title, kind: 'sin-datos', reason: 'No hay ediciones de texto ni hipótesis aceptadas en esta presentación.' });
       else if (p.annex) {

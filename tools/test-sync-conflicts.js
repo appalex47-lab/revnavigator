@@ -1,0 +1,119 @@
+#!/usr/bin/env node
+/* Cierre técnico · hallazgo 4: conflictos de sincronización de `reportPrefs` entre DOS personas/navegadores.
+ * ⚠ SIMULADO: el servidor es un Supabase en memoria (tabla team_blobs con updated_at, como la real). Ejecuta el código REAL de js/cloud/cloudSync.js y de
+ *   js/report/presentationPrefs.js en dos navegadores independientes (localStorage propio cada uno), pero NO prueba el Supabase real (RLS, red, latencias, condiciones de carrera
+ *   del servidor). Eso queda como validación pendiente con credenciales reales.   node tools/test-sync-conflicts.js */
+const fs = require('fs'), vm = require('vm');
+let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 500) : '')); if (!c) bad++; };
+const CFG = { url: 'https://x.supabase.co', publishableKey: 'pk', table: 'team_blobs', chunkChars: 400000, skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion'], autoSkipKeys: ['uxSettings', 'productSettings'], conflictKeys: ['reportPrefs'] };
+
+// ---- servidor simulado (compartido por el equipo) ----
+const rows = []; let puts = 0;
+const resp = (status, obj) => ({ ok: status < 300, status, json: async () => obj, text: async () => (obj === null ? '' : JSON.stringify(obj)) });
+async function server(url, o) {
+  const u = new URL(url), q = (k) => u.searchParams.get(k);
+  if (!u.pathname.startsWith('/rest/v1/team_blobs')) return resp(404, {});
+  let sel = rows.slice();
+  const kf = q('key'), pf = q('part');
+  if (kf && kf.startsWith('eq.')) sel = sel.filter((r) => r.key === kf.slice(3));
+  if (pf && pf.startsWith('eq.')) sel = sel.filter((r) => r.part === +pf.slice(3));
+  if (pf && pf.startsWith('gte.')) sel = sel.filter((r) => r.part >= +pf.slice(4));
+  if (o.method === 'POST') { puts++; JSON.parse(o.body).forEach((r) => { const i = rows.findIndex((x) => x.key === r.key && x.part === r.part); if (i >= 0) rows[i] = r; else rows.push(r); }); return resp(201, null); }
+  if (o.method === 'DELETE') { sel.forEach((r) => rows.splice(rows.indexOf(r), 1)); return resp(204, null); }
+  return resp(200, sel.map((r) => ({ key: r.key, part: r.part, total: r.total, payload: r.payload, updated_at: r.updated_at, bytes: r.bytes })));
+}
+// ---- un navegador: su propio localStorage, su propio FP y su propio «disco» de claves ----
+function browser(name) {
+  const ls = new Map(), disk = new Map();
+  const ctx = { console, JSON, Math, Date, Map, Set, Promise, setTimeout, clearTimeout, Error, Array, Object, String, Number, encodeURIComponent, URL, AbortController, fetch: server };
+  ctx.localStorage = { getItem: (k) => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: (k) => ls.delete(k) };
+  ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
+  ctx.FP = { config: { cloud: JSON.parse(JSON.stringify(CFG)) } };
+  ['js/cloud/cloudSync.js', 'js/report/presentationPrefs.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+  ctx.localStorage.setItem('fp.cloudSession', JSON.stringify({ access_token: 'tok-' + name, refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600, user_id: name, email: name + '@x.com', anonymous: false, team_id: 'T', team_name: 'Equipo' }));
+  const FP = ctx.FP, provider = { keys: async () => [...disk.keys()], read: async (k) => (disk.has(k) ? JSON.parse(disk.get(k)) : null), write: async (k, e) => { disk.set(k, JSON.stringify(e)); } };
+  const save = (key, data, at) => { disk.set(key, JSON.stringify({ schemaVersion: 1, savedAt: at, data })); };   // como storage.save, con la fecha de guardado
+  const isData = () => false;
+  return { name, FP, provider, save, isData, ls, disk, get: (k) => (disk.has(k) ? JSON.parse(disk.get(k)) : null),
+    push: (keys, o) => FP.cloud.pushKeys(provider, keys, o || {}), pull: () => FP.cloud.pullNewer(provider, isData, {}) };
+}
+const P = (note, extra) => ({ schema: 'report_prefs', version: 1, audience: 'operativo', type: 'desempeno', depth: 'detallado', include: [], exclude: [], options: { showTags: false, showBusinessName: false, thresholds: {} }, edits: { 'operativo|pacing': { note } , ...(extra || {}) } });
+const iso = (m) => new Date(Date.UTC(2026, 10, 2, 9, m, 0)).toISOString();   // 2 nov 2026 09:mm
+const cloudData = () => { const r = rows.filter((x) => x.key === 'reportPrefs').sort((a, b) => a.part - b.part); return r.length ? JSON.parse(r.map((x) => x.payload).join('')).data : null; };
+
+(async () => {
+  const note = (d) => d && d.edits && d.edits['operativo|pacing'] && d.edits['operativo|pacing'].note;
+  // ---------- 1. flujo normal sin conflicto ----------
+  let A = browser('ana'), B = browser('beto');
+  A.save('reportPrefs', P('v1 de Ana'), iso(1));
+  let r = await A.push(['reportPrefs']);
+  t('Ana sube su presentación (primera subida: no hay nada en la nube, sin conflicto)', r.ok && r.pushed === 1 && r.conflicts.length === 0 && note(cloudData()) === 'v1 de Ana', r);
+  r = await B.pull();
+  t('Beto (sin cambios propios) trae la de Ana: se aplica, sin conflicto', r.ok && r.applied.includes('reportPrefs') && r.conflicts.length === 0 && note(B.get('reportPrefs').data) === 'v1 de Ana', r);
+  t('después de sincronizar, subir lo mismo no sube nada y no hay conflicto', (await B.push(['reportPrefs'])).conflicts.length === 0);
+
+  // ---------- 2. los dos editan sin verse (el caso que antes se perdía en silencio) ----------
+  A.save('reportPrefs', P('Ana: versión 2'), iso(10));
+  r = await A.push(['reportPrefs']); t('Ana edita y sube (base vigente): se sube', r.ok && r.pushed === 1 && note(cloudData()) === 'Ana: versión 2', r);
+  B.save('reportPrefs', P('Beto: su propia edición'), iso(12));   // Beto editó SIN haber traído lo de Ana
+  const before = JSON.stringify(rows);
+  r = await B.push(['reportPrefs']);
+  t('Beto intenta subir: se detecta CONFLICTO, no se sube nada y la nube conserva lo de Ana', r.ok && r.pushed === 0 && r.conflicts.length === 1 && r.conflicts[0].key === 'reportPrefs' && JSON.stringify(rows) === before && note(cloudData()) === 'Ana: versión 2', { pushed: r.pushed, c: r.conflicts.length });
+  t('el conflicto trae las dos versiones completas (la local y la del equipo) para que la persona decida', note(r.conflicts[0].local.data) === 'Beto: su propia edición' && note(r.conflicts[0].cloud.data) === 'Ana: versión 2');
+  r = await B.pull();
+  t('al traer de la nube, la copia local de Beto (más reciente) NO se pisa; el conflicto ya quedó registrado al intentar subir', r.ok && r.applied.length === 0 && note(B.get('reportPrefs').data) === 'Beto: su propia edición', r);
+
+  // ---------- 3. aunque la edición local sea ANTERIOR a la de la nube (último-en-escribir-gana la habría borrado) ----------
+  const C = browser('carla'); C.save('reportPrefs', P('v1 de Ana'), iso(1)); await C.pull().then(() => 0);
+  C.save('reportPrefs', P('Carla editó a las 9:05'), iso(5));   // antes que la v2 de Ana (9:10)
+  r = await C.pull();
+  t('edición local más VIEJA que la de la nube: con «gana la última» se perdía; ahora es conflicto y la local sigue intacta', r.conflicts.length === 1 && note(C.get('reportPrefs').data) === 'Carla editó a las 9:05', { applied: r.applied, c: r.conflicts.length });
+
+  // ---------- 4. resolver: tres salidas, sin pérdida silenciosa ----------
+  const cmp = B.FP.reportPrefs.compare(r.conflicts[0].local.data, r.conflicts[0].cloud.data);
+  t('compare: describe qué difiere (misma lámina editada distinto en las dos)', cmp.both.length === 1 && cmp.both[0] === 'operativo|pacing' && !cmp.onlyMine.length, cmp);
+  const mine = B.FP.reportPrefs.merge(B.get('reportPrefs').data, cloudData());
+  t('merge: une las ediciones de las dos; donde chocan queda la mía y se informa cuáles chocaron', mine.clashes.length === 1 && note(mine.data) === 'Beto: su propia edición');
+  const D1 = P('Beto: base', { 'operativo|drivers': { note: 'solo de Beto' } }), D2 = P('Ana: base', { 'operativo|movers': { note: 'solo de Ana' } });
+  const mg = B.FP.reportPrefs.merge(D1, D2);
+  t('merge: conserva las ediciones que solo tiene cada lado (nada se pierde) y avisa del choque', Object.keys(mg.data.edits).sort().join() === 'operativo|drivers,operativo|movers,operativo|pacing' && mg.clashes.join() === 'operativo|pacing', mg);
+  // «conservar la mía» (con fecha nueva y forzado) → la nube queda con la de Beto y Ana la recibe sin conflicto
+  B.save('reportPrefs', B.get('reportPrefs').data, iso(20));
+  r = await B.push(['reportPrefs'], { force: ['reportPrefs'] });
+  t('«Conservar la mía»: tras elegir, sube forzado y la nube queda con la de Beto', r.ok && r.pushed === 1 && note(cloudData()) === 'Beto: su propia edición', r);
+  r = await A.pull();
+  t('Ana (que tenía su v2 ya sincronizada, sin cambios nuevos) recibe la elegida sin conflicto y sin rebote', r.applied.includes('reportPrefs') && r.conflicts.length === 0 && note(A.get('reportPrefs').data) === 'Beto: su propia edición', r);
+  const stable = JSON.stringify(rows); await A.push(['reportPrefs']); await B.push(['reportPrefs']); await A.pull(); await B.pull();
+  t('después de resolver no hay rebotes: nuevas rondas de subir/traer no cambian nada', JSON.stringify(rows) === stable);
+
+  // ---------- 5. «usar la del equipo» ----------
+  const E = browser('eva'); E.save('reportPrefs', P('Eva local'), iso(15));
+  r = await E.pull();
+  t('un navegador que nunca se sincronizó y tiene su propia versión: conflicto (no se pisa en silencio)', r.conflicts.length === 1 && note(E.get('reportPrefs').data) === 'Eva local', r);
+  await E.provider.write('reportPrefs', r.conflicts[0].cloud); E.FP.cloud.setBase('reportPrefs', r.conflicts[0].cloudAt);
+  r = await E.pull(); t('«Usar la del equipo»: se aplica la de la nube y no vuelve a haber conflicto', r.conflicts.length === 0 && note(E.get('reportPrefs').data) === note(cloudData()), r);
+
+  // ---------- 6. sin conflicto cuando el contenido es igual / quien no editó ----------
+  const F = browser('fer'); F.save('reportPrefs', JSON.parse(JSON.stringify(cloudData())), iso(5));
+  r = await F.pull(); const rp = await F.push(['reportPrefs']);
+  t('mismo contenido en las dos copias: no hay conflicto y la nube queda igual', r.conflicts.length === 0 && rp.conflicts.length === 0 && JSON.stringify(cloudData()) === JSON.stringify(F.get('reportPrefs').data));
+  const G = browser('gus'); r = await G.pull();
+  t('un navegador sin datos propios trae la de la nube sin conflicto', r.applied.includes('reportPrefs') && r.conflicts.length === 0);
+
+  // ---------- 7. error al revisar la nube: no se sube nada ----------
+  const H = browser('hugo'); H.save('reportPrefs', P('Hugo'), iso(40));
+  const real = rows.filter((x) => x.key === 'reportPrefs'); real[0].total = 5;   // trozos incompletos en la nube
+  r = await H.push(['reportPrefs']);
+  t('si no se puede revisar lo que hay en la nube (incompleto), NO se sube: se informa el error', r.ok === false && /no se subió nada/.test(r.error || ''), r);
+  real[0].total = real.length;
+
+  // ---------- 8. otras claves siguen igual (no entran en esta revisión) ----------
+  const I = browser('ines'), J = browser('jose');
+  I.save('targets:2026', { goal: 1 }, iso(1)); await I.push(['targets:2026']);
+  J.save('targets:2026', { goal: 2 }, iso(0));
+  r = await J.pull();
+  t('claves fuera de `conflictKeys` conservan el comportamiento de siempre (gana la última escritura): límite documentado', r.conflicts.length === 0 && r.applied.includes('targets:2026'));
+  // ---------- 9. configuración ----------
+  t('la configuración declara reportPrefs como clave con detección de conflictos', JSON.parse(JSON.stringify(require('./_cfg.js'))).conflictKeys.includes('reportPrefs'));
+  console.log(bad ? `\n${bad} FALLAS` : '\nTODO OK'); process.exit(bad ? 1 : 0);
+})();

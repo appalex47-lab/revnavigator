@@ -2,6 +2,7 @@
 El MISMO archivo, con el flujo normal y con el Worker, y una respuesta simulada de Cohere. Se comparan: la consulta que sale (solo encabezados desconocidos y
 ejemplos de las 3 primeras filas, sin datos personales), el mapeo resultante, la pantalla de revisión, los registros guardados, las columnas aprendidas
 (la segunda carga ya no consulta) y los casos sin consulta (sin columnas desconocidas, IA desactivada, sin API key, respuesta inválida)."""
+from sim_proxy import sim
 import asyncio, sys, os, json, datetime as dt, threading, functools, http.server, socketserver
 from playwright.async_api import async_playwright
 ROOT = os.path.abspath(sys.argv[1])
@@ -33,7 +34,7 @@ async def ctx(b, worker, key=True, ai=True):
     c = await b.new_context(viewport={'width': 1280, 'height': 900}); q = await c.new_page(); errs = []; q.on('pageerror', lambda e: errs.append(str(e)[:200]))
     await q.clock.set_fixed_time(dt.datetime(2026, 10, 2, 9, 0)); u = f'http://127.0.0.1:{port}/index.html'; await q.goto(u + '#carga'); await q.wait_for_timeout(300)
     await q.evaluate(f"FP.importWorker.setMinBytes({0 if worker else 10 ** 12})")
-    await q.evaluate(f"FP.app.state.dx.apiKey = {json.dumps('clave-de-prueba' if key else '')}; FP.app.state.settings.enableAI = {json.dumps(ai)}")
+    await q.evaluate(sim(bool(key))); await q.evaluate(f"FP.app.state.settings.enableAI = {json.dumps(ai)}")
     return c, q, u, errs
 async def pick(q, text, name='raro.csv'):
     await q.set_input_files('input[data-action="pick-files"][data-type="actual"]', files=[{'name': name, 'mimeType': 'text/csv', 'buffer': text.encode()}])

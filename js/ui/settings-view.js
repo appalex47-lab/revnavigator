@@ -2,7 +2,7 @@
  * settings-view.js — Configuración de RevNavigator.
  * Reúne en un solo lugar lo que se configura una vez y vale para toda la app:
  *   · Estado de la herramienta (año, meta, canales, datos y motor: el detalle de las píldoras del encabezado) · Modo de uso · Análisis con IA (Cohere) · Almacenamiento · Negocio (Business Setup, más abajo en la misma vista).
- * No hay lógica nueva: cada control conserva su acción de siempre (ux-mode, dx-key, dx-remember, dx-model, storage-tests, storage-retry, bc-*).
+ * No hay lógica nueva: cada control conserva su acción de siempre (ux-mode, dx-model, storage-tests, storage-retry, bc-*).
  * Configuración de planeación NO está aquí: sigue en Planear porque afecta al plan, no a la herramienta.
  */
 (function (root) {
@@ -39,7 +39,7 @@
       case 'st-fuentes': { const b = FP.dataSources.build(state); return `${b.summary.activeSources} de ${b.summary.liveSources} fuentes con datos`; }
       case 'st-equivalencias': return plural(FP.aliases.rules().length, 'equivalencia', 'equivalencias');
       case 'st-almacenamiento': return 'Dónde se guardan tus datos';
-      case 'st-ia': return `${FP.cohereProxy && FP.cohereProxy.available() ? 'Servidor del equipo' : ai.apiKey ? 'API key en uso' : 'Sin API key'} · IA ${state.settings.enableAI === false ? 'desactivada' : 'activada'}`;
+      case 'st-ia': return `${FP.cohereProxy && FP.cohereProxy.available() ? 'Servidor del equipo' : 'Requiere sesión'} · IA ${state.settings.enableAI === false ? 'desactivada' : 'activada'}`;
       case 'st-ia-log': return plural(FP.aiAudit.count(), 'consulta en esta sesión', 'consultas en esta sesión');
       case 'st-ia-aprendido': return plural(Object.keys(FP.importer.learnedMappings()).length, 'columna aprendida', 'columnas aprendidas');
       case 'st-ia-privacidad': return plural((state.settings.piiColumns || []).length, 'columna marcada a mano', 'columnas marcadas a mano');
@@ -267,17 +267,10 @@
       ${accStart(state, 'st-ia', 'Conexión con Cohere (análisis con IA)', 'La usan Diagnóstico, Recovery Center, Narrativa y el mapeo semántico de importaciones. Todas comparten esta misma conexión de Cohere; no se crea otra API key. Cohere no calcula ni cambia cifras.')}
         <div class="panel__body stack">
           ${FP.cohereProxy && FP.cohereProxy.available()
-            ? `<div class="note note--ok" data-ai-server><strong>La IA usa el servidor de tu equipo.</strong> Con tu sesión, Cohere se llama desde tu Supabase y la API key vive allá, no en este navegador. No necesitas pegar ninguna key.</div>
+            ? `<div class="note note--ok" data-ai-server><strong>La IA usa el servidor de tu equipo.</strong> Con tu sesión, Cohere se llama desde tu Supabase y la API key vive allá, no en este navegador. No hay ninguna key que pegar.</div>
                <div class="btn-row"><button type="button" class="btn btn--small" data-action="dx-proxy-test" ${ai.proxyTest && ai.proxyTest.busy ? 'disabled' : ''}>${ai.proxyTest && ai.proxyTest.busy ? 'Probando…' : 'Probar la conexión del servidor'}</button></div>
-               ${ai.proxyTest && ai.proxyTest.msg ? `<p class="note ${ai.proxyTest.ok ? 'note--ok' : 'note--warning'}" id="dx-proxy-msg" role="status">${esc(ai.proxyTest.msg)}</p>` : ''}
-               <p class="field__hint">La key de abajo es solo un respaldo para cuando no inicies sesión o el servidor no esté disponible.</p>`
-            : '<p class="field__hint" data-ai-local>Sin sesión de equipo: la IA usa la API key pegada aquí. Al iniciar sesión pasará al servidor del equipo y podrás quitarla de este navegador.</p>'}
-          <div class="field"><label for="dx-key-input" class="field__hint">API key de Cohere (respaldo)</label>
-            <input id="dx-key-input" type="password" autocomplete="off" value="${esc(ai.apiKey || '')}" data-action="dx-key" placeholder="Pega tu API key"></div>
-          <div class="field field--check"><label><input type="checkbox" data-action="dx-remember" ${ai.rememberKey ? 'checked' : ''}> Recordar la key en este navegador</label>
-            <span class="field__hint">Se guarda en localStorage de este navegador y nunca se exporta ni se sube a la nube. Cualquiera con acceso a este navegador podría verla.</span></div>
-          <div class="note note--warning"><strong>Límite de seguridad.</strong> Esta app corre completa en tu navegador: una API key guardada aquí <em>no es un secreto seguro</em>. Cualquier extensión, script del mismo sitio o persona con acceso a este equipo puede leerla; ocultarla o codificarla no lo evita. Úsala solo en equipos personales, no la recuerdes en equipos compartidos y crea en Cohere una key propia con límite de gasto que puedas revocar. Con sesión de equipo la app usa el servidor intermedio (proxy) y esta key no hace falta.</div>
-          <div class="btn-row"><button type="button" class="btn btn--small" data-action="dx-key-clear" ${ai.apiKey ? '' : 'disabled'}>Quitar la key de este navegador</button></div>
+               ${ai.proxyTest && ai.proxyTest.msg ? `<p class="note ${ai.proxyTest.ok ? 'note--ok' : 'note--warning'}" id="dx-proxy-msg" role="status">${esc(ai.proxyTest.msg)}</p>` : ''}`
+            : '<div class="note note--warning" data-ai-local><strong>La IA necesita sesión de equipo.</strong> Cohere solo se llama desde el servidor del equipo (la API key vive allá): este navegador no guarda ni envía ninguna key. Inicia sesión para usar la IA; sin sesión, todo lo demás de la aplicación sigue funcionando.</div>'}
           <div class="field"><label for="dx-model" class="field__hint">Modelo</label>
             <input id="dx-model" type="text" value="${esc(ai.model)}" data-action="dx-model"></div>
         </div>

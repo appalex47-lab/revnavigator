@@ -82,11 +82,12 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
   calls.length = 0; c = await chat({ apiKey: PK });
   t('aunque haya key local, con sesión se prefiere el servidor y la key local NO sale del navegador', c.via === 'server' && !JSON.stringify(calls).includes(PK), calls);
   calls.length = 0; c = await chat({ apiKey: PK }, (u) => (u.includes('/functions/v1/') ? errResp(404) : okResp()));
-  t('servidor no instalado (404) + key local → respaldo directo a Cohere, que responde ok', c.ok === true && c.via === 'browser', c);
-  const fb = calls.map((x) => x.url); t('el respaldo llamó primero al proxy y luego a Cohere', fb.length === 2 && fb[0].includes('/functions/v1/') && fb[1] === 'https://api.cohere.com/v2/chat', fb);
+  t('cierre técnico · servidor no instalado (404) + key local → NO hay respaldo directo: falla explicando qué falta', c.ok === false && c.errorKind === 'proxy_setup' && /cohere-proxy/.test(c.errors[0]), c);
+  const fb = calls.map((x) => x.url); t('cierre técnico · la única llamada de red fue al proxy; nada a api.cohere.com y la key local no salió', fb.length === 1 && fb[0].includes('/functions/v1/') && !JSON.stringify(calls).includes('api.cohere.com') && !JSON.stringify(calls).includes(PK), fb);
+  t('cierre técnico · el cliente no contiene ninguna llamada directa a Cohere (ni «api.cohere.com», ni cabecera Bearer de Cohere) en js/', (() => { const hits = []; (function walk(d) { fs.readdirSync(d, { withFileTypes: true }).forEach((e) => { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else if (/\.js$/.test(e.name)) { const x = fs.readFileSync(f, 'utf8'); if (/api\.cohere\.com|Authorization:\s*`Bearer \$\{apiKey\}`/.test(x)) hits.push(f); } }); })('js'); return hits.length === 0; })());
   calls.length = 0; c = await chat({}, () => errResp(404));
   t('servidor no instalado y sin key: mensaje claro (proxy_setup)', c.ok === false && c.errorKind === 'proxy_setup' && /cohere-proxy/.test(c.errors[0]), c);
-  c = await chat({}, () => errResp(503, 'not_configured')); t('servidor sin secreto: dice que falta COHERE_API_KEY', c.errorKind === 'proxy_setup' && /COHERE_API_KEY/.test(c.errors[0]), c);
+  c = await chat({ apiKey: PK }, () => errResp(503, 'not_configured')); t('servidor sin secreto: dice que falta COHERE_API_KEY', c.errorKind === 'proxy_setup' && /COHERE_API_KEY/.test(c.errors[0]), c);
   for (const [st, code, kind] of [[401, 'no_session', 'no_session'], [403, 'no_team', 'no_session'], [502, 'cohere_auth', 'auth'], [429, 'cohere_quota', 'quota'], [502, 'cohere_server', 'server'], [504, 'cohere_unreachable', 'server'], [400, 'bad_request', 'http']]) {
     c = await chat({}, () => errResp(st, code)); t(`proxy ${st}/${code} → ${kind} con mensaje útil`, c.ok === false && c.errorKind === kind && c.errors[0].length > 10 && !JSON.stringify(c).includes(PK), c);
   }

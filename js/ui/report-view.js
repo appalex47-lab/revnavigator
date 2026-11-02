@@ -452,7 +452,8 @@
     if (hidden) Object.assign(rootEl.style, { display: 'block', position: 'absolute', left: '-99999px', top: '0', visibility: 'hidden' });
     rootEl.querySelectorAll('.rp-page').forEach((pg) => {
       const b = pg.querySelector('.rp-body'); if (!b) return;
-      pg.classList.remove('rp-compact', 'rp-tight'); pg.removeAttribute('data-overflow');
+      const over2 = () => b.scrollHeight > b.clientHeight + 1;
+      pg.classList.remove('rp-compact', 'rp-tight', 'rp-ed-s', 'rp-ed-ss'); pg.removeAttribute('data-overflow'); pg.querySelectorAll('.rp-title--fit, .rp-title--fit2').forEach((x) => x.classList.remove('rp-title--fit', 'rp-title--fit2'));
       b.querySelectorAll('tr.rp-rest, tr.rp-rest-total').forEach((x) => x.remove());   // se recalculan en cada ajuste
       delete pg.dataset.noTotal;
       if (b.scrollHeight > b.clientHeight + 1) { pg.classList.add('rp-compact'); }
@@ -526,6 +527,33 @@
         while (b.scrollHeight > b.clientHeight + 1 && guard-- > 0) { const c = cols.sort((a, d) => d.querySelectorAll('.rp-mv__r').length - a.querySelectorAll('.rp-mv__r').length)[0], rs = c.querySelectorAll('.rp-mv__r'); if (rs.length <= 1) break; rs[rs.length - 1].remove(); }
         if (b.querySelectorAll('.rp-mv__r').length < tot.reduce((a, c) => a + c, 0)) pg.setAttribute('data-trimmed', '1'); else trimNote.remove();
       }
+      // Cierre técnico: textos escritos por la persona (título, nota, hipótesis). Máximo permitido: 120 / 280 / 3×220 caracteres. Si la lámina sigue sin caber,
+      // primero se compactan (tipografía menor, nunca bajo 13.5 px); después se abrevian con «…», y si hace falta se quitan hipótesis desde la última, y la lámina lo dice.
+      // Nunca se desborda ni se recorta en silencio (el texto completo queda en la aplicación).
+      if (b.scrollHeight > b.clientHeight + 1 && pg.querySelector('.rp-ed, .rp-title')) {
+        pg.classList.add('rp-ed-s'); const ttl = pg.querySelector('.rp-title'); if (ttl) ttl.classList.add('rp-title--fit');
+        const ed = pg.querySelector('.rp-ed'), over = () => b.scrollHeight > b.clientHeight + 1;
+        if (over() && ed) {
+          const nt = ed.querySelector('.rp-ed__n'), tn = document.createElement(nt ? 'span' : 'p'); tn.className = 'rp-ed__trim'; tn.textContent = (nt ? ' ' : '') + 'Por espacio, el texto se muestra abreviado; el completo está en la aplicación.'; (nt || ed).appendChild(tn);
+          const node = (el) => (el.tagName === 'LI' ? el.firstChild : el.childNodes[1]), parts = [...ed.querySelectorAll('.rp-ed__n, .rp-ed__h li')].map((el) => ({ el, tx: node(el), full: node(el).textContent }));
+          const apply = (keep) => parts.forEach((q) => { const n = Math.floor(q.full.length * keep); q.tx.textContent = q.full.length > n ? (n > 3 ? q.full.slice(0, n).replace(/\s+\S*$/, '') + '…' : '…') : q.full; });
+          let keep = 0.85, guard = 14;
+          while (over() && guard-- > 0 && keep > 0.12) { apply(keep); keep *= 0.8; }
+          // aun abreviado no cabe: se quitan hipótesis desde la última (la lámina dice cuántas se muestran)
+          const lis = [...ed.querySelectorAll('.rp-ed__h li')]; let k = lis.length;
+          while (over() && k > 0) { lis[--k].remove(); }
+          if (k < lis.length) { tn.textContent = `${nt ? ' ' : ''}Por espacio, el texto se muestra abreviado y solo ${k} de ${lis.length} hipótesis; el completo está en la aplicación.`; if (!k) { const h = ed.querySelector('.rp-ed__h'); if (h) h.remove(); } }
+          if (parts.some((q) => q.tx.textContent !== q.full) || k < lis.length) pg.setAttribute('data-trimmed', '1'); else tn.remove();
+        }
+      }
+      if (over2() && pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-ss'); const ttl2 = pg.querySelector('.rp-title'); if (ttl2) ttl2.classList.add('rp-title--fit2'); }   // último recurso: el título escrito baja a 18 px (nunca se abrevia)
+      // Anexo «Ediciones e IA»: una fila por lámina editada. Si no caben todas, se quitan desde la última y el anexo dice cuántas muestra (cada texto está en su lámina).
+      if (over2() && pg.getAttribute('data-page') === 'annexEdits') {
+        const tb = b.querySelector('table tbody'), rows = tb ? [...tb.rows] : [], tot = rows.length; let k = tot;
+        const n = document.createElement('p'); n.className = 'rp-small rp-trim'; n.textContent = 'x'; b.appendChild(n);
+        while (over2() && k > 1) { rows[--k].remove(); }
+        if (k < tot) { n.textContent = `Por espacio, el anexo muestra ${k} de ${tot} láminas editadas; el texto de cada una está en su lámina.`; pg.setAttribute('data-trimmed', '1'); } else n.remove();
+      }
       if (b.scrollHeight > b.clientHeight + 1) { pg.setAttribute('data-overflow', '1'); bad.push(pg.getAttribute('data-page')); }
     });
     if (hidden) ['display', 'position', 'left', 'top', 'visibility'].forEach((k) => { rootEl.style[k] = ''; });
@@ -551,6 +579,17 @@
   }
 
   /* ================= vista «Presentación (PDF)» ================= */
+  /** Cierre técnico (hallazgo 4): la presentación guardada local y la del equipo son distintas y ninguna se pisa sola; la persona elige. */
+  function conflictHtml(state) {
+    const cs = ((state.cloud && state.cloud.conflicts) || []).filter((c) => c.key === 'reportPrefs'); if (!cs.length) return '';
+    const c = cs[0], P = FP.reportPrefs, d = P.compare(c.local.data, c.cloud.data), n = (a) => a.length;
+    const when = (e) => { try { return new Date(e.savedAt || c.cloudAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }); } catch (x) { return ''; } };
+    const parts = [d.selection ? 'la elección de láminas, formato o etiquetas' : null, d.options ? 'los umbrales u opciones' : null, n(d.onlyMine) ? `${n(d.onlyMine)} edición(es) solo tuya(s)` : null,
+      n(d.onlyTheirs) ? `${n(d.onlyTheirs)} edición(es) solo del equipo` : null, n(d.both) ? `${n(d.both)} lámina(s) editada(s) distinto en las dos` : null].filter(Boolean);
+    const btn = (choice, label, cls) => `<button type="button" class="btn btn--small ${cls || ''}" data-action="rp-conflict" data-key="reportPrefs" data-choice="${choice}">${label}</button>`;
+    return `<div class="note note--warn" id="rp-conflict" role="alert"><strong>La presentación cambió en otro lugar.</strong> Tu copia (${esc(when(c.local))}) y la del equipo (${esc(when(c.cloud))}) son distintas${parts.length ? `: difieren ${esc(parts.join('; '))}` : ''}. No se sobrescribió nada; elige qué conservar.
+      <div class="btn-row">${btn('merge', 'Combinar las dos (lo que choca queda con lo mío)', 'btn--primary')}${btn('mine', 'Conservar la mía')}${btn('theirs', 'Usar la del equipo')}</div></div>`;
+  }
   /** Sensibilidad del formato elegido (Operativo o Gerencial): a partir de qué desvío contra el plan se marca algo. Vacío = valor por defecto de la configuración. */
   function thresholdsHtml(rp, state) {
     const g = rp.audience === 'gerencial' || rp.audience === 'directivo', D = FP.config.reports[g ? 'gerencial' : 'operativo'], T = rp.options.thresholds || {};
@@ -627,6 +666,7 @@
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}
           <div id="rp-status" aria-live="polite">${rp.status === 'busy' ? FP.loader.html('Armando la presentación con los cálculos actuales…', { key: 'presentacion' }) : ''}
+            ${conflictHtml(state)}
             ${rp.prefsNote && rp.prefsNote.length ? `<p class="note note--warn" id="rp-prefs-note" role="status">Parte de lo que tenías guardado ya no aplica y se descartó: ${H().esc(rp.prefsNote.join(' '))}</p>` : ''}
             ${rp.status === 'error' ? `<p class="note note--warn">No pude armar la presentación: ${H().esc(rp.error || '')}</p>` : ''}
             <div id="rp-ov" aria-live="polite"></div>

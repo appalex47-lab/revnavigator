@@ -341,7 +341,7 @@
       if (local) { S.asks[agent] = { status: 'ok', result: { answer: local.text }, to: local.to || null }; S.q = ''; }
       else if (agent === 'analista' && FP.cohereAnalysisAssistant && hasAnalysis()) {
         // Con Análisis calculado se usa el asistente de Análisis (contexto completo); sin él, el de la historia del periodo.
-        const r = await FP.cohereAnalysisAssistant.ask(q, state, { apiKey: state.dx && state.dx.apiKey, model: state.dx && state.dx.model });
+        const r = await FP.cohereAnalysisAssistant.ask(q, state, { model: state.dx && state.dx.model });
         S.asks[agent] = r.ok ? { status: 'ok', result: r.result } : { status: 'error', errors: r.errors };
         if (r.ok) S.q = '';
       } else {

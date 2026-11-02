@@ -1,6 +1,7 @@
 """Configuración en pestañas con secciones fijas (sin desplegables). Uso: python3 batch_ajustes_tabs.py <raiz>
 T-1 cinco pestañas y ningún desplegable; T-2 cada pestaña muestra solo sus secciones, completas y con título y resumen; T-3 teclado (flechas) y ARIA;
 T-4 los resúmenes reflejan el estado real; T-5 el menú de la cuenta lleva directo a «Cuenta y nube»; T-6 sin desborde de 320 a 1920 px y encabezados sin saltos."""
+from sim_proxy import sim
 import asyncio, sys, os, json, datetime as dt, threading, functools, http.server, socketserver
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from recovery_state import prepare
@@ -46,10 +47,10 @@ async def main():
         await q.wait_for_function("FP.app.state.selfTest", timeout=90000)   # Fase A: las pruebas del motor corren solas en segundo plano unos segundos después de abrir
         await q.evaluate("FP.app.state.stTab='herramienta';FP.app.render()")
         meta = await q.evaluate("(()=>Object.fromEntries([...document.querySelectorAll('#view-ajustes section.stsec')].map(d=>[d.id,((d.querySelector('.stsec__meta')||{}).textContent||'').trim()])))()")
-        chk('T-4 resúmenes: modo, sin API key, 0 consultas, 0 aprendidas, 0 equivalencias, fuentes, negocio y motor', meta['st-modo']=='Aprendiz' and 'Sin API key' in meta['st-ia'] and meta['st-ia-log'].startswith('0 consultas') and meta['st-ia-aprendido'].startswith('0 columnas') and meta['st-equivalencias'].startswith('0 equivalencias') and 'fuentes con datos' in meta['st-fuentes'] and 'Sin configurar' in meta['st-negocio'] and 'motor operativo' in meta['st-estado'], meta)
-        await q.evaluate("FP.app.state.dx.apiKey='k'; FP.importer.setLearnedMappings({monto_vendido:'revenue',importe:'revenue'}); FP.app.state.settings.piiColumns=['a']; FP.app.render()"); await q.wait_for_timeout(300)
+        chk('T-4 resúmenes: modo, IA «requiere sesión», 0 consultas, 0 aprendidas, 0 equivalencias, fuentes, negocio y motor', meta['st-modo']=='Aprendiz' and 'Requiere sesión' in meta['st-ia'] and meta['st-ia-log'].startswith('0 consultas') and meta['st-ia-aprendido'].startswith('0 columnas') and meta['st-equivalencias'].startswith('0 equivalencias') and 'fuentes con datos' in meta['st-fuentes'] and 'Sin configurar' in meta['st-negocio'] and 'motor operativo' in meta['st-estado'], meta)
+        await q.evaluate(sim(True)); await q.evaluate("FP.importer.setLearnedMappings({monto_vendido:'revenue',importe:'revenue'}); FP.app.state.settings.piiColumns=['a']; FP.app.render()"); await q.wait_for_timeout(300)
         m2 = await q.evaluate("(()=>Object.fromEntries([...document.querySelectorAll('#view-ajustes section.stsec')].map(d=>[d.id,((d.querySelector('.stsec__meta')||{}).textContent||'').trim()])))()")
-        chk('T-4 los resúmenes se actualizan: API key en uso, 2 columnas aprendidas, 1 marcada', 'API key en uso' in m2['st-ia'] and m2['st-ia-aprendido'].startswith('2 columnas') and m2['st-ia-privacidad'].startswith('1 columna marcada'), m2)
+        chk('T-4 los resúmenes se actualizan: IA por el servidor del equipo (sesión simulada), 2 columnas aprendidas, 1 marcada', 'Servidor del equipo' in m2['st-ia'] and m2['st-ia-aprendido'].startswith('2 columnas') and m2['st-ia-privacidad'].startswith('1 columna marcada'), m2)
         # menú de cuenta -> Cuenta y nube
         await q.goto(u + '#inicio'); await q.wait_for_timeout(500)
         await q.evaluate("FP.app.state.cloud.session={userId:'u',email:'a@b.com',teamId:'t',teamName:'Eq'};FP.app.render()")

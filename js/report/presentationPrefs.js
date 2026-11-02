@@ -6,7 +6,7 @@
  *   - Lo guardado se valida contra el catálogo vigente: una audiencia o un tipo que ya no está habilitado, una profundidad desconocida o un umbral fuera de rango se
  *     descartan (se avisa cuáles) y rige el valor por defecto. Nunca se inventa un valor para tapar uno inválido.
  *   - Las ediciones son TEXTO de la persona (título y nota) y las hipótesis de IA que ella aceptó; ninguna puede contener ni sustituir una cifra calculada.
- * El almacenamiento (y su limpieza al cerrar sesión) lo maneja la aplicación: la clave `reportPrefs` es local, no viaja a la nube y se borra con los datos del equipo.
+ * El almacenamiento (y su limpieza al cerrar sesión) lo maneja la aplicación: la clave `reportPrefs` se sincroniza con el equipo (con detección de conflictos: ver cloudSync.js y `compare`/`merge`) y se borra con los datos del equipo al cerrar sesión.
  */
 (function (root) {
   'use strict';
@@ -61,8 +61,9 @@
         if (d.depth !== undefined && d.depth !== null) { if (depths.includes(d.depth)) value.depth = d.depth; else dropped.push(`La profundidad guardada «${d.depth}» ya no existe en este formato.`); }
         const blocks = new Set(prof.slots.map((s) => s.block)), inc = strList(d.include), exc = strList(d.exclude);
         if (inc) value.include = inc.filter((b) => blocks.has(b));
-        if (exc) value.exclude = exc.filter((b) => blocks.has(b));
-        if ((inc && inc.length !== value.include.length) || (exc && exc.length !== value.exclude.length)) dropped.push('Se descartaron láminas guardadas que el formato ya no tiene.');
+        const req = new Set(prof.slots.filter((s) => s.required).map((s) => s.block));
+        if (exc) { value.exclude = exc.filter((b) => blocks.has(b) && !req.has(b)); if (exc.some((b) => req.has(b))) dropped.push('Se ignoró una lámina obligatoria (la portada) guardada como quitada.'); }
+        if ((inc && inc.length !== value.include.length) || (exc && exc.some((b) => !blocks.has(b)))) dropped.push('Se descartaron láminas guardadas que el formato ya no tiene.');
       }
     }
     if (d.options && typeof d.options === 'object') {
@@ -98,5 +99,25 @@
       options: { showTags: Boolean(o.showTags), showBusinessName: Boolean(o.showBusinessName), thresholds: th }, edits };
   }
 
-  FP.reportPrefs = { SCHEMA, VERSION, LIMITS, RANGE, THRESHOLDS, cleanText, sanitizeEdit, editKey, EDITABLE_NOT, normalize, serialize };
+  /**
+   * Cierre técnico (hallazgo 4): conflicto entre la copia local y la del equipo (dos personas o navegadores cambiaron la presentación sin verse).
+   * Puro, sin red. `a` y `b` son los datos guardados ({ audience, type, depth, include, exclude, options, edits }).
+   * compare → qué difiere: la elección (audiencia, tipo, profundidad, láminas, etiquetas, umbrales) y las ediciones por lámina
+   *   { selection: bool, options: bool, onlyMine: [claves], onlyTheirs: [claves], both: [claves con texto distinto en ambas] }.
+   * merge   → { data, clashes }: ediciones de ambas (las que chocan se quedan con la MÍA, y se devuelven en `clashes` para avisarlo); la elección y los umbrales, los míos.
+   */
+  const j = (v) => JSON.stringify(v === undefined ? null : v);
+  function compare(a, b) {
+    const A = (a && a.edits) || {}, B = (b && b.edits) || {}, ka = Object.keys(A), kb = Object.keys(B);
+    const sel = (d) => j([d && d.audience, d && d.type, d && d.depth, d && d.include, d && d.exclude]);
+    return { selection: sel(a) !== sel(b), options: j(a && a.options) !== j(b && b.options),
+      onlyMine: ka.filter((k) => !(k in B)), onlyTheirs: kb.filter((k) => !(k in A)), both: ka.filter((k) => k in B && j(A[k]) !== j(B[k])) };
+  }
+  function merge(mine, theirs) {
+    const m = mine && typeof mine === 'object' ? mine : {}, t = theirs && typeof theirs === 'object' ? theirs : {};
+    const c = compare(m, t), edits = { ...(t.edits || {}), ...(m.edits || {}) };
+    return { data: { ...m, edits }, clashes: c.both };
+  }
+
+  FP.reportPrefs = { SCHEMA, VERSION, LIMITS, RANGE, THRESHOLDS, cleanText, sanitizeEdit, editKey, EDITABLE_NOT, normalize, serialize, compare, merge };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3,7 +3,7 @@
 const fs = require('fs'), vm = require('vm');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, Error }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/directivo.js', 'js/report/composer.js']
+['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/directivo.js', 'js/report/composer.js', 'js/report/voice.js']
   .forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const FP = ctx.FP, D = FP.reportDirectivo, B = FP.reportBlocks, P = FP.reportProfiles, C = FP.reportComposer, CH = FP.config.channels.map((c) => c.id);
 const rev = (a, p) => ({ revenue: { actual: a, plan: p, gap: a - p, gapPct: a / p - 1, compliance: a / p } });
@@ -22,6 +22,18 @@ t('Veredicto: tres cifras (real, plan a la fecha y cierre estimado del periodo) 
 t('Veredicto: real y plan salen del bloque toDate del total (sin recalcular)', v.kpis[0].value === 990 + (CH.length - 1) * 1000 && v.kpis[1].value === CH.length * 1000);
 t('Veredicto: la frase dice «Canal digital» y que va por debajo (o a la par) según la brecha', /^Canal digital va 0\.\d % por debajo|^Canal digital va a la par/.test(v.conclusion), v.conclusion);
 t('Veredicto: con brecha de −10 % el titular lo dice con el monto', (() => { const q = D.verdict(src([[900, 1000], [900, 1000], [900, 1000], [900, 1000]]), { pages: [] }); return CH.length !== 4 || /va 10\.0 % por debajo de su plan a la fecha \(−\$400\)/.test(q.conclusion); })());
+/* ---- cierre técnico: la dirección («por debajo» / «por encima») nunca se invierte, en ninguna de las dos ramas de la frase ---- */
+const ratio = (g) => src(Array(CH.length).fill([1000 * (1 + g), 1000]));
+const dirOf = (g) => { const c = D.verdict(ratio(g), { pages: [] }).conclusion; return { c, below: /por debajo/.test(c), above: /por encima/.test(c) }; };
+[[-0.003, 'rama «a la par», por debajo'], [-0.0049, 'rama «a la par», borde inferior'], [0.003, 'rama «a la par», por encima'], [0.0049, 'rama «a la par», borde superior'], [-0.032, 'fuera de la banda, por debajo'], [0.032, 'fuera de la banda, por encima'], [-0.5, 'muy por debajo'], [0.5, 'muy por encima']].forEach(([g, name]) => {
+  const d = dirOf(g);
+  t(`Veredicto · dirección correcta (${name}: ${g * 100} %): ${g < 0 ? 'dice «por debajo» y NO «por encima»' : 'dice «por encima» y NO «por debajo»'}`, g < 0 ? d.below && !d.above : d.above && !d.below, d.c);
+});
+t('Veredicto · la rama «a la par» se usa solo dentro de ±0.5 % y la otra fuera (la frase cambia de forma en el borde)', /va a la par del plan/.test(dirOf(0.0049).c) && /va a la par del plan/.test(dirOf(-0.0049).c) && !/a la par/.test(dirOf(0.006).c) && !/a la par/.test(dirOf(-0.006).c));
+t('Veredicto · el monto firmado coincide con la dirección (−$ cuando está por debajo, +$ por encima) fuera de la banda', /\(−\$/.test(dirOf(-0.032).c) && /\(\+\$/.test(dirOf(0.032).c), [dirOf(-0.032).c, dirOf(0.032).c]);
+(() => { const V = ctx.FP.reportVoice, pacing = (g) => ({ pages: [{ id: 'pacing', status: 'included', kpis: [{ id: 'real', value: 1000 * (1 + g) }, { id: 'plan', value: 1000 }, { id: 'compliance', value: 1 + g }], id: 'pacing' }] });
+  [[-0.003, 'a la par'], [0.003, 'a la par'], [-0.032, 'por debajo'], [0.032, 'por encima'], [-0.0051, 'por debajo'], [0.0051, 'por encima']].forEach(([g, w]) => { const r = pacing(g), tt = V.title('directivo', r.pages[0], r);
+    t(`Voz de Directivo · Pacing (${g * 100} %): «${w}» con el signo correcto`, w === 'a la par' ? (/a la par del plan/.test(tt) && tt.includes(g < 0 ? '−' : '+')) : new RegExp(w).test(tt) && !new RegExp(w === 'por debajo' ? 'por encima' : 'por debajo').test(tt), tt); }); })();
 t('Veredicto: la confiabilidad y la divergencia salen de la página de confiabilidad que ya existe; sin esa página no se inventa aviso', v.caution.some((c) => /Confiabilidad del cierre estimado: limitada/.test(c)) && v.caution.some((c) => /difieren de forma material/.test(c)) && D.verdict(src([[1000, 1000]]), { pages: [] }).caution.length === 0);
 t('Veredicto: sin cierre estimado muestra null (No disponible) y no cero', D.verdict(src([[1000, 1000]], {}, null), { pages: [] }).kpis[2].value === null);
 t('Veredicto: avisa si la venta real llega antes del corte', D.verdict(src([[1000, 1000]], { lastActual: '2026-09-20' }), { pages: [] }).caution.some((c) => /antes del corte/.test(c)));

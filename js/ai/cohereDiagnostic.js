@@ -110,12 +110,12 @@
    * Llama a Cohere (Chat API v2). `fetchImpl` permite probar sin red.
    * @returns Promise<{ ok, status: 'ok'|'unavailable'|'invalid', hypotheses, errors, model }>
    */
-  async function generateWithCohere(diag, { apiKey, model = C().diagnostics.cohere.model, fetchImpl = (typeof fetch !== 'undefined' ? fetch : null), timeoutMs = C().diagnostics.cohere.timeoutMs } = {}) {
+  async function generateWithCohere(diag, { model = C().diagnostics.cohere.model, fetchImpl = (typeof fetch !== 'undefined' ? fetch : null), timeoutMs = C().diagnostics.cohere.timeoutMs } = {}) {
     const unavailable = (msg) => ({ ok: false, status: 'unavailable', hypotheses: [], errors: [msg], model });
     if (!diag || diag.status !== 'ok') return unavailable('No hay diagnóstico con datos para enviar.');
     const payload = buildPayload(diag);
     const knownIds = new Set((diag.signals || []).map((s) => s.id));
-    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Diagnóstico (hipótesis)' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, apiKey, model, fetchImpl, timeoutMs,
+    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Diagnóstico (hipótesis)' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, model, fetchImpl, timeoutMs,
       user: `Genera un JSON con hipótesis a partir de este diagnóstico ya calculado:\n${JSON.stringify(payload)}` });
     if (!r.ok) return { ok: false, status: r.status, hypotheses: [], errors: r.errors, model };
     const text = r.text;
