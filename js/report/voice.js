@@ -7,7 +7,7 @@
  *
  * Contra el riesgo de «caer al titular actual sin avisar»: cada regla declara qué necesita (`needs`) y FP.reportVoice.audit() lista, por formato, qué titulares salieron
  * con la voz del formato y cuáles no (y qué campo faltó). El anexo «Reglas y umbrales» lo muestra y una prueba falla si una regla no produce titular teniendo sus campos.
- * Solo cubre los formatos Gerencial y Directivo y las láminas Resumen, Pacing, Factores y Quién suma y resta.
+ * Cubre Gerencial, Directivo y Operativo (Operativo agrega los indicadores bajo el plan de «Pacing por canal») y las láminas Resumen, Pacing, Factores y Quién suma y resta.
  */
 (function (root) {
   'use strict';
@@ -31,7 +31,7 @@
     if (!p) return { missing: 'la página «Qué resta y qué suma»' };
     const ch = (a) => (Array.isArray(a) ? a.filter((x) => x && x.type === 'Canal' && isNum(x.value) && typeof x.name === 'string' && x.name) : []);
     const minus = ch(p.minus).filter((x) => x.value < 0).sort((a, b) => a.value - b.value)[0] || null, plus = ch(p.plus).filter((x) => x.value > 0).sort((a, b) => b.value - a.value)[0] || null;
-    return { minus, plus };
+    return { minus, plus, all: ch(p.minus) };
   }
   /** «4 de 4 canales en meta» solo si el semáforo del formato está en la presentación. */
   function inGoal(report) {
@@ -39,6 +39,9 @@
     const n = (p.counts.ok || 0) + (p.counts.watch || 0) + (p.counts.alert || 0);
     return n > 0 ? `${p.counts.ok} de ${n} ${n === 1 ? 'canal' : 'canales'} en meta` : null;
   }
+  const joinEs = (a) => (a.length < 2 ? (a[0] || '') : `${a.slice(0, -1).join(', ')} y ${a[a.length - 1]}`);
+  /** Indicadores bajo el plan de un canal (de «Pacing por canal», si está en la presentación): « (ticket y conversión bajo el plan)». */
+  const belowOf = (report, name) => { const cp = pageOf(report, 'channelPacing'), r = cp && (cp.rows || []).find((x) => x && x.label === name); return r && Array.isArray(r.below) && r.below.length ? r.below.filter((x) => typeof x === 'string' && x) : []; };
   const standingDir = (g) => (Math.abs(g) < 0.005 ? `Vamos a la par del plan (${fmt('spct', g)})` : `Vamos ${fmt('pct', Math.abs(g))} ${g < 0 ? 'por debajo' : 'por encima'} del plan a la fecha`);
 
   /** Reglas: needs(report) → texto de lo que falta o null; text(p, report) → titular. Una regla por (formato, lámina). */
@@ -50,6 +53,17 @@
         text: (p, r) => { const t = (p.tables || []).find((x) => x.id === 'drivers'), top = t.rows.filter((x) => isNum(x.contribution) && x.driver).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))[0]; return `La brecha es de ${fmt('smoneyC', kpi(p, 'gap'))}; el factor que más pesa es ${String(top.driver).toLowerCase()} (${fmt('smoneyC', top.contribution)})`; } },
       movers: { needs: (r) => { const m = moversFacts(r); return m.missing || (m.minus || m.plus ? null : 'canales que sumen o resten'); },
         text: (p, r) => { const m = moversFacts(r); return m.minus && m.plus ? `${m.minus.name} resta ${money(m.minus.value)} y ${m.plus.name} suma ${money(m.plus.value)}` : m.minus ? `${m.minus.name} resta ${money(m.minus.value)} y ningún canal suma sobre el plan` : `${m.plus.name} suma ${money(m.plus.value)} y ningún canal resta contra el plan`; } }
+    },
+    operativo: {
+      summary: { needs: (r) => { const f = pacingFacts(r), m = moversFacts(r); return f.missing || m.missing || null; },
+        text: (p, r) => { const f = pacingFacts(r), m = moversFacts(r), b = m.minus ? belowOf(r, m.minus.name) : [];
+          return `A la fecha vamos al ${fmt('pct', f.compliance)} del plan; ${m.minus ? `${m.minus.name} resta ${money(m.minus.value)}${b.length ? ` y su ${joinEs(b)} ${b.length === 1 ? 'está' : 'están'} bajo el plan` : ''}` : 'ningún canal resta contra su plan'}`; } },
+      pacing: { needs: (r) => pacingFacts(r).missing || null, text: (p, r) => { const f = pacingFacts(r); return `Vamos al ${fmt('pct', f.compliance)} del plan a la fecha (${money(f.real)} de ${money(f.plan)})`; } },
+      drivers: { needs: (r) => { const p = pageOf(r, 'drivers'), t = p && (p.tables || []).find((x) => x.id === 'drivers'); return !t || (t.rows || []).filter((x) => isNum(x.contribution) && x.driver).length < 2 || !isNum(kpi(p, 'gap')) ? 'la brecha y al menos dos factores del diagnóstico' : null; },
+        text: (p, r) => { const t = (p.tables || []).find((x) => x.id === 'drivers'), rows = t.rows.filter((x) => isNum(x.contribution) && x.driver).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution)).slice(0, 3); return `La brecha es de ${fmt('smoneyC', kpi(p, 'gap'))}: ${joinEs(rows.map((x) => `${String(x.driver).toLowerCase()} ${fmt('smoneyC', x.contribution)}`))}`; } },
+      movers: { needs: (r) => { const m = moversFacts(r); return m.missing || (m.minus || m.plus ? null : 'canales que sumen o resten'); },
+        text: (p, r) => { const m = moversFacts(r), sub = (r2) => { const b = belowOf(r, r2.name); return `${r2.name} resta ${money(r2.value)}${b.length ? ` (${joinEs(b)} bajo el plan)` : ''}`; };
+          const mins = m.all.filter((x) => x.value < 0).sort((a, b) => a.value - b.value).slice(0, 2).map(sub); return mins.length ? mins.join('; ') + (m.plus ? `; ${m.plus.name} suma ${money(m.plus.value)}` : '') : `${m.plus.name} suma ${money(m.plus.value)} y ningún canal resta contra el plan`; } }
     },
     directivo: {
       pacing: { needs: (r) => pacingFacts(r).missing || null, text: (p, r) => standingDir(pacingFacts(r).gapPct) },
