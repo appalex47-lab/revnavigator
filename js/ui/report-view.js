@@ -458,6 +458,31 @@
       delete pg.dataset.noTotal;
       if (b.scrollHeight > b.clientHeight + 1) { pg.classList.add('rp-compact'); }
       if (b.scrollHeight > b.clientHeight + 1) { pg.classList.add('rp-tight'); }   // último recurso antes de quitar filas: gráficos más bajos
+      // Cierre técnico: textos escritos por la persona (título, nota, hipótesis). Máximo permitido: 120 / 280 / 3×220 caracteres.
+      // Prioridad: las cifras calculadas van ANTES que el texto escrito. Por eso el ajuste va en dos tiempos: (1) antes de quitar filas de datos se compacta, se abrevia al mínimo, se quitan hipótesis
+      // desde la última y el título baja a 18 px; (2) si aun quitando filas hace falta, se repite el ajuste sobre lo que quede. Cada abreviatura lo dice en la lámina.
+      const edFit = (final) => {
+        if (!(b.scrollHeight > b.clientHeight + 1) || !pg.querySelector('.rp-ed, .rp-title')) return;
+        if (!pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-s'); const ttl = pg.querySelector('.rp-title'); if (ttl) ttl.classList.add('rp-title--fit'); }
+        const ed = pg.querySelector('.rp-ed'), over = () => b.scrollHeight > b.clientHeight + 1;
+        if (over() && ed) {
+          const node = (el) => (el.tagName === 'LI' ? el.firstChild : el.childNodes[1]), parts = [...ed.querySelectorAll('.rp-ed__n, .rp-ed__h li')].map((el) => ({ el, tx: node(el), full: pg.__edFull && pg.__edFull.get(el) !== undefined ? pg.__edFull.get(el) : node(el).textContent }));
+          pg.__edFull = pg.__edFull || new Map(); parts.forEach((q) => pg.__edFull.set(q.el, q.full));
+          let tn = ed.querySelector('.rp-ed__trim');
+          if (!tn) { const nt = ed.querySelector('.rp-ed__n'); tn = document.createElement(nt ? 'span' : 'p'); tn.className = 'rp-ed__trim'; tn.textContent = (nt ? ' ' : '') + 'Por espacio, el texto se muestra abreviado; el completo está en la aplicación.'; (nt || ed).appendChild(tn); }
+          const apply = (keep) => parts.forEach((q) => { const n = Math.floor(q.full.length * keep); q.tx.textContent = q.full.length > n ? (n > 3 ? q.full.slice(0, n).replace(/\s+\S*$/, '') + '…' : '…') : q.full; });
+          const floor = final ? 0.12 : 0.5; let keep = 0.85, guard = 14;
+          while (over() && guard-- > 0 && keep > floor) { apply(keep); keep *= 0.8; }
+          if (final) {
+            const lis = [...ed.querySelectorAll('.rp-ed__h li')]; let k = lis.length;
+            while (over() && k > 0) { lis[--k].remove(); }
+            if (k < lis.length) { tn.textContent = `${tn.tagName === 'SPAN' ? ' ' : ''}Por espacio, el texto se muestra abreviado y solo ${k} de ${lis.length} hipótesis; el completo está en la aplicación.`; if (!k) { const h = ed.querySelector('.rp-ed__h'); if (h) h.remove(); } }
+          }
+          if (parts.some((q) => q.tx.textContent !== q.full) || !ed.querySelector('.rp-ed__h li') && pg.__edFull.size > 1) pg.setAttribute('data-trimmed', '1'); else if (!parts.some((q) => q.tx.textContent !== q.full)) { tn.remove(); }
+        }
+        if (final && over2() && pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-ss'); const ttl2 = pg.querySelector('.rp-title'); if (ttl2) ttl2.classList.add('rp-title--fit2'); }   // último recurso: el título escrito baja a 18 px (nunca se abrevia)
+      };
+      edFit(true);   // el texto escrito se abrevia al mínimo ANTES de quitar cifras: las filas de datos solo se recortan si aun así no cabe
       // Resumen: antes de quitar nada se esconde el gráfico del foco; luego, los hallazgos secundarios (lo dice una nota; siguen en sus láminas).
       if (pg.getAttribute('data-page') === 'summary' && b.scrollHeight > b.clientHeight + 1) {
         pg.classList.add('rp-lean');
@@ -527,26 +552,6 @@
         while (b.scrollHeight > b.clientHeight + 1 && guard-- > 0) { const c = cols.sort((a, d) => d.querySelectorAll('.rp-mv__r').length - a.querySelectorAll('.rp-mv__r').length)[0], rs = c.querySelectorAll('.rp-mv__r'); if (rs.length <= 1) break; rs[rs.length - 1].remove(); }
         if (b.querySelectorAll('.rp-mv__r').length < tot.reduce((a, c) => a + c, 0)) pg.setAttribute('data-trimmed', '1'); else trimNote.remove();
       }
-      // Cierre técnico: textos escritos por la persona (título, nota, hipótesis). Máximo permitido: 120 / 280 / 3×220 caracteres. Si la lámina sigue sin caber,
-      // primero se compactan (tipografía menor, nunca bajo 13.5 px); después se abrevian con «…», y si hace falta se quitan hipótesis desde la última, y la lámina lo dice.
-      // Nunca se desborda ni se recorta en silencio (el texto completo queda en la aplicación).
-      if (b.scrollHeight > b.clientHeight + 1 && pg.querySelector('.rp-ed, .rp-title')) {
-        pg.classList.add('rp-ed-s'); const ttl = pg.querySelector('.rp-title'); if (ttl) ttl.classList.add('rp-title--fit');
-        const ed = pg.querySelector('.rp-ed'), over = () => b.scrollHeight > b.clientHeight + 1;
-        if (over() && ed) {
-          const nt = ed.querySelector('.rp-ed__n'), tn = document.createElement(nt ? 'span' : 'p'); tn.className = 'rp-ed__trim'; tn.textContent = (nt ? ' ' : '') + 'Por espacio, el texto se muestra abreviado; el completo está en la aplicación.'; (nt || ed).appendChild(tn);
-          const node = (el) => (el.tagName === 'LI' ? el.firstChild : el.childNodes[1]), parts = [...ed.querySelectorAll('.rp-ed__n, .rp-ed__h li')].map((el) => ({ el, tx: node(el), full: node(el).textContent }));
-          const apply = (keep) => parts.forEach((q) => { const n = Math.floor(q.full.length * keep); q.tx.textContent = q.full.length > n ? (n > 3 ? q.full.slice(0, n).replace(/\s+\S*$/, '') + '…' : '…') : q.full; });
-          let keep = 0.85, guard = 14;
-          while (over() && guard-- > 0 && keep > 0.12) { apply(keep); keep *= 0.8; }
-          // aun abreviado no cabe: se quitan hipótesis desde la última (la lámina dice cuántas se muestran)
-          const lis = [...ed.querySelectorAll('.rp-ed__h li')]; let k = lis.length;
-          while (over() && k > 0) { lis[--k].remove(); }
-          if (k < lis.length) { tn.textContent = `${nt ? ' ' : ''}Por espacio, el texto se muestra abreviado y solo ${k} de ${lis.length} hipótesis; el completo está en la aplicación.`; if (!k) { const h = ed.querySelector('.rp-ed__h'); if (h) h.remove(); } }
-          if (parts.some((q) => q.tx.textContent !== q.full) || k < lis.length) pg.setAttribute('data-trimmed', '1'); else tn.remove();
-        }
-      }
-      if (over2() && pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-ss'); const ttl2 = pg.querySelector('.rp-title'); if (ttl2) ttl2.classList.add('rp-title--fit2'); }   // último recurso: el título escrito baja a 18 px (nunca se abrevia)
       // Anexo «Ediciones e IA»: una fila por lámina editada. Si no caben todas, se quitan desde la última y el anexo dice cuántas muestra (cada texto está en su lámina).
       if (over2() && pg.getAttribute('data-page') === 'annexEdits') {
         const tb = b.querySelector('table tbody'), rows = tb ? [...tb.rows] : [], tot = rows.length; let k = tot;
@@ -554,6 +559,7 @@
         while (over2() && k > 1) { rows[--k].remove(); }
         if (k < tot) { n.textContent = `Por espacio, el anexo muestra ${k} de ${tot} láminas editadas; el texto de cada una está en su lámina.`; pg.setAttribute('data-trimmed', '1'); } else n.remove();
       }
+      edFit(true);
       if (b.scrollHeight > b.clientHeight + 1) { pg.setAttribute('data-overflow', '1'); bad.push(pg.getAttribute('data-page')); }
     });
     if (hidden) ['display', 'position', 'left', 'top', 'visibility'].forEach((k) => { rootEl.style[k] = ''; });

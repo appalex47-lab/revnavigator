@@ -7,10 +7,17 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
 (async () => {
   const { handle, sanitize } = await import(path.resolve('supabase/functions/cohere-proxy/handler.js'));
   // ---------- servidor simulado ----------
-  let upstream = [], authCalls = 0, cfg = { cohereStatus: 200, user: { id: 'u1', is_anonymous: false }, members: [{ team_id: 'T' }], authOk: true, cohereThrows: false };
+  let upstream = [], authCalls = 0, hits = 0, cfg = { rate: 'ok',  cohereStatus: 200, user: { id: 'u1', is_anonymous: false }, members: [{ team_id: 'T' }], authOk: true, cohereThrows: false };
   const fakeFetch = async (url, o = {}) => {
     const h = o.headers || {};
     if (url.endsWith('/auth/v1/user')) { authCalls++; return cfg.authOk && h.Authorization === `Bearer ${USER_TOKEN}` ? { ok: true, status: 200, json: async () => cfg.user } : { ok: false, status: 401, json: async () => ({}) }; }
+    if (url.includes('/rest/v1/rpc/ai_usage_hit')) {   // réplica de la función SQL (migración 20261102_ai_usage_rate_limit.sql); la real se prueba aparte contra PostgreSQL
+      if (cfg.rate === 'missing') return { ok: false, status: 404, json: async () => ({ code: 'PGRST202' }) };
+      hits++; const b = JSON.parse(o.body);
+      if (cfg.rate === 'minute' || hits > b.p_limit_min && cfg.rate === 'count') return { ok: true, status: 200, json: async () => ({ ok: false, scope: 'minute', retry_after: 60 }) };
+      if (cfg.rate === 'day') return { ok: true, status: 200, json: async () => ({ ok: false, scope: 'day', retry_after: 3600 }) };
+      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    }
     if (url.includes('/rest/v1/team_members')) return { ok: true, status: 200, json: async () => cfg.members };
     if (url === 'https://api.cohere.com/v2/chat') {
       if (cfg.cohereThrows) throw new Error('boom ' + COHERE_KEY);
@@ -49,6 +56,15 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
   for (const [n, b] of bads) { r = await run(req(b)); t(`rechaza: ${n} (400) y no llama a Cohere`, r.status === 400 && !upstream.length, r.status); }
   r = await run(req('no es json')); t('JSON inválido → 400', r.status === 400 && r.json.error.code === 'bad_json');
   r = await run(req({ ...good, messages: [{ role: 'user', content: 'x'.repeat(1_100_000) }] })); t('petición enorme → 413', r.status === 413 && !upstream.length);
+  // ---- Hardening: límites de frecuencia y de tamaño ----
+  upstream = []; cfg.rate = 'minute'; r = await run(req(good));
+  t('límite por minuto: 429 rate_limited con Retry-After y NO se llama a Cohere', r.status === 429 && r.json.error.code === 'rate_limited' && r.headers.get('retry-after') === '60' && !upstream.length, r.status);
+  cfg.rate = 'day'; r = await run(req(good)); t('límite diario: 429 con mensaje distinto y Retry-After largo', r.status === 429 && /diario/.test(r.json.error.message) && r.headers.get('retry-after') === '3600' && !upstream.length);
+  cfg.rate = 'missing'; r = await run(req(good)); t('si la función de límites no está instalada el proxy FALLA CERRADO (503) y no llama a Cohere', r.status === 503 && r.json.error.code === 'rate_unavailable' && !upstream.length, r.status);
+  cfg.rate = 'count'; hits = 0; const codes = []; for (let i = 0; i < 12; i++) codes.push((await run(req(good))).status);
+  t('ráfaga de 12 solicitudes con límite 10/min: las 10 primeras pasan y el resto recibe 429', codes.slice(0, 10).every((c) => c === 200) && codes.slice(10).every((c) => c === 429), codes);
+  cfg.rate = 'ok'; upstream = []; r = await run(req({ ...good, messages: [{ role: 'user', content: 'x'.repeat(200_001) }] })); t('un solo mensaje enorme (>200 mil caracteres) → 400 y no llama a Cohere', r.status === 400 && !upstream.length, r.status);
+  upstream = []; r = await run(req(good), { AI_RATE_PER_MIN: '3' }); t('los límites se configuran con secretos (AI_RATE_PER_MIN) y la solicitud válida sigue pasando', r.status === 200 && upstream.length === 1);
   const s = sanitize({ ...good, tools: [{ x: 1 }], documents: ['d'], connectors: ['c'], stream: true, max_tokens: 99999 });
   t('descarta tools/documents/connectors/stream y acota max_tokens', !('tools' in s.body) && !('documents' in s.body) && !('connectors' in s.body) && !('stream' in s.body) && s.body.max_tokens === 4000, s);
 

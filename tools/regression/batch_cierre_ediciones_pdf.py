@@ -18,6 +18,12 @@ MEASURE = r"""(()=>{const rp=FP.app.state.rp, sel=FP.reportSetupView.selectionOf
     return {id:pg.dataset.page, w:Math.round(bb.width), h:Math.round(bb.height), ov:pg.getAttribute('data-overflow'), trimmed:pg.getAttribute('data-trimmed'), small,
       hasEd:!!ed, edInside:!edBox||(edBox.bottom<=bodyBox.bottom+1&&edBox.bottom<=bb.bottom), trimNote:!!pg.querySelector('.rp-ed__trim'), title:tt?tt.textContent:'', titleBottom:tt?tt.getBoundingClientRect().bottom<=bb.bottom:true,
       noteTx:ed&&ed.querySelector('.rp-ed__n')?ed.querySelector('.rp-ed__n').textContent:'', hypTx:ed?[...ed.querySelectorAll('.rp-ed__h li')].map(l=>l.textContent):[], ctrl:b?b.scrollHeight<=b.clientHeight+1:true, bh:b?[b.scrollHeight,b.clientHeight]:null, edh:ed?Math.round(edBox.height):0}}); host.style.cssText=''; return out})()"""
+VARIANT = r"""(()=>{const rp=FP.app.state.rp, sel=FP.reportSetupView.selectionOf(rp), v='__V__'; const rep=JSON.parse(JSON.stringify(rp.report)); let i=0;
+  const walk=(o)=>{ if(Array.isArray(o)) o.forEach(walk); else if(o&&typeof o==='object') Object.keys(o).forEach(k=>{ const x=o[k]; if(typeof x==='number'&&Number.isFinite(x)&&!/^(year|month|day|n|count|total|rank|order|index|days|countedDays)$/i.test(k)){ if(v==='enormes') o[k]=x*1e6; else if(v==='negativos') o[k]=-x; else if(v==='nulos'&&(i++%3===0)) o[k]=null; } else walk(x); }); };
+  walk(rep.pages);
+  const host=FP.reportView.mountPrint(rep,{exclude:rp.exclude,tags:true,sel,edits:null}); host.style.cssText='display:block;position:absolute;left:0;top:0;visibility:hidden';
+  const out=[...host.querySelectorAll('.rp-page')].map(pg=>{const bb=pg.getBoundingClientRect();const small=[...pg.querySelectorAll('*')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&!e.closest('svg')&&parseFloat(getComputedStyle(e).fontSize)<13.3).length;return {id:pg.dataset.page,w:Math.round(bb.width),h:Math.round(bb.height),ov:pg.getAttribute('data-overflow'),small}});
+  host.style.cssText=''; return out})()"""
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch()
@@ -63,6 +69,14 @@ async def main():
                 chk(f'[{tag}] textos máximos: el PDF real sigue con una hoja por lámina', n1 == len(m), [n1, len(m)])
                 t1 = subprocess.run(['pdftotext', '-layout', path1, '-'], capture_output=True, text=True).stdout
                 chk(f'[{tag}] textos máximos: la nota y la etiqueta de IA se leen en el PDF', ('Nota.' in t1 or info['n'] == 0) and ('Hipótesis (IA), por validar' in t1 or info['n'] == 0), None)
+                # ---- casos límite de DATOS (hardening): números enormes, signos invertidos y valores nulos sobre el reporte real ----
+                if scenario == 'mes':
+                    for variant in ('enormes', 'negativos', 'nulos'):
+                        mv = await f.evaluate(VARIANT.replace('__V__', variant))
+                        chk(f'[{tag}] datos {variant}: ninguna lámina desborda ni queda más baja que 13.4 px', all(s_['ov'] is None and s_['w'] == 1122 and s_['h'] == 630 for s_ in mv) and not [s_['id'] for s_ in mv if s_['small'] and s_['id'] != 'cover'], [(s_['id'], s_['ov'], s_['small']) for s_ in mv if s_['ov'] or (s_['small'] and s_['id'] != 'cover')])
+                        bad = await f.evaluate("(()=>{const h=document.getElementById('rp-print-host');const t=[...h.querySelectorAll('.rp-page')].map(p=>{const c=p.cloneNode(true);c.querySelectorAll('svg,style,script').forEach(x=>x.remove());c.querySelectorAll('*').forEach(x=>x.append(' '));return p.dataset.page+'::'+c.textContent.replace(/\\s+/g,' ')});return t.filter(x=>/\\b(null|undefined|NaN|Infinity)\\b/.test(x.split('::')[1])).map(x=>x.split('::')[0])})()")
+                        chk(f'[{tag}] datos {variant}: ninguna lámina muestra «null», «undefined», «NaN» ni «Infinity»', not bad, bad)
+                        await f.evaluate("FP.reportView.unmountPrint()")
                 await f.emulate_media(media='screen'); await f.evaluate("FP.reportView.unmountPrint(); FP.app.state.rp.edits={}")
             await f.close()
         await b.close()

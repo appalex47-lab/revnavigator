@@ -8,6 +8,8 @@ const MAX_BODY_CHARS = 1_000_000;
 const MAX_MESSAGES = 8;
 const MAX_TOKENS_CAP = 4000;
 const UPSTREAM_TIMEOUT_MS = 55_000;
+const MAX_MESSAGE_CHARS = 200_000;   // por mensaje (el total ya está acotado por MAX_BODY_CHARS)
+const DEFAULT_PER_MIN = 10, DEFAULT_PER_DAY = 300;   // límites por persona; configurables con los secretos AI_RATE_PER_MIN / AI_RATE_PER_DAY
 
 export function corsHeaders(origin, allowed) {
   const ok = origin && allowed.includes(origin);
@@ -26,6 +28,7 @@ export function sanitize(body) {
   const clean = [];
   for (const m of messages) {
     if (!m || !['system', 'user', 'assistant'].includes(m.role) || typeof m.content !== 'string') return { error: 'Mensaje inválido.' };
+    if (m.content.length > MAX_MESSAGE_CHARS) return { error: 'Mensaje demasiado largo.' };
     clean.push({ role: m.role, content: m.content });
   }
   const out = { model, messages: clean };
@@ -69,6 +72,15 @@ export async function handle(req, deps) {
     const rows = r.ok ? await r.json() : [];
     if (!Array.isArray(rows) || !rows.length) return fail(403, 'no_team', 'Tu usuario no pertenece a ningún equipo.', cors);
   } catch (e) { return fail(502, 'auth_unreachable', 'No pude verificar tu equipo con Supabase.', cors); }
+
+  // 2b) límite de frecuencia y consumo por persona (función ai_usage_hit en Postgres; falla CERRADO: sin ella no se llama a Cohere)
+  try {
+    const lim = (k, d) => { const n = Number(env(k)); return Number.isInteger(n) && n > 0 ? n : d; };
+    const r = await f(`${url}/rest/v1/rpc/ai_usage_hit`, { method: 'POST', headers: { apikey: anon, Authorization: auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_limit_min: lim('AI_RATE_PER_MIN', DEFAULT_PER_MIN), p_limit_day: lim('AI_RATE_PER_DAY', DEFAULT_PER_DAY) }) });
+    if (!r.ok) return fail(503, 'rate_unavailable', 'No pude comprobar tu límite de uso; intenta más tarde.', cors);
+    const q = await r.json();
+    if (!q || q.ok !== true) return json(429, { error: { code: 'rate_limited', message: q && q.scope === 'day' ? 'Alcanzaste el límite diario de uso de IA.' : 'Demasiadas solicitudes seguidas; espera un momento.' } }, { ...cors, 'Retry-After': String((q && q.retry_after) || 60) });
+  } catch (e) { return fail(502, 'auth_unreachable', 'No pude comprobar tu límite de uso.', cors); }
 
   // 3) cuerpo permitido
   const len = Number(req.headers.get('content-length') || 0);
