@@ -24,18 +24,19 @@ Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con pru
 | 15 | Choques de clases CSS | **Cerrado** | La misma prueba falla si una clase de las Fases 3–8 redefine una anterior (salvo 3 acotadas bajo `.rp-op`). |
 | 16 | Conteo «N páginas» ≠ PDF | **Cerrado** | Con un formato nuevo el aviso cuenta las láminas que saldrán en el PDF. |
 | 17 | Supuestos recortados | **Mitigado** | El texto completo queda como detalle (tooltip) en pantalla; la lámina impresa sigue recortada. |
-| 18 | Preferencias por navegador | **Abierto** | Por diseño (privacidad). |
+| 18 | Preferencias por navegador | **Cerrado** | Ya no son locales: `reportPrefs` se sincroniza con el equipo (sale de las claves que nunca viajan), se aplica en caliente al traerla y «Borrar mis ediciones…» guarda el estado vacío para que el borrado también llegue al equipo. **Nuevo riesgo:** las ediciones de texto ahora se comparten con el equipo (última escritura gana, sin fusión) y la copia de la nube se conserva al cerrar sesión. |
 
 **Pruebas que antes faltaban:** contraste AA de colores de estado (corregido el chip «en seguimiento»: 4.49:1 → 5.01:1), celular 390 px con editor y sensibilidad abiertos (sin desborde), tiempo de generación (≈7 s con datos de ejemplo, umbral de prueba 20 s).
 **Fallos preexistentes (ya no hay):** `batch_dias_excluidos` (X3), `batch_evolucion_filtro` y `batch_movil` (M-11) eran pruebas desactualizadas por rediseños de pantalla (Inicio «Ver más», Producto y evolución, veredicto de Pacing), no errores del producto; se adaptaron sin cambiar lo que verifican. `batch_editorial` ya pasa desde cualquier carpeta.
-**Siguen sin corregirse:** lint de diseño en 193 hallazgos (línea base), PPTX, pruebas sensibles a carga paralela (`batch_drill`, `batch_restaurar_carga`), la higiene del repositorio (sección G).
+**Corregidas después:** `batch_drill` (D6) y `batch_restaurar_carga` (R1e) esperaban un tiempo fijo y fallaban con la máquina cargada; ahora esperan la condición.
+**Siguen sin corregirse:** lint de diseño en 193 hallazgos (línea base), PPTX, la higiene del repositorio (sección G).
 
 ## A. Decisiones de negocio provisionales
 | # | Riesgo | Dónde | Estado |
 |---|---|---|---|
 | A1 | Umbrales «bajo el plan» 0.5 % y «más floja» 1 % (Operativo) elegidos sin base de negocio | `config.reports.operativo` | Editables en pantalla; sin validar con el negocio |
 | A2 | Semáforo Gerencial/Directivo: en meta < 1 %, fuera de meta ≥ 5 % | `config.reports.gerencial` | Editables; provisionales |
-| A3 | Los umbrales editados viven en `localStorage` del navegador, no se comparten entre personas ni equipos | Fase 7 | Abierto por diseño |
+| A3 | Los umbrales editados se guardan en el navegador y se sincronizan con el equipo (última escritura gana) | Fase 7 | Ver 18 |
 
 ## B. Cifras y honestidad de los datos
 | # | Riesgo | Mitigación | Abierto |
@@ -63,7 +64,7 @@ Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con pru
 ## D. Persistencia, privacidad y sesión (Fase 7)
 | # | Riesgo | Mitigación | Abierto |
 |---|---|---|---|
-| D1 | Datos del equipo (ediciones de texto) quedan en el navegador | La clave `reportPrefs` se borra al cerrar sesión (no está en `SIGNOUT_KEEP`) y no viaja a la nube | Mientras la sesión está abierta, otra persona con acceso al navegador las ve |
+| D1 | Datos del equipo (ediciones de texto) quedan en el navegador y, con la sincronización activa, en la nube del equipo | La clave `reportPrefs` se borra de este navegador al cerrar sesión (no está en `SIGNOUT_KEEP`); la copia de la nube se conserva | Mientras la sesión está abierta, otra persona con acceso al navegador las ve |
 | D2 | Escrituras tardías tras cerrar sesión | `storage.save` devuelve false mientras se borra; solo se escribe si cambió | Probado con el borrado de datos, no con el flujo completo de cierre de sesión en un servidor real |
 | D3 | Preferencias guardadas inválidas o de otra versión | Se descartan con aviso; nunca se rellenan | — |
 | D4 | Texto de la persona con HTML | Se escapa; probado con `<b>` e `<img onerror>` | — |

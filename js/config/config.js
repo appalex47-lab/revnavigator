@@ -576,7 +576,7 @@
       // S2: lo que NO se sincroniza solo (preferencias por dispositivo)
       autoSkipKeys: ['uxSettings', 'productSettings', 'productsCloud'],
       autoDebounceMs: 4000,
-      skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'reportPrefs']   // secretos y banderas locales: nunca viajan a la nube
+      skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession']   // secretos y banderas locales: nunca viajan a la nube
     },
     storageDb: {
       name: 'fp-data', version: 2,

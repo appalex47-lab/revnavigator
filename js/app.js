@@ -4723,11 +4723,12 @@
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
     'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp), edits: rp.edits }); },
     'rp-prefs-clear'() {   // borra lo guardado en este navegador (ediciones de texto, umbrales y selección) sin esperar a cerrar sesión
-      if (!root.confirm('¿Borrar las ediciones, los umbrales y la selección de la presentación guardados en este navegador?')) return;
+      if (!root.confirm('¿Borrar las ediciones, los umbrales y la selección de la presentación guardados? Si la sincronización con tu equipo está activa, se borran también para el equipo.')) return;
       const rp = state.rp, prof = FP.reportCatalog.resolve('actual', 'desempeno');
       Object.assign(rp, { audience: 'actual', type: 'desempeno', depth: prof.defaultDepth, include: [], exclude: prof.defaultExclude.slice(), edits: {}, editing: null, aiRes: {}, report: null, status: 'idle', sig: null, gap: null, prefsNote: [] });
       Object.assign(rp.options, { showTags: false, showBusinessName: false, ai: false }); Object.assign(rp.options.thresholds, { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null });
-      storage.remove(K.reportPrefs); rpSaved = JSON.stringify(FP.reportPrefs.serialize(rp)); render(); FP.ui.toast('Se borró lo guardado de la presentación en este navegador.');
+      // se guarda el estado vacío (no se quita la clave): así, si la sincronización está activa, el borrado también llega al equipo en vez de volver a traerse la copia vieja
+      rpSaved = JSON.stringify(FP.reportPrefs.serialize(rp)); storage.save(K.reportPrefs, JSON.parse(rpSaved)); render(); FP.ui.toast('Se borraron las ediciones y preferencias guardadas de la presentación.');
     },
     /* Fase 7 · editor de la lámina: título y nota de la persona (texto, nunca cifras calculadas) y las hipótesis de IA que acepte */
     'rp-edit-open'(el) { state.rp.editing = el.dataset.id; render(); },
@@ -6205,6 +6206,7 @@
     if (r.applied.length) {
       state.cloud.auto.pulled = r.applied;
       if (r.applied.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
+      if (r.applied.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
       if (r.applied.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
       const needReload = r.applied.includes('businessContext');   // config.js lo lee antes de arrancar
       if (needReload) state.cloud.restored = true;

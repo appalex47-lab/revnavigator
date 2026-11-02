@@ -93,7 +93,8 @@ async def main():
         await f.click('#rp-prop button[data-action="rp-edit-open"][data-id="pacing"]'); await f.fill('#rp-ed-note', 'Confidencial'); await f.dispatch_event('#rp-ed-note', 'change'); await f.wait_for_timeout(300)
         chk('P10a antes de borrar hay una edición guardada', 'Confidencial' in str(await f.evaluate(f"localStorage.getItem('{k}')")))
         await f.evaluate("window.confirm=()=>true"); await f.click('[data-action="rp-prefs-clear"]'); await f.wait_for_timeout(500)
-        chk('P10 «Borrar mis ediciones y preferencias guardadas» borra lo guardado y restablece la selección sin cerrar sesión', await f.evaluate(f"localStorage.getItem('{k}')") is None and await f.evaluate("FP.app.state.rp.audience") == 'actual' and await f.evaluate("Object.keys(FP.app.state.rp.edits).length") == 0)
+        saved = await f.evaluate(f"localStorage.getItem('{k}')")
+        chk('P10 «Borrar mis ediciones y preferencias guardadas» deja guardado el estado vacío (sin ediciones; así el borrado también se sincroniza) y restablece la selección sin cerrar sesión', saved is not None and 'Confidencial' not in saved and '"edits":{}' in saved.replace(' ', '') and await f.evaluate("FP.app.state.rp.audience") == 'actual' and await f.evaluate("Object.keys(FP.app.state.rp.edits).length") == 0, saved)
         # lo guardado inválido se descarta con aviso
         await f.evaluate(f"localStorage.setItem('{k}', JSON.stringify({{data:{{schema:'report_prefs',version:1,audience:'inventada',type:'desempeno',options:{{thresholds:{{okPct:9}}}},edits:{{'gerencial|cover':{{title:'x'}}}}}}}}))")
         await f.reload(); await f.wait_for_selector('[data-action="rp-generate"]'); await f.wait_for_timeout(600)
@@ -116,7 +117,7 @@ async def main():
         chk('S2 antes de borrar hay algo guardado', await f.evaluate(f"localStorage.getItem('{k}')") is not None)
         await f.evaluate("window.confirm=()=>true; FP.app.actions['clear-all']()"); await f.wait_for_timeout(800)
         chk('S3 al borrar los datos del navegador (el mismo borrado de cerrar sesión) las preferencias desaparecen y la pantalla no las vuelve a escribir', await f.evaluate(f"localStorage.getItem('{k}')") is None, await f.evaluate(f"localStorage.getItem('{k}')"))
-        chk('S4 la clave es local: no viaja a la nube', 'reportPrefs' in await f.evaluate("JSON.stringify(FP.config.cloud.skipKeys)"))
+        chk('S4 la clave SÍ se sincroniza con el equipo (ya no está en las que nunca viajan) y se aplica en caliente al traerla', 'reportPrefs' not in await f.evaluate("JSON.stringify(FP.config.cloud.skipKeys.concat(FP.config.cloud.autoSkipKeys))") and await f.evaluate("FP.cloud.isAutoKey('reportPrefs', FP.repository.isDataKey)") is True and "includes('reportPrefs')) { loadRpPrefs()" in src, None)
         chk('X sin errores de página', not f._errs, f._errs)
         await b.close()
     print('\nFALLAS:' if fails else '\nTODO BIEN', fails or ''); sys.exit(1 if fails else 0)
