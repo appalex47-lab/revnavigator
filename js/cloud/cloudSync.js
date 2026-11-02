@@ -217,14 +217,14 @@
      Para las claves en `cloud.conflictKeys` (p. ej. reportPrefs: ediciones de la presentación), «gana la última escritura» podía borrar en silencio lo que otra persona
      (u otro navegador) escribió. Ahora cada navegador recuerda la fecha de la nube con la que se sincronizó por última vez (la «base», en localStorage, fuera de los
      datos del equipo). Hay CONFLICTO cuando este navegador cambió la clave desde esa base Y la nube también cambió Y el contenido es distinto: no se escribe nada
-     (ni local ni en la nube) hasta que la persona elija. Límite conocido: no hay escritura condicional en el servidor, así que dos subidas simultáneas
-     (dentro de la misma fracción de segundo) siguen siendo posibles; la ventana es la de una consulta y una subida. */
+     (ni local ni en la nube) hasta que la persona elija. Además, con la función `put_blob_cas` instalada en Supabase la subida de estas claves es condicional y atómica en el servidor, así que
+     dos subidas simultáneas ya no se pisan (sin la función se conserva la ventana de una consulta + una subida). */
   const BASE_KEY = 'fp.cloudBase';
   const baseMap = () => { try { return JSON.parse(root.localStorage.getItem(BASE_KEY) || '{}') || {}; } catch (e) { return {}; } };
   const getBase = (k) => baseMap()[k] || null;
   const setBase = (k, iso) => { try { const m = baseMap(); m[k] = iso; root.localStorage.setItem(BASE_KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ } };
   const clearBases = () => { try { root.localStorage.removeItem(BASE_KEY); } catch (e) { /* sin storage */ } };
-  const isConflictKey = (key) => (cfg().conflictKeys || []).includes(String(key).split(':')[0]);
+  const isConflictKey = (key) => { const l = cfg().conflictKeys || []; return l.includes('*') || l.includes(String(key).split(':')[0]); };
   const sameData = (a, b) => JSON.stringify(a && a.data) === JSON.stringify(b && b.data);
   /** Descarga y arma el sobre completo de una clave de la nube (null si está incompleto o ilegible). */
   async function fetchEnv(session, key, total, fetchImpl) {
@@ -329,28 +329,51 @@
     return !(isDataKey && isDataKey(key)) && !cfg().skipKeys.includes(b) && !cfg().autoSkipKeys.includes(b);
   }
 
+  /** Escritura condicional (RPC `put_blob_cas`, ver supabase/migrations/20261102_put_blob_cas.sql): reemplaza la clave solo si en la nube sigue la fecha que vimos.
+   *  Devuelve { ok:true } | { ok:false, conflict:true } | { unavailable:true } (la función aún no está instalada en Supabase: se usa la subida de siempre). */
+  async function casPut(session, key, env, expectedIso, fetchImpl) {
+    const text = JSON.stringify(env), parts = split(text, cfg().chunkChars), at = (env && env.savedAt && !isNaN(Date.parse(env.savedAt))) ? new Date(env.savedAt).toISOString() : new Date().toISOString();
+    const rows = parts.map((p, n) => ({ part: n, total: parts.length, payload: p, bytes: p.length, updated_at: at }));
+    let r;
+    try { r = await rest('rpc/put_blob_cas', { method: 'POST', body: { p_key: key, p_expected: expectedIso || null, p_rows: rows }, fetchImpl, session }); }
+    catch (e) { if (/PGRST202|respondió 404/.test(String(e.message))) return { unavailable: true }; throw e; }
+    if (r && r.ok) { setBase(key, at); return { ok: true }; }
+    return { ok: false, conflict: true };
+  }
+
   /**
    * Sube solo estas claves (sin tocar ni borrar las demás de la nube).
    * Las claves de `conflictKeys` no se suben si la nube cambió desde la última sincronización de este navegador y su contenido es distinto: se devuelven en
    * `conflicts` ({ key, local, cloud, cloudAt }) y NO se escribe nada. `force` (lista de claves) omite esa revisión: solo para cuando la persona ya eligió conservar la suya.
+   * Además, la subida de esas claves es CONDICIONAL en el servidor (casPut): si otra persona escribe entre la revisión y la subida, el servidor la rechaza y también es conflicto.
    */
   async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress, force = [] } = {}) {
     const se = await ensureSession({ fetchImpl, captchaImpl }); if (!se.ok) return se;
     let n = 0; const conflicts = [];
+    const asConflict = async (key, env, cloudIso) => {
+      const meta = await rest(`${cfg().table}?select=total,updated_at&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
+      const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
+      if (!cloud) throw new Error(`No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.`);
+      conflicts.push({ key, local: env, cloud, cloudAt: (meta[0] && meta[0].updated_at) || cloudIso });
+    };
     try {
       let at = null;
       for (const key of keys) {
         const env = await provider.read(key); if (!env) continue;
-        if (isConflictKey(key) && !force.includes(key)) {
+        if (isConflictKey(key)) {
           if (!at) { const cl = await listKeys({ fetchImpl }); if (!cl.ok) return { ok: false, error: cl.error }; at = cl.at || {}; }
-          const cloudIso = at[key], base = getBase(key);
-          if (cloudIso && (!base || Date.parse(cloudIso) > Date.parse(base) + 2000)) {   // la nube cambió desde nuestra última sincronización
+          const cloudIso = at[key] || null, base = getBase(key);
+          if (cloudIso && !force.includes(key) && (!base || Date.parse(cloudIso) > Date.parse(base) + 2000)) {   // la nube cambió desde nuestra última sincronización
             const meta = await rest(`${cfg().table}?select=total&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
             const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
             if (!cloud) return { ok: false, error: `No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.` };
             if (sameData(env, cloud)) { setBase(key, cloudIso); continue; }   // mismo contenido: nada que subir ni que resolver
             conflicts.push({ key, local: env, cloud, cloudAt: cloudIso }); continue;
           }
+          const c = await casPut(se.session, key, env, cloudIso, fetchImpl);   // condicional: solo si la nube sigue como la vimos
+          if (c.ok) { n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); continue; }
+          if (c.conflict) { await asConflict(key, env, cloudIso); continue; }
+          // c.unavailable → función no instalada todavía: subida de siempre (con la ventana de carrera documentada)
         }
         await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length });
       }

@@ -575,7 +575,7 @@
       // S2: lo que NO se sincroniza solo (preferencias por dispositivo)
       autoSkipKeys: ['uxSettings', 'productSettings', 'productsCloud'],
       autoDebounceMs: 4000,
-      conflictKeys: ['reportPrefs'],   // cierre técnico: claves donde una escritura ajena nunca se pisa en silencio (ver cloudSync.js)
+      conflictKeys: ['*'],   // cierre técnico: en TODAS las claves de sincronización automática una escritura ajena nunca se pisa en silencio (ver cloudSync.js)
       skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion']   // secretos y banderas locales: nunca viajan a la nube
     },
     storageDb: {

@@ -6224,23 +6224,31 @@
   function noteConflicts(list) {
     let isNew = false;
     (list || []).forEach((c) => { const i = state.cloud.conflicts.findIndex((x) => x.key === c.key); if (i < 0) { state.cloud.conflicts.push(c); isNew = true; } else state.cloud.conflicts[i] = c; });
-    if (isNew) { FP.ui.toast('La presentación se cambió en otro navegador o por otra persona del equipo. Revisa el aviso en «Presentación (PDF)» y elige qué conservar.'); render(); }
+    if (isNew) { FP.ui.toast(list.some((c) => c.key === 'reportPrefs') ? 'La presentación se cambió en otro navegador o por otra persona del equipo. Revisa el aviso en «Presentación (PDF)» y elige qué conservar.' : 'Un ajuste se cambió en otro navegador o por otra persona del equipo. Revisa el aviso en Configuración → Cuenta y nube y elige qué conservar.'); render(); }
+  }
+  /** Aplica en caliente lo que se trajo de la nube (misma lógica en autoPull y al resolver un conflicto con «usar la del equipo»). Devuelve true si hay que recargar. */
+  function applyPulledHot(keys) {
+    if (keys.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
+    if (keys.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
+    if (keys.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
+    return keys.includes('businessContext');   // config.js lo lee antes de arrancar
   }
   async function resolveConflict(key, choice) {
     const i = state.cloud.conflicts.findIndex((c) => c.key === key); if (i < 0) return;
     const c = state.cloud.conflicts[i];
-    if (key !== 'reportPrefs') return;
     if (choice === 'theirs') {   // se usa la del equipo (se descartan mis cambios locales)
-      await cloudWriter.write(key, c.cloud); FP.cloud.setBase(key, c.cloudAt); loadRpPrefs();
+      await cloudWriter.write(key, c.cloud); FP.cloud.setBase(key, c.cloudAt);
+      if (applyPulledHot([key])) state.cloud.restored = true;
     } else {
-      const data = choice === 'merge' ? FP.reportPrefs.merge(c.local.data, c.cloud.data).data : c.local.data;
+      const data = choice === 'merge' && key === 'reportPrefs' ? FP.reportPrefs.merge(c.local.data, c.cloud.data).data : c.local.data;
       storage.save(key, data);   // fecha nueva: así la nube y los demás navegadores la ven más reciente que la que se reemplaza
       if (choice === 'merge') loadRpPrefs();
       const r = await FP.cloud.pushKeys(cloudProvider, [key], { force: [key] });
       if (!r.ok) { FP.ui.toast(`No se pudo subir tu elección: ${r.error}`); return; }
+      if (r.conflicts && r.conflicts.length) { state.cloud.conflicts[i] = r.conflicts[0]; FP.ui.toast('La nube cambió otra vez mientras elegías. Revisa de nuevo.'); render(); return; }
     }
     state.cloud.conflicts.splice(i, 1);
-    FP.ui.toast(choice === 'theirs' ? 'Se usó la presentación del equipo.' : choice === 'merge' ? 'Se combinaron las dos: tus ediciones y las del equipo (donde chocan, quedó la tuya).' : 'Se conservó la tuya y reemplazó a la del equipo.');
+    FP.ui.toast(choice === 'theirs' ? 'Se usó la versión del equipo.' : choice === 'merge' ? 'Se combinaron las dos: tus ediciones y las del equipo (donde chocan, quedó la tuya).' : 'Se conservó la tuya y reemplazó a la del equipo.');
     render();
   }
   async function autoPull(announce) {
@@ -6250,10 +6258,7 @@
     if (r.conflicts && r.conflicts.length) noteConflicts(r.conflicts);
     if (r.applied.length) {
       state.cloud.auto.pulled = r.applied;
-      if (r.applied.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
-      if (r.applied.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
-      if (r.applied.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
-      const needReload = r.applied.includes('businessContext');   // config.js lo lee antes de arrancar
+      const needReload = applyPulledHot(r.applied);
       if (needReload) state.cloud.restored = true;
       FP.ui.toast(`Se trajeron ${r.applied.length} ajuste(s) más nuevos de la nube${needReload ? '. Recarga la página para aplicar los del negocio.' : '.'}`);
       cloudNote(`Se trajeron de la nube ${r.applied.length} ajuste(s) más nuevos (${r.applied.slice(0, 4).join(', ')}${r.applied.length > 4 ? '…' : ''})${needReload ? '. Recarga para aplicar los del negocio.' : '.'}`, 'ok');

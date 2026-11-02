@@ -5,13 +5,21 @@
  *   del servidor). Eso queda como validación pendiente con credenciales reales.   node tools/test-sync-conflicts.js */
 const fs = require('fs'), vm = require('vm');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 500) : '')); if (!c) bad++; };
-const CFG = { url: 'https://x.supabase.co', publishableKey: 'pk', table: 'team_blobs', chunkChars: 400000, skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion'], autoSkipKeys: ['uxSettings', 'productSettings'], conflictKeys: ['reportPrefs'] };
+const CFG = { url: 'https://x.supabase.co', publishableKey: 'pk', table: 'team_blobs', chunkChars: 400000, skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion'], autoSkipKeys: ['uxSettings', 'productSettings'], conflictKeys: ['*'] };
 
 // ---- servidor simulado (compartido por el equipo) ----
-const rows = []; let puts = 0;
+const rows = []; let puts = 0, casMode = false;
 const resp = (status, obj) => ({ ok: status < 300, status, json: async () => obj, text: async () => (obj === null ? '' : JSON.stringify(obj)) });
 async function server(url, o) {
   const u = new URL(url), q = (k) => u.searchParams.get(k);
+  if (u.pathname === '/rest/v1/rpc/put_blob_cas') {   // réplica de supabase/migrations/20261102_put_blob_cas.sql (atómica: un solo turno del bucle de eventos)
+    if (!casMode) return resp(404, { code: 'PGRST202', message: 'Could not find the function' });
+    const b = JSON.parse(o.body), cur = rows.find((r) => r.key === b.p_key && r.part === 0);
+    if (cur && (b.p_expected === null || new Date(cur.updated_at).getTime() !== new Date(b.p_expected).getTime())) return resp(200, { ok: false, current: cur.updated_at });
+    for (let i = rows.length - 1; i >= 0; i--) if (rows[i].key === b.p_key) rows.splice(i, 1);
+    b.p_rows.forEach((r) => rows.push({ team_id: 'T', key: b.p_key, ...r }));
+    return resp(200, { ok: true });
+  }
   if (!u.pathname.startsWith('/rest/v1/team_blobs')) return resp(404, {});
   let sel = rows.slice();
   const kf = q('key'), pf = q('part');
@@ -112,8 +120,25 @@ const cloudData = () => { const r = rows.filter((x) => x.key === 'reportPrefs').
   I.save('targets:2026', { goal: 1 }, iso(1)); await I.push(['targets:2026']);
   J.save('targets:2026', { goal: 2 }, iso(0));
   r = await J.pull();
-  t('claves fuera de `conflictKeys` conservan el comportamiento de siempre (gana la última escritura): límite documentado', r.conflicts.length === 0 && r.applied.includes('targets:2026'));
+  t('otras claves sincronizadas (metas, supuestos…) también detectan el conflicto y no se pisan (ya no «gana la última escritura»)', r.conflicts.length === 1 && r.conflicts[0].key === 'targets:2026' && J.get('targets:2026').data.goal === 2 && !r.applied.includes('targets:2026'), r);
+  const O = browser('olga'); O.save('targets:2026', { goal: 1 }, iso(1)); await O.pull().catch(() => 0);
+  r = await O.pull(); t('y una clave sin cambios propios se actualiza sin conflicto', r.conflicts.length === 0);
+  // ---------- 8b. escritura condicional en el servidor (put_blob_cas, SIMULADA con una réplica de la función SQL) ----------
+  casMode = true;
+  const K = browser('kira'), L = browser('luis');
+  K.save('reportPrefs', P('base'), iso(50)); rows.length = 0; await K.push(['reportPrefs']); await L.pull();
+  K.save('reportPrefs', P('Kira escribe a la vez'), iso(51)); L.save('reportPrefs', P('Luis escribe a la vez'), iso(52));
+  const [rk, rl] = await Promise.all([K.push(['reportPrefs']), L.push(['reportPrefs'])]);
+  const won = [rk, rl].filter((x) => x.pushed === 1).length, lost = [rk, rl].filter((x) => x.conflicts.length === 1).length;
+  t('dos subidas SIMULTÁNEAS: el servidor deja pasar una y rechaza la otra, que queda como conflicto (nadie se pisa, ni siquiera en la ventana de carrera)', won === 1 && lost === 1 && ['Kira escribe a la vez', 'Luis escribe a la vez'].includes(note(cloudData())), { rk: [rk.pushed, rk.conflicts.length], rl: [rl.pushed, rl.conflicts.length] });
+  const loser = rk.conflicts.length ? rk.conflicts[0] : rl.conflicts[0];
+  t('el conflicto por rechazo del servidor trae las dos versiones completas', loser && loser.local.data && loser.cloud.data && note(loser.local.data) !== note(loser.cloud.data));
+  casMode = false;
+  const M = browser('mia'), N = browser('nico'); M.save('reportPrefs', P('m'), iso(60)); rows.length = 0; await M.push(['reportPrefs']); await N.pull();
+  M.save('reportPrefs', P('m2'), iso(61)); N.save('reportPrefs', P('n2'), iso(62));
+  const [rm, rn] = await Promise.all([M.push(['reportPrefs']), N.push(['reportPrefs'])]);
+  t('sin la función instalada se conserva el comportamiento anterior (subida normal; la ventana de carrera documentada)', rm.ok && rn.ok);
   // ---------- 9. configuración ----------
-  t('la configuración declara reportPrefs como clave con detección de conflictos', JSON.parse(JSON.stringify(require('./_cfg.js'))).conflictKeys.includes('reportPrefs'));
+  t('la configuración declara la detección de conflictos para todas las claves de sincronización automática', JSON.parse(JSON.stringify(require('./_cfg.js'))).conflictKeys.includes('*'));
   console.log(bad ? `\n${bad} FALLAS` : '\nTODO OK'); process.exit(bad ? 1 : 0);
 })();

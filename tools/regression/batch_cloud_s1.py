@@ -54,6 +54,12 @@ async def main():
             team = me['team']
             if u.path == '/rest/v1/team_members': return await jr(route, 200, [{'team_id': team, 'teams': {'name': TEAMS[team]}}] if team else [])
             if not team: return await jr(route, 200, [])
+            if u.path == '/rest/v1/rpc/put_blob_cas':   # réplica de la función SQL put_blob_cas (supabase/migrations/20261102_put_blob_cas.sql)
+                b = json.loads(r.post_data); cur = next((y for y in rows if y['team_id'] == team and y['key'] == b['p_key'] and y['part'] == 0), None)
+                if cur and (b['p_expected'] is None or dt.datetime.fromisoformat(cur['updated_at'].replace('Z', '+00:00')) != dt.datetime.fromisoformat(b['p_expected'].replace('Z', '+00:00'))):
+                    return await jr(route, 200, {'ok': False, 'current': cur['updated_at']})
+                rows[:] = [y for y in rows if not (y['team_id'] == team and y['key'] == b['p_key'])] + [{'team_id': team, 'key': b['p_key'], **x} for x in b['p_rows']]
+                return await jr(route, 200, {'ok': True})
             if r.method == 'POST':
                 for x in json.loads(r.post_data):
                     assert x['team_id'] == team

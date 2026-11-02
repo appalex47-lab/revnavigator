@@ -22,15 +22,20 @@
 - Supabase (proyecto `Revnavigator`, consulta de solo lectura): proyecto ACTIVE_HEALTHY; Edge Function `cohere-proxy` ACTIVE v2 con `verify_jwt: true`; `team_blobs` con RLS activo.
 - **No validado** (bloqueo: sin JWT de usuario de equipo, sin acceso a secretos y sin red del entorno hacia Cohere): existencia del secreto `COHERE_API_KEY`, una llamada real navegador → proxy → Cohere, y la sincronización con dos sesiones reales de Supabase. Esas pruebas son simuladas y están rotuladas así.
 
-## Riesgos residuales
-1. Sin escritura condicional en el servidor: dos subidas casi simultáneas de `reportPrefs` aún pueden cruzarse (ventana de una consulta + una subida).
-2. Las demás claves sincronizadas conservan «gana la última escritura».
+## Segunda pasada (riesgos residuales atendidos)
+- **`batch_controles.py` (6 fallas):** eran pruebas desactualizadas frente a rutas heredadas que la app sí redirige (`#producto`, `#analisis` → Producto y evolución). El batch ahora las reconoce como alias válidos y se añadió MN-4c que comprueba la redirección real; los botones de alternancia Resumen/Completo y versión corta/larga (oyente delegado de su vista) ya no se marcan como decorativos. Resultado: 0 fallas.
+- **`batch_ejemplo_conversion.py` E11:** la espera fija de 5 s se cambió por esperar la condición (hasta 60 s). La «falla de origen no identificado» era la línea-resumen de ese mismo batch.
+- **Carrera de dos subidas:** nueva función SQL `put_blob_cas` (`supabase/migrations/20261102_put_blob_cas.sql`): reemplaza la clave de forma atómica solo si la fecha en la nube sigue siendo la que el cliente vio; si no, devuelve conflicto. El cliente la usa y, si la función aún no está instalada, sigue con la subida anterior. **La migración está en el repositorio pero NO se aplicó a Supabase** (requiere autorización explícita).
+- **Otras claves sincronizadas:** `cloud.conflictKeys = ['*']`: todas las claves de sincronización automática detectan conflicto; las que no son `reportPrefs` ofrecen «Conservar la mía / Usar la del equipo» en Configuración → Cuenta y nube.
+- **IA sin sesión:** se mantiene por diseño. Permitirla sin sesión exige una API key en el navegador, que es justo lo que el hallazgo 2 eliminó.
+
+## Riesgos residuales (vigentes)
+1. Hasta aplicar la migración `put_blob_cas`, la ventana de carrera de una consulta + una subida sigue abierta.
+2. Validación con Supabase y Cohere reales pendiente (ver arriba).
 3. Sin sesión de equipo no hay IA (decisión de diseño).
-4. `batch_controles.py` conserva 6 fallas previas (vistas `producto`/`analisis`, botones sin acción); no se introdujeron en esta ronda.
-5. `batch_ejemplo_conversion.py` E11 puede fallar bajo carga (espera fija de 5 s); pasa sola.
 
 ## Resultado antes / después
-Node: 91 → 92 archivos, todos OK; selftest 233/233; lint 193 (igual). Batches: 3619 ✔ / 10 ✘ → 3648 ✔ / 8 ✘ (6 previas de `controles` + 1 flake de carga + 1 no atribuible; ver informe).
+Ver el PR: Node todo OK, selftest 233/233, lint 193 (igual), batches sin fallas atribuibles.
 
 ## Conclusión: APROBADO CON CONDICIONES
-Condiciones: (a) validar con credenciales reales el proxy/Cohere y la sincronización de dos usuarios; (b) decidir si se acepta el riesgo residual 1.
+Condiciones: (a) aplicar `put_blob_cas` en Supabase y probarla con dos sesiones reales; (b) validar proxy/Cohere con credenciales reales.
