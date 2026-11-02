@@ -77,11 +77,38 @@ async def main():
         chk('P8 la IA vuelve a estar apagada al reabrir (hay que permitirla de nuevo)', await f.evaluate("FP.app.state.rp.options.ai") is False)
         await f.click('#rp-prop button[data-action="rp-edit-open"][data-id="pacing"]'); await f.click('[data-action="rp-edit-reset"]'); await f.wait_for_timeout(300)
         chk('E8 «Restaurar el texto original» quita la edición y vuelve el título generado', await f.evaluate("Object.keys(FP.app.state.rp.edits).length") == 0 and 'TTTT' not in await f.evaluate(TXT('pacing')))
+        # texto largo que no cabe: se avisa en pantalla (antes solo se veía al imprimir)
+        await f.click('[data-action="rp-audience"][data-id="gerencial"]'); await f.wait_for_timeout(300); await f.click('[data-action="rp-depth"][data-id="detallado"]'); await f.wait_for_timeout(300); await gen(f)
+        await f.click('#rp-prop button[data-action="rp-edit-open"][data-id="drivers"]'); await f.wait_for_timeout(200)
+        await f.fill('#rp-ed-title', 'T' * 120); await f.dispatch_event('#rp-ed-title', 'change'); await f.fill('#rp-ed-note', 'N' * 280); await f.dispatch_event('#rp-ed-note', 'change'); await f.wait_for_timeout(300)
+        ovn = await f.evaluate("(document.getElementById('rp-ov')||{innerText:''}).innerText")
+        ov_slide = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"drivers\"]')||{getAttribute:()=>null}).getAttribute('data-overflow')")
+        chk('E9 si el texto propio hace que una lámina no quepa, se avisa cuál (y si cabe, no se avisa)', (ov_slide == '1' and 'no cabe' in ovn) or (ov_slide is None and ovn.strip() == ''), [ov_slide, ovn])
+        await f.add_style_tag(content='.rp-ed{min-height:900px}'); await f.fill('#rp-ed-note', 'N' * 200); await f.dispatch_event('#rp-ed-note', 'change'); await f.wait_for_timeout(400)
+        chk('E9b forzando que el texto no quepa, el aviso nombra la lámina y pide acortar', 'no cabe' in await f.evaluate("(document.getElementById('rp-ov')||{innerText:''}).innerText") and 'acorta' in (await f.evaluate("document.getElementById('rp-ov').innerText")).lower(), await f.evaluate("document.getElementById('rp-ov').innerText"))
+        await f.click('[data-action="rp-edit-reset"]'); await f.wait_for_timeout(300)
+        # borrar lo guardado sin cerrar sesión
+        await f.click('[data-action="rp-edit-close"]') if await f.query_selector('[data-action="rp-edit-close"]') else None
+        await f.fill('#rp-ed-note', 'x') if False else None
+        await f.click('#rp-prop button[data-action="rp-edit-open"][data-id="pacing"]'); await f.fill('#rp-ed-note', 'Confidencial'); await f.dispatch_event('#rp-ed-note', 'change'); await f.wait_for_timeout(300)
+        chk('P10a antes de borrar hay una edición guardada', 'Confidencial' in str(await f.evaluate(f"localStorage.getItem('{k}')")))
+        await f.evaluate("window.confirm=()=>true"); await f.click('[data-action="rp-prefs-clear"]'); await f.wait_for_timeout(500)
+        saved = await f.evaluate(f"localStorage.getItem('{k}')")
+        chk('P10 «Borrar mis ediciones y preferencias guardadas» deja guardado el estado vacío (sin ediciones; así el borrado también se sincroniza) y restablece la selección sin cerrar sesión', saved is not None and 'Confidencial' not in saved and '"edits":{}' in saved.replace(' ', '') and await f.evaluate("FP.app.state.rp.audience") == 'actual' and await f.evaluate("Object.keys(FP.app.state.rp.edits).length") == 0, saved)
         # lo guardado inválido se descarta con aviso
         await f.evaluate(f"localStorage.setItem('{k}', JSON.stringify({{data:{{schema:'report_prefs',version:1,audience:'inventada',type:'desempeno',options:{{thresholds:{{okPct:9}}}},edits:{{'gerencial|cover':{{title:'x'}}}}}}}}))")
         await f.reload(); await f.wait_for_selector('[data-action="rp-generate"]'); await f.wait_for_timeout(600)
         st = await f.evaluate("({a:FP.app.state.rp.audience,n:(document.getElementById('rp-prefs-note')||{}).innerText||''})")
         chk('P9 lo guardado que ya no aplica se descarta, rige el valor por defecto y se avisa', st['a'] == 'actual' and 'ya no aplica' in st['n'], st)
+        # celular (390 px) con el editor y la sensibilidad abiertos, y tiempo de generación
+        await f.set_viewport_size({'width': 390, 'height': 800}); await f.click('[data-action="rp-audience"][data-id="gerencial"]'); await f.wait_for_timeout(300)
+        await f.click('[data-action="rp-depth"][data-id="detallado"]'); await f.wait_for_timeout(300)
+        t0 = await f.evaluate("performance.now()"); await gen(f); ms = (await f.evaluate("performance.now()")) - t0
+        await f.click('#rp-prop button[data-action="rp-edit-open"][data-id="pacing"]'); await f.wait_for_timeout(300)
+        ow = await f.evaluate("({sw:document.documentElement.scrollWidth,iw:innerWidth,ed:(document.getElementById('rp-editor')||{getBoundingClientRect:()=>({right:0})}).getBoundingClientRect().right,th:(document.querySelector('.rp-th-box')||{getBoundingClientRect:()=>({right:0})}).getBoundingClientRect().right})")
+        chk('M1 en un celular (390 px) con el editor y la sensibilidad abiertos no hay desborde horizontal', ow['sw'] <= ow['iw'] + 1 and ow['ed'] <= ow['iw'] + 1 and ow['th'] <= ow['iw'] + 1, ow)
+        chk('M2 generar la presentación Gerencial · Detallado con los datos de ejemplo tarda menos de 20 s', ms < 20000, round(ms))
+        print(f'   (tiempo de generación: {round(ms)} ms)')
         # cierre de sesión
         src = open(os.path.join(ROOT, 'js/app.js'), encoding='utf-8').read()
         keep = [l for l in src.splitlines() if l.strip().startswith('const SIGNOUT_KEEP')][0]
@@ -90,7 +117,7 @@ async def main():
         chk('S2 antes de borrar hay algo guardado', await f.evaluate(f"localStorage.getItem('{k}')") is not None)
         await f.evaluate("window.confirm=()=>true; FP.app.actions['clear-all']()"); await f.wait_for_timeout(800)
         chk('S3 al borrar los datos del navegador (el mismo borrado de cerrar sesión) las preferencias desaparecen y la pantalla no las vuelve a escribir', await f.evaluate(f"localStorage.getItem('{k}')") is None, await f.evaluate(f"localStorage.getItem('{k}')"))
-        chk('S4 la clave es local: no viaja a la nube', 'reportPrefs' in await f.evaluate("JSON.stringify(FP.config.cloud.skipKeys)"))
+        chk('S4 la clave SÍ se sincroniza con el equipo (ya no está en las que nunca viajan) y se aplica en caliente al traerla', 'reportPrefs' not in await f.evaluate("JSON.stringify(FP.config.cloud.skipKeys.concat(FP.config.cloud.autoSkipKeys))") and await f.evaluate("FP.cloud.isAutoKey('reportPrefs', FP.repository.isDataKey)") is True and "includes('reportPrefs')) { loadRpPrefs()" in src, None)
         chk('X sin errores de página', not f._errs, f._errs)
         await b.close()
     print('\nFALLAS:' if fails else '\nTODO BIEN', fails or ''); sys.exit(1 if fails else 0)

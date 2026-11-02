@@ -95,6 +95,7 @@
     },
     // Fase 8.1: Categoría → Producto (resultados en memoria; datos en IndexedDB)
     pkg: { busy: false, last: null },
+    th: { sug: null, on: null, sig: null },   // sugerencia de umbrales según el historial (derivada; local)
     rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false, ai: false, thresholds: { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null } }, edits: {}, editing: null, aiRes: {}, prefsNote: [], filter: null, sig: null, at: null },   // «Presentación (PDF)»
     pa: { from: null, to: null, comparison: 'previous', channel: 'total', viewBy: 'category', drill: [], next: null, geo: {}, topN: 20, page: 1, result: null, loading: false, key: null,
       trace: null, counts: null, estimate: null, tests: null, testing: false, note: null },
@@ -537,6 +538,20 @@
     // Hay algo guardado que no se puede leer (JSON dañado o versión de esquema desconocida): se avisa, no se adivina
     const raw = lsAdapter.get(`${C.storage.namespace}:${K.businessContext}`);
     state.bc = { draft: ctx || BCX.empty(), storedAt: ctx ? env.savedAt : null, dirty: false, unreadable: Boolean(raw) && !ctx };
+  }
+  /* ---------- Sugerencia de umbrales según el historial (se recalcula sola al llegar datos nuevos y una vez al día; nunca se aplica sola) ---------- */
+  function loadThresholdSuggestion() {
+    const env = storage.load(K.thresholdSuggestion), d = env && env.data;
+    state.th = d && d.sug && d.sug.schema === FP.thresholdAdvisor.SCHEMA && d.sug.version === FP.thresholdAdvisor.VERSION ? { sug: d.sug, on: d.on || null, sig: d.sig || null } : { sug: null, on: null, sig: null };
+  }
+  function thresholdTick(force) {
+    const run = state.fc.run; if (!run || !run.total || !FP.thresholdAdvisor) return false;
+    const weeks = Array.isArray(run.total.weeks) ? run.total.weeks : [], today = Cal.toISODate(new Date());
+    const sig = JSON.stringify([run.generatedAt || null, run.cutoff || null, weeks.reduce((s, w) => s + (w.countedDays || 0), 0)]);
+    if (!force && state.th.sig === sig && state.th.on === today) return false;
+    state.th = { sug: FP.thresholdAdvisor.suggest(run), on: today, sig };
+    if (state.th.sug.status === 'ready') storage.save(K.thresholdSuggestion, state.th); else storage.remove(K.thresholdSuggestion);   // solo se guarda una sugerencia real; con la sesión cerrándose, save no escribe
+    return true;
   }
   /* ---------- Fase 7: selección, umbrales y ediciones de la presentación (local; se borran al cerrar sesión) ---------- */
   let rpSaved = null;   // lo último que se guardó (o se leyó): solo se vuelve a escribir cuando cambia
@@ -1419,7 +1434,9 @@
     const filters = [{ page: 'Evolución', label: rpF ? rpLabel : desc(an.filter) }, { page: 'Productos', label: rpF ? rpLabel : (pa.result && pa.result.filter ? desc(pa.result.filter) : '') }, { page: 'Clientes', label: rpF ? rpLabel : (customers && customers.result && customers.result.filtered ? desc(state.cu.opts.filter) : '') }].filter((f) => f.label);
     const rcA = state.rc.analysis, store = state.rc.scenarioStore;
     const linked = rcA && store ? store.scenarios.filter((s) => (rcA.allScenarios || rcA.scenarios || []).some((x) => x.scenarioId === s.scenarioId)) : [];   // «Total digital»: escenarios de todos los canales (mismo periodo), cada uno con su canal
-    const recovery = { actions: state.rc.plan && state.rc.plan.actions ? state.rc.plan.actions : [], scenarios: linked.map((s) => ({ name: s.name, type: s.type, channel: s.context ? s.context.channel : null, impact: s.expectedImpact ? s.expectedImpact.incrementalValue : null })) };
+    const recovery = { actions: state.rc.plan && state.rc.plan.actions ? state.rc.plan.actions : [], scenarios: linked.map((s) => ({ id: s.scenarioId, name: s.name, type: s.type, channel: s.context ? s.context.channel : null, impact: s.expectedImpact ? s.expectedImpact.incrementalValue : null,
+      recoveryPercent: s.expectedImpact ? s.expectedImpact.recoveryPercent : null, gapBefore: s.expectedImpact ? s.expectedImpact.gapBefore : null, changes: s.inputs || null,
+      assumptions: Array.isArray(s.assumptions) ? s.assumptions.slice() : [], warnings: Array.isArray(s.warnings) ? s.warnings.slice() : [] })) };
     const src = {
       app: { name: C.app.name, version: C.app.version }, generatedAt: new Date().toISOString(), channel: ch, run, rf, rfMonth, diag, trafficDiag, trafficWeekly, selPacing, selection: monthOn ? { periodType: dxs.periodType, periodKey: monthSel } : null,
       focusData, trend: trendSnap || { priorities: an.priorities, rows: an.rows, context: an.context, share: an.share }, trendFilterLabel: rpF ? rpLabel : desc(an.filter), reportFilter: rpLabel, branchNames: (() => { const o = {}; try { (FP.productStore.geoOptions({}).branches || []).forEach((b) => { if (b.name && b.name !== b.code) o[b.code] = b.name; }); } catch (e) { /* sin nombres */ } return o; })(),
@@ -1624,6 +1641,7 @@
     FP.navigation.renderNav(state);
     renderView();
     rpPersist();
+    thresholdTick(false);
     restoreDrafts();
     announceView();
     learnFromView();
@@ -4710,7 +4728,8 @@
       }
       rp.gap = null; rp.gapOk = false;
       rp.status = 'busy'; rp.error = null; FP.reportView.render(state);
-      try { rp.report = await buildExecutiveReport(); rp.report.context.lastActual = lastActualDate(); rp.sig = FP.reportView.signature(state); rp.at = new Date().toISOString(); rp.status = 'ready'; FP.ui.toast(`Presentación lista: ${rp.report.total} página${rp.report.total === 1 ? '' : 's'}${rp.report.omitted.length ? `, ${rp.report.omitted.length} sin datos suficientes (ver anexo)` : ''}.`); }
+      try { rp.report = await buildExecutiveReport(); rp.report.context.lastActual = lastActualDate(); rp.sig = FP.reportView.signature(state); rp.at = new Date().toISOString(); rp.status = 'ready'; const nPg = rp.report.profile ? FP.reportComposer.units(rp.report, rp.exclude, FP.reportSetupView.selectionOf(rp)).length : rp.report.total;   // con un formato nuevo, las láminas que de verdad saldrán en el PDF (incluye anexos y edita lo propio)
+      FP.ui.toast(`Presentación lista: ${nPg} página${nPg === 1 ? '' : 's'}${rp.report.omitted.length ? `, ${rp.report.omitted.length} sin datos suficientes (ver anexo)` : ''}.`); }
       catch (e) { rp.status = 'error'; rp.error = e && e.message ? e.message : String(e); }
       render();
     },
@@ -4719,6 +4738,30 @@
     'rp-gap-load'() { state.rp.gap = null; root.location.hash = 'carga'; },
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
     'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp), edits: rp.edits }); },
+    'th-suggest'() {
+      if (!state.fc.run) { FP.ui.toast('Primero carga datos para calcular el pacing.'); return; }
+      thresholdTick(true); const s = state.th.sug;
+      FP.ui.toast(s && s.status === 'ready' ? 'Sugerencia actualizada con tu historial.' : (s ? s.reason : 'No hay datos suficientes.')); render();
+    },
+    'th-apply-rp'() {
+      const s = state.th.sug; if (!s || s.status !== 'ready') return;
+      const keys = FP.thresholdView.KEYS[state.rp.audience] || [], th = state.rp.options.thresholds; let n = 0;
+      keys.forEach((k) => { if (typeof s.presentation[k] === 'number') { th[k] = s.presentation[k]; n += 1; } });
+      FP.ui.toast(n ? 'Umbrales de la presentación actualizados con la sugerencia. Vuelve a generar la vista previa.' : 'Esta sugerencia no trae valores para este formato.'); render();
+    },
+    'th-apply-fc'() {
+      const s = state.th.sug; if (!s || s.status !== 'ready') return;
+      state.fc.settings.pacingThresholds = { ...(state.fc.settings.pacingThresholds || {}), aboveFrom: s.pacing.aboveFrom, onPlanFrom: s.pacing.onPlanFrom };
+      saveForecastSettings(); state.fc.run = null; FP.ui.toast('Umbrales de Pacing actualizados con la sugerencia.'); render();
+    },
+    'rp-prefs-clear'() {   // borra lo guardado en este navegador (ediciones de texto, umbrales y selección) sin esperar a cerrar sesión
+      if (!root.confirm('¿Borrar las ediciones, los umbrales y la selección de la presentación guardados? Si la sincronización con tu equipo está activa, se borran también para el equipo.')) return;
+      const rp = state.rp, prof = FP.reportCatalog.resolve('actual', 'desempeno');
+      Object.assign(rp, { audience: 'actual', type: 'desempeno', depth: prof.defaultDepth, include: [], exclude: prof.defaultExclude.slice(), edits: {}, editing: null, aiRes: {}, report: null, status: 'idle', sig: null, gap: null, prefsNote: [] });
+      Object.assign(rp.options, { showTags: false, showBusinessName: false, ai: false }); Object.assign(rp.options.thresholds, { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null });
+      // se guarda el estado vacío (no se quita la clave): así, si la sincronización está activa, el borrado también llega al equipo en vez de volver a traerse la copia vieja
+      rpSaved = JSON.stringify(FP.reportPrefs.serialize(rp)); storage.save(K.reportPrefs, JSON.parse(rpSaved)); render(); FP.ui.toast('Se borraron las ediciones y preferencias guardadas de la presentación.');
+    },
     /* Fase 7 · editor de la lámina: título y nota de la persona (texto, nunca cifras calculadas) y las hipótesis de IA que acepte */
     'rp-edit-open'(el) { state.rp.editing = el.dataset.id; render(); },
     'rp-edit-close'() { state.rp.editing = null; render(); },
@@ -6116,6 +6159,7 @@
     loadProjCalibration();
     loadUx();
     loadRpPrefs();
+    loadThresholdSuggestion();
     loadStore();
     loadYearScoped(C.defaultYear);
     const migrated = migrateLegacyDataset();
@@ -6195,6 +6239,7 @@
     if (r.applied.length) {
       state.cloud.auto.pulled = r.applied;
       if (r.applied.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
+      if (r.applied.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
       if (r.applied.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
       const needReload = r.applied.includes('businessContext');   // config.js lo lee antes de arrancar
       if (needReload) state.cloud.restored = true;

@@ -3,7 +3,7 @@
  *
  * FP.reportBuilder arma las páginas del reporte actual y NO se modifica. Los perfiles nuevos pueden pedir bloques que ese reporte no tiene
  * (p. ej. el formato Operativo: pacing por canal, evolución, acciones). Cada bloque nuevo registra aquí un constructor
- *   builder(src, report) → página { id, title, status: 'included'|'omitted', ... }     (mismo contrato de página que reportBuilder)
+ *   builder(src, report, profile) → página { id, title, status: 'included'|'omitted', ... }     (mismo contrato de página que reportBuilder)
  * y FP.reportBlocks.extend() lo agrega al reporte SOLO si el perfil elegido lo declara en sus slots y el reporte todavía no lo trae.
  *
  * Con el perfil LEGACY no hay bloques por agregar, así que extend() devuelve el mismo reporte, sin tocarlo: el reporte actual no cambia.
@@ -32,14 +32,15 @@
     const have = new Set(report.pages.map((p) => p.id)), added = [];
     profile.slots.forEach((s) => {
       if (have.has(s.block) || !REG.has(s.block)) return;
-      const pg = REG.get(s.block)(src, report);
+      const pg = REG.get(s.block)(src, report, profile);
       if (!pg || pg.id !== s.block || !['included', 'omitted'].includes(pg.status)) throw new Error(`El constructor del bloque «${s.block}» no devolvió una página válida.`);
       added.push(pg); have.add(s.block);
     });
     if (!added.length) return report;
     const pages = report.pages.slice(), at = pages.findIndex((p) => p.id === 'annex');
     pages.splice(at < 0 ? pages.length : at, 0, ...added);
-    const included = pages.filter((p) => p.status === 'included');
+    // Las páginas con `needs` (p. ej. el anexo de ediciones) dependen de lo que la persona edite después de generar: no cuentan en el total ni en la numeración del reporte; el compositor decide si entran.
+    const included = pages.filter((p) => p.status === 'included' && !p.needs);
     included.forEach((p, i) => { p.number = i + 1; });
     report.pages = pages;
     report.included = included.map((p) => p.id);

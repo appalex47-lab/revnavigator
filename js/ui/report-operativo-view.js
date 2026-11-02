@@ -70,7 +70,7 @@
         <td>${r.owner ? esc(r.owner) : '<span class="rp-na">Por asignar</span>'}</td><td>${esc(D(r.start))} → ${esc(D(r.end))}</td><td>${esc(r.status)}</td>
         <td class="num">${r.impact ? `${esc(f('smoneyC', r.impact.value))} ${tag('Estimado', 'est')}${isNum(r.impact.recoveryPct) ? `<span class="rp-op__sub">${esc(f('pct', r.impact.recoveryPct))} de la brecha</span>` : ''}` : '<span class="rp-na">Sin escenario</span>'}</td></tr>`;
     }).join('');
-    return `<div class="rp-op"><table class="rp-t rp-op__t rp-op__t--big"><caption class="sr-only">Acciones registradas</caption><thead><tr><th scope="col">ID</th><th scope="col">Acción</th><th scope="col">Canal</th><th scope="col">Responsable</th><th scope="col">Ventana</th><th scope="col">Estado</th><th scope="col" class="num">Impacto simulado</th></tr></thead><tbody>${body}</tbody></table>
+    return `<div class="rp-op"><table class="rp-t rp-op__t rp-op__t--big"><caption class="sr-only">Acciones registradas</caption><thead><tr><th scope="col">ID</th><th scope="col">Acción</th><th scope="col">Canal</th><th scope="col">Responsable</th><th scope="col">Ventana</th><th scope="col">Estado</th><th scope="col" class="num">Impacto simulado (venta)</th></tr></thead><tbody>${body}</tbody></table>
       <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
   }
 

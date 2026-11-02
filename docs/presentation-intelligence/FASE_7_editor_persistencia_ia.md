@@ -9,7 +9,7 @@
 
 ## Persistencia
 - Se guarda en `localStorage` con la clave `reportPrefs`: formato, tipo, profundidad, láminas agregadas/quitadas, etiquetas, nombre en portada, umbrales y ediciones de texto. **No** se guarda el reporte generado, la IA ni su permiso.
-- Se escribe solo cuando algo cambia (comparación del contenido). Al cerrar sesión la clave se borra con el resto de los datos del equipo (no está entre las que se conservan) y mientras se borra `storage.save` no escribe nada (sin escrituras tardías). No viaja a la nube (`skipKeys`).
+- Se escribe solo cuando algo cambia (comparación del contenido). Al cerrar sesión la clave se borra con el resto de los datos del equipo (no está entre las que se conservan) y mientras se borra `storage.save` no escribe nada (sin escrituras tardías). Se sincroniza con el equipo como el resto de los ajustes (no está en `skipKeys`); al traer una copia más nueva se aplica en caliente. «Borrar mis ediciones…» guarda el estado vacío para que el borrado también se sincronice.
 - Al leer se valida contra el catálogo vigente: audiencia, tipo o profundidad que ya no existen, láminas desconocidas y umbrales fuera de 0.1 %–20 % se descartan **con aviso en pantalla** y rige el valor por defecto; otra versión del esquema se rechaza completa.
 
 ## Editor
@@ -23,5 +23,5 @@
 ## Limitaciones
 - Las ediciones largas pueden no caber en láminas muy densas (se probó con el máximo en Pacing; no se recorta automáticamente otra lámina).
 - La whitelist de cifras es tolerante (formato, K/M, %, redondeo): una cifra inventada que coincida por casualidad con otra de la lámina pasaría.
-- Las preferencias son por navegador (no se sincronizan entre equipos).
+- Las ediciones de texto se comparten con el equipo (última escritura gana, sin fusión).
 - La validación frena números y lenguaje causal, no afirmaciones falsas sin números.

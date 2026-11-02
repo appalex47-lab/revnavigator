@@ -424,11 +424,11 @@
     if (u.id === 'cover') {
       const per = (x.units.find((q) => q.id === 'cover').page.facts.find((f) => f.id === 'period') || {}).value || '';
       return `<section class="rp-page rp-page--cover" data-page="cover"${coverAttr()}>${coverDecoHtml()}<div class="rp-cover__in"><div class="rp-brand">${brandMark(true)}${brandLogo() ? '' : 'RevNavigator'}</div>
-        <div class="rp-cover__eyebrow">${x.report.profile && FP.reportProfiles.get(x.report.profile) ? `Reporte ${esc(FP.reportProfiles.get(x.report.profile).label.toLowerCase())}` : 'Reporte ejecutivo'}</div><h1 class="rp-cover__title">${esc(p.headline)}</h1><div class="rp-cover__rule"></div><p class="rp-cover__sub">${esc([per, p.businessName].filter(Boolean).join(' · '))}</p>
+        <div class="rp-cover__eyebrow">${x.report.profile && FP.reportProfiles.get(x.report.profile) ? `Reporte ${esc(FP.reportProfiles.get(x.report.profile).label.toLowerCase())}` : 'Reporte ejecutivo'}</div><h1 class="rp-cover__title">${esc(p.headline)}</h1><div class="rp-cover__rule"></div><p class="rp-cover__sub">${esc([per, p.businessName].filter(Boolean).join(' · '))}</p>${x.report.profile === 'directivo' ? '<p class="rp-cover__sub rp-cover__scope">Canal digital · no incluye la venta total de la empresa</p>' : ''}
         <dl class="rp-cover__meta"><div><dt>Período analizado</dt><dd>${esc(per)}</dd></div><div><dt>Fecha de corte</dt><dd>${esc(x.cutoff)}</dd></div>${x.lastActual ? `<div><dt>Venta real hasta</dt><dd>${esc(x.lastActual)}</dd></div>` : ''}<div><dt>Alcance</dt><dd>${esc(p.scope || x.channelLabel)}</dd></div>${p.filterLabel ? `<div><dt>Filtro</dt><dd>${esc(p.filterLabel)}</dd></div>` : ''}</dl>${p.filterNote ? `<p class="rp-cover__note">${esc(p.filterNote)}</p>` : ''}</div>${brandLogo() ? '<div class="rp-cover__by">RevNavigator</div>' : ''}</section>`;
     }
     const body = u.id === 'summary' ? summaryBody(p, x) : u.id === 'closing' ? closingBody(p, x) : u.id === 'decisions' ? decisionsBody(p) : u.id === 'annex' ? annexBody(p, x, u.sub) : (BODY[u.id] ? BODY[u.id](p, x) : '');
-    const concl = u.id === 'annex' || !FP.reportCopy ? null : (FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
+    const concl = u.id === 'annex' || !FP.reportCopy ? null : ((FP.reportVoice && FP.reportVoice.title(x.editProfile, p, x.report)) || FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
     return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
@@ -552,7 +552,7 @@
 
   /* ================= vista «Presentación (PDF)» ================= */
   /** Sensibilidad del formato elegido (Operativo o Gerencial): a partir de qué desvío contra el plan se marca algo. Vacío = valor por defecto de la configuración. */
-  function thresholdsHtml(rp) {
+  function thresholdsHtml(rp, state) {
     const g = rp.audience === 'gerencial' || rp.audience === 'directivo', D = FP.config.reports[g ? 'gerencial' : 'operativo'], T = rp.options.thresholds || {};
     const inp = (key, label, hint) => `<label class="field rp-th"><span class="field__label">${label}</span><span class="rp-th__in"><input type="text" inputmode="decimal" data-action="rp-threshold" data-key="${key}" value="${T[key] === null || T[key] === undefined ? '' : esc(String(+(T[key] * 100).toFixed(2)))}" placeholder="${+(D[key] * 100).toFixed(2)}" aria-describedby="rp-th-hint"> %</span><span class="field__hint">${hint}</span></label>`;
     const fields = g
@@ -560,7 +560,8 @@
       : inp('belowPlanPct', 'Indicador «bajo el plan» desde', 'Un indicador de canal se marca bajo el plan si se aparta al menos esto de su plan.') + inp('weakPct', 'Semana, mes o día «más flojo» desde', 'Se nombra como el más flojo si su venta queda al menos esto bajo el plan.');
     const defs = g ? `${+(D.okPct * 100).toFixed(2)} % y ${+(D.alertPct * 100).toFixed(2)} %` : `${+(D.belowPlanPct * 100).toFixed(2)} % y ${+(D.weakPct * 100).toFixed(2)} %`;
     return `<fieldset class="rp-step rp-th-box"><legend>Sensibilidad del formato ${rp.audience === 'directivo' ? 'Directivo' : g ? 'Gerencial' : 'Operativo'}</legend>${fields}
-      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${defs}). Se aplica al generar de nuevo y vale mientras la sesión esté abierta.</p></fieldset>`;
+      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${defs}). Se aplica al generar de nuevo. Se guardan y se comparten con tu equipo.</p>
+      ${FP.thresholdView ? FP.thresholdView.box(state, 'rp') : ''}</fieldset>`;
   }
   function signature(state) {
     const s = state.dx.settings, an = state.an || {};
@@ -621,20 +622,26 @@
           ${filterSelect(state)}
           <div class="rp-opts"><label class="check"><input type="checkbox" data-action="rp-option" data-key="showTags" ${rp.options.showTags ? 'checked' : ''}> Mostrar etiquetas Observado / Calculado / Estimado</label>
             <label class="check"><input type="checkbox" data-action="rp-option" data-key="showBusinessName" ${rp.options.showBusinessName ? 'checked' : ''}> Incluir el nombre del negocio en la portada</label></div>
-          ${(rp.audience === 'operativo' && FP.reportOperativo) || ((rp.audience === 'gerencial' || rp.audience === 'directivo') && FP.reportGerencial) ? thresholdsHtml(rp) : ''}
+          ${(rp.audience === 'operativo' && FP.reportOperativo) || ((rp.audience === 'gerencial' || rp.audience === 'directivo') && FP.reportGerencial) ? thresholdsHtml(rp, state) : ''}
           <div class="btn-row"><button type="button" class="btn ${ready && !stale ? '' : 'btn--primary'}" data-action="rp-generate" ${rp.status === 'busy' ? 'disabled aria-busy="true"' : ''}>${ready ? 'Volver a generar' : 'Generar vista previa'}</button>
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}
           <div id="rp-status" aria-live="polite">${rp.status === 'busy' ? FP.loader.html('Armando la presentación con los cálculos actuales…', { key: 'presentacion' }) : ''}
             ${rp.prefsNote && rp.prefsNote.length ? `<p class="note note--warn" id="rp-prefs-note" role="status">Parte de lo que tenías guardado ya no aplica y se descartó: ${H().esc(rp.prefsNote.join(' '))}</p>` : ''}
             ${rp.status === 'error' ? `<p class="note note--warn">No pude armar la presentación: ${H().esc(rp.error || '')}</p>` : ''}
+            <div id="rp-ov" aria-live="polite"></div>
             ${stale ? '<p class="note note--warn" role="status">La selección o los datos cambiaron desde que se generó la vista previa. Vuelve a generar antes de guardar el PDF.</p>' : ''}</div>
           <p class="field__hint">«Guardar como PDF» abre el cuadro de impresión del navegador: elige <strong>Guardar como PDF</strong>; el tamaño horizontal 16:9 ya viene definido. Si no salen los colores, activa «Gráficos de fondo».</p>
         </div>
       </section>
       ${ready ? `${SV.proposalHtml(state, plan)}
       <section class="rp-preview" aria-label="Vista previa de la presentación">${doc.parts.map((h) => `<div class="rp-frame">${h}</div>`).join('')}</section>` : ''}`;
-    if (ready) { scale(el); fitPages(el); }
+    if (ready) {
+      scale(el); const bad = fitPages(el) || [], ov = el.querySelector('#rp-ov');
+      // Fase 7/hardening: si el texto propio hace que una lámina no quepa, se dice cuál (antes solo se veía al imprimir)
+      const over = bad.filter((id) => rp.edits && rp.edits[`${sel.profile}|${id}`]).map((id) => (doc.units.find((u) => u.id === id) || { title: id }).title);
+      if (ov) ov.innerHTML = over.length ? `<p class="note note--warn" role="status">Con tu texto no cabe en la lámina: ${over.map((t) => H().esc(t)).join(', ')}. Acorta el título o la nota, o restaura el texto original.</p>` : '';
+    }
   }
   if (typeof window !== 'undefined') { let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const el = document.getElementById('presentacion-view'); if (el) scale(el); }, 120); }); }
 

@@ -35,6 +35,9 @@ async def main():
         chk('X1 aparece el aviso con 1 día excluido', bool(e) and e['d'] == 1, e)
         chk('X2 el monto excluido es la venta de los demás canales de ese día', bool(e) and abs(e['r'] - others) < 1, (e, others))
         total_file = sum(float(l.split(',')[iv]) for l in lines[1:] if l is not target)
+        # Inicio sigue al mes en curso (octubre con el reloj fijo) y muestra «—» si el periodo aún no tiene venta; el archivo es de septiembre: se fija ese mes
+        await q.evaluate("(()=>{const h=FP.app.state.ux.home;h.follow=false;h.periodType='month';h.periodKey='2026-09';FP.app.render()})()"); await q.wait_for_timeout(800)
+        await q.evaluate("document.querySelectorAll('#view-inicio details').forEach(d=>d.open=true)"); await q.wait_for_timeout(300)   # las cifras clave están dentro de «Ver más»
         shown = await q.evaluate("(()=>{const e=document.querySelector('[data-key-real]');return +e.innerText.replace(/[^0-9.]/g,'')})()")
         chk('X3 venta mostrada + excluido = suma del archivo', abs(shown + (e or {}).get('r', 0) - total_file) < 2, (shown, e, total_file))
         await load('actual', 'real2.csv', act)

@@ -17,7 +17,7 @@
   function selectionOf(rp) {
     const prof = FP.reportCatalog.resolve(rp.audience, rp.type);
     if (!prof) throw new Error(`No hay un perfil habilitado para la audiencia «${rp.audience}» y el tipo «${rp.type}».`);
-    return { profile: prof.id, depth: prof.depths && prof.depths.length ? (rp.depth || prof.defaultDepth) : undefined, exclude: rp.exclude || [], include: rp.include || [] };
+    return { profile: prof.id, depth: prof.depths && prof.depths.length ? (rp.depth || prof.defaultDepth) : undefined, exclude: rp.exclude || [], include: rp.include || [], edits: rp.edits || null };
   }
 
   const choice = (action, o, pressed) => `<button type="button" class="rp-choice${o.enabled ? '' : ' rp-choice--off'}" data-action="${action}" data-id="${esc(o.id)}" aria-pressed="${pressed ? 'true' : 'false'}"${o.enabled ? '' : ` aria-disabled="true" title="${esc(o.reason)}"`}>
@@ -45,7 +45,7 @@
     const acc = ed.hyp && ed.hyp.length ? `<ul class="rp-ed__acc" id="rp-ai-acc">${ed.hyp.map((h, i) => `<li><span>${esc(h)}</span> <button type="button" class="btn btn--ghost" data-action="rp-ai-drop" data-i="${i}" aria-label="Quitar la hipótesis ${i + 1}">Quitar</button></li>`).join('')}</ul>` : '';
     const aiMsg = !ai ? '' : ai.busy ? '<p class="field__hint" role="status">Consultando…</p>' : ai.ok ? '' : `<p class="note note--warn" role="status">${esc(ai.status === 'rejected' ? 'La IA respondió algo que no cumple las reglas (cifras que no están en la lámina, lenguaje causal o sin lenguaje de posibilidad); no se muestra. ' : '')}${esc((ai.errors || []).slice(0, 2).join(' '))}</p>`;
     return `<div class="rp-editor" id="rp-editor" role="group" aria-labelledby="rp-editor-t"><h4 class="rp-prop__h" id="rp-editor-t">Editar «${esc(slide.title)}»</h4>
-      <p class="field__hint">Tu texto no cambia ninguna cifra: el título propio reemplaza al generado y la nota se agrega al pie de la lámina. Se guarda en este navegador y se borra al cerrar sesión.</p>
+      <p class="field__hint">Tu texto no cambia ninguna cifra: el título propio reemplaza al generado y la nota se agrega al pie de la lámina. Se guarda en este navegador y, si la sincronización con tu equipo está activa, también se comparte con el equipo. Al cerrar sesión se borra de este navegador.</p>
       <label class="field"><span class="field__label">Título de la lámina (vacío = el generado)</span><input type="text" id="rp-ed-title" data-action="rp-edit-field" data-field="title" maxlength="${L.title}" value="${esc(ed.title || '')}" placeholder="${esc(slide.title)}"></label>
       <label class="field"><span class="field__label">Nota (máx. ${L.note} caracteres)</span><textarea id="rp-ed-note" data-action="rp-edit-field" data-field="note" rows="2" maxlength="${L.note}">${esc(ed.note || '')}</textarea></label>
       <label class="check"><input type="checkbox" data-action="rp-option" data-key="ai" ${on ? 'checked' : ''}> Permitir sugerencias de IA (al pedirlas se envía a Cohere el texto y las cifras de esta lámina)</label>
@@ -81,7 +81,7 @@
         ${editorHtml(state, plan, prof)}
         ${out ? `<div><h4 class="rp-prop__h">No incluidas</h4><ul class="rp-offlist" id="rp-offlist">${out}</ul></div>` : ''}
         ${lim ? `<div><h4 class="rp-prop__h">Limitaciones detectadas</h4><ul class="rp-limits" id="rp-limits">${lim}</ul></div>` : '<p class="field__hint">No se detectaron limitaciones declaradas en las páginas incluidas.</p>'}
-        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-reset-selection">Restablecer la selección</button></div>
+        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-reset-selection">Restablecer la selección</button> <button type="button" class="btn btn--ghost" data-action="rp-prefs-clear">Borrar mis ediciones y preferencias guardadas</button></div>
       </div></section>`;
   }
 

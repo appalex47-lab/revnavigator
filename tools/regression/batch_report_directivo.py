@@ -37,10 +37,16 @@ async def main():
         chk('V8 sin «null», «undefined» ni «NaN» en las láminas nuevas', not any(w in (v + r) for w in ['null', 'undefined', 'NaN']))
         cover = await f.evaluate(TXT('cover'))
         chk('V9 la portada dice «Reporte directivo»', 'Reporte directivo' in cover, cover[:120])
+        chk('V9b la portada de Directivo aclara «Canal digital · no incluye la venta total de la empresa»', 'no incluye la venta total de la empresa' in cover, cover[:200])
+        chk('V9c las láminas con impacto simulado rotulan «(venta)»', 'Impacto simulado (venta)' in await f.evaluate(TXT('opportunities')))
         for pg in ('verdict', 'riskOpp'):
             g = await f.evaluate(f"({GEO})('{pg}')")
             chk(f'V10 en impresión «{pg}» es 1122×630, sin desborde, texto ≥ 13.4 px', g['w'] == 1122 and g['h'] == 630 and g['ov'] is None and g['wide'] == 0 and g['small'] == 0, g)
-        for d, want in (('resumen', ['cover', 'verdict', 'decisions']), ('detallado', ['cover', 'verdict', 'riskOpp', 'opportunities', 'pacing', 'movers', 'decisions'])):
+        await f.click('[data-action="rp-depth"][data-id="detallado"]'); await f.wait_for_timeout(300)
+        tp = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"pacing\"] .rp-title')||{textContent:''}).textContent")
+        chk('V9d el titular de Pacing en Directivo usa su voz corta («Vamos a la par del plan (−0.1 %)» o «Vamos X % por debajo/encima del plan a la fecha»)', tp.startswith('Vamos a la par del plan (') or tp.startswith('Vamos '), tp)
+        await f.click('[data-action="rp-depth"][data-id="ejecutivo"]'); await f.wait_for_timeout(300)
+        for d, want in (('resumen', ['cover', 'verdict', 'decisions']), ('detallado', ['cover', 'verdict', 'riskOpp', 'opportunities', 'scenarios', 'pacing', 'movers', 'decisions'])):
             await f.click(f'[data-action="rp-depth"][data-id="{d}"]'); await f.wait_for_timeout(300)
             got = await f.evaluate(PAGES); chk(f'V11 profundidad {d}', got == want, got)
         await f.click('[data-action="rp-depth"][data-id="ejecutivo"]'); await f.wait_for_timeout(300)

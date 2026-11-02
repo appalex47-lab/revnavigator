@@ -78,6 +78,10 @@ async def main():
         chk('R1c «Cancelar» visible durante la descarga', cancel_vis is True)
         chk('R1d nunca hubo dos diálogos y NUNCA salió la pregunta de los cuatro escenarios', maxd <= 1 and not tour, (maxd, tour))
         await q.wait_for_timeout(2500)
+        for _ in range(40):   # con la máquina cargada la restauración tarda más: se espera hasta 20 s en vez de 2.5 s fijos
+            n = await q.evaluate(NACT)
+            if n > 0: break
+            await q.wait_for_timeout(500)
         n = await q.evaluate(NACT); d = await q.evaluate(DLG)
         chk('R1e al terminar la página entra con los datos restaurados y sin diálogos', n > 0 and d == [], (n, d))
         chk('R1f authChoice «team» y sin escrituras a la nube', await q.evaluate("(FP.app.storage.load('authChoice')||{}).data") == 'team' and M['writes'] == 0)

@@ -32,6 +32,8 @@ async def main():
           const o={w:Math.round(b.width),h:Math.round(b.height),ov:pg.getAttribute('data-overflow'),wide:[...pg.querySelectorAll('table')].filter(t=>t.getBoundingClientRect().right>b.right+1).length,small};
           h.remove();document.getElementById('rp-print-style')&&document.getElementById('rp-print-style').remove();document.body.classList.remove('rp-printing');return o})()""")
         chk('G8 en impresión la lámina es 1122×630, sin desborde, con texto ≥ 13.4 px', geo['w'] == 1122 and geo['h'] == 630 and geo['ov'] is None and geo['wide'] == 0 and geo['small'] == 0, geo)
+        tt = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"pacing\"] .rp-title')||{textContent:''}).textContent")
+        chk('G4a el titular de Pacing en Gerencial usa la voz del formato («Vamos al … del plan a la fecha: N de M canales en meta»)', tt.startswith('Vamos al ') and 'canales en meta' in tt, tt)
         chk('G4b la vista previa de Gerencial trae «Oportunidades priorizadas» después del semáforo', 'opportunities' in prev and prev.index('channelScorecard') < prev.index('opportunities'), prev)
         ot = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"opportunities\"]')||{textContent:''}).textContent.replace(/\\s+/g,' ')")
         chk('G4c la lámina muestra brecha (Observado), acciones (Estimado), «Por asignar» y aclara que es venta, sin margen, ROI, ROAS ni CAC', all(k in ot for k in ['Dónde está la brecha', 'Qué se puede recuperar', 'Observado', 'Estimado', 'Impacto simulado', 'venta, no utilidad', 'ROAS']), ot[:300])

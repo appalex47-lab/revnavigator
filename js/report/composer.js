@@ -14,6 +14,7 @@
  *   depth    id de profundidad del perfil; un bloque cuyo slot pide más profundidad queda fuera («profundidad»). Sin depth no se filtra nada.
  *   exclude  bloques que la persona quitó (siempre ganan).
  *   include  bloques que la persona agregó aunque la profundidad los deje fuera.
+ *   edits    ediciones de la persona { 'perfil|bloque': {…} }: las páginas con `needs: 'edits'` (anexo de ediciones) solo entran si hay alguna.
  *
  * Plan (schema deck_plan 1.1.0):
  *   { schema, version, profile, audience, depth,
@@ -27,6 +28,9 @@
   const FP = (root.FP = root.FP || {});
   const SCHEMA = 'deck_plan', VERSION = '1.1.0';
   const PROFILES = () => FP.reportProfiles;
+
+  /** ¿Hay ediciones de la persona para este perfil? (las páginas con `needs: 'edits'` solo entran si las hay) */
+  const hasEdits = (edits, profileId) => Boolean(edits) && Object.keys(edits).some((k) => k.startsWith(`${profileId}|`) && edits[k] && (edits[k].title || edits[k].note || (edits[k].hyp && edits[k].hyp.length)));
 
   /** Avisos que las páginas ya traen: se listan tal cual; el compositor no redacta ninguno. */
   function limitationsOf(report) {
@@ -60,6 +64,7 @@
 
     report.pages.forEach((p, i) => {
       if (p.status !== 'included') excluded.push({ block: p.id, title: p.title, kind: 'sin-datos', reason: p.reason });
+      else if (p.needs === 'edits' && !hasEdits(o.edits, profile.id)) excluded.push({ block: p.id, title: p.title, kind: 'sin-datos', reason: 'No hay ediciones de texto ni hipótesis aceptadas en esta presentación.' });
       else if (p.annex) {
         const host = (slots.find((s) => s.block === p.id) || {}).embeddedIn, hostPage = host && report.pages.find((x) => x.id === host);
         excluded.push({ block: p.id, title: p.title, kind: 'en-anexo', reason: hostPage ? `Su contenido va dentro de «${hostPage.title}».` : 'Su contenido va dentro del anexo técnico.' });
@@ -99,7 +104,7 @@
    *   quitado por la persona → se vuelve a poner; fuera por profundidad → se agrega; sin datos o dentro del anexo → no hay nada que alternar.
    */
   function toggle(report, sel, block) {
-    const s = { profile: sel && sel.profile, depth: sel && sel.depth, exclude: (sel && sel.exclude ? sel.exclude : []).slice(), include: (sel && sel.include ? sel.include : []).slice() };
+    const s = { profile: sel && sel.profile, depth: sel && sel.depth, exclude: (sel && sel.exclude ? sel.exclude : []).slice(), include: (sel && sel.include ? sel.include : []).slice(), edits: sel && sel.edits };
     const plan = compose(report, s), out = { exclude: s.exclude, include: s.include };
     const slot = (PROFILES().get(plan.profile).slots || []).find((x) => x.block === block);
     if (slot && slot.required) return out;   // una lámina obligatoria (la portada) no se puede quitar

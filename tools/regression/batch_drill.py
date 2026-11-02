@@ -48,6 +48,7 @@ async def main():
         # ---- D6 error de lectura → mensaje + Reintentar → funciona ----
         await q.evaluate("window.__orig=FP.productStore.aggregateScan;FP.productStore.aggregateScan=()=>Promise.reject(new Error('fallo simulado'));null")
         await q.evaluate("FP.app.actions['an-select']({dataset:{entity:FP.app.state.an.rows[0].entity,source:'tabla'}})"); await q.wait_for_function("(()=>{const d=FP.app.state.an.drill;return d&&!d.loading&&d.error})()", timeout=30000)
+        await q.wait_for_function("(document.getElementById('an-drill')||{innerText:''}).innerText.includes('Reintentar')", timeout=30000)   # el estado cambia antes de que termine de dibujarse el panel
         txt = await q.evaluate("document.getElementById('an-drill').innerText")
         chk('D6 si la lectura falla se ve el motivo y el botón «Reintentar» (no «Cargando…»)', 'fallo simulado' in txt and 'Reintentar' in txt and 'Cargando detalle' not in txt, txt[:200])
         await q.evaluate("FP.productStore.aggregateScan=window.__orig;null"); await q.click('#an-drill [data-action="an-drill-retry"]'); await q.wait_for_function(WAIT, timeout=30000)

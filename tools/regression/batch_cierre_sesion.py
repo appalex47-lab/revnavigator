@@ -80,8 +80,12 @@ async def main():
         chk('S1a respaldado: aviso verde, botón directo, sin casilla', 'Todo está respaldado' in t and 'Entiendo' not in t, t)
         chk('S1b el texto dice qué se borra y qué se conserva', 'se borran de este navegador' in t and 'preferencias' in t and 'Cohere' in t, t)
         chk('S1c aún no se borró nada', len((await inv_safe(q))['kv']) == len(inv0['kv']))
+        # Fase 7: las preferencias y ediciones de la presentación (texto de la persona) también se borran y no se escriben de nuevo
+        await q.evaluate("FP.app.storage.save('reportPrefs',{schema:'report_prefs',version:1,audience:'gerencial',type:'desempeno',edits:{'gerencial|pacing':{note:'Confidencial'}}})")
+        chk('S1c2 antes de cerrar sesión las preferencias de la presentación están guardadas', 'reportPrefs' in (await inv_safe(q))['ls'])
         await q.click('#signout-dialog [data-action="signout-confirm"]'); await q.wait_for_timeout(2500)
         inv = await inv_safe(q)
+        chk('S1c3 al cerrar sesión se borran las preferencias y ediciones de la presentación', 'reportPrefs' not in inv['ls'], inv['ls'])
         chk('S1d IndexedDB vacío (kv)', inv['kv'] == [], inv['kv'])
         data_ls = [k for k in inv['ls'] if k.split(':')[0] in ('historicalData','planData','actualData','segmentsData','dataset','plans','forecasts','targets','settings','aliases','businessContext','diagnosticSettings')]
         chk('S1e sin claves de datos en localStorage', data_ls == [], data_ls)
@@ -91,6 +95,8 @@ async def main():
         chk('S1i la app dejó de mostrar datos en memoria', await q.evaluate("FP.app.state.store ? FP.dataStore.records(FP.app.state.store,'actual').length === 0 : true"))
         await q.wait_for_timeout(600)
         chk('S1j tras recargar aparece la bienvenida y la sesión no existe', await q.evaluate("!!document.querySelector('#entry-dialog')") and await q.evaluate("!FP.app.state.cloud.session"))
+        await q.wait_for_timeout(1500)
+        chk('S1l pasada la recarga nada vuelve a escribir las preferencias de la presentación (sin escrituras tardías)', 'reportPrefs' not in (await inv_safe(q))['ls'])
         chk('S1k la nube no se tocó (no hubo POST ni DELETE)', M['posts'] == 0)
         await c.close()
         # ---- S2 sin respaldo: advertencia, casilla obligatoria, cancelar conserva ----
