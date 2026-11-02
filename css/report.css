@@ -444,7 +444,4 @@
 .rp-ed__trim { font-size:13.5px; color:var(--muted, #5B6B85); font-style:italic; } p.rp-ed__trim { margin:2px 0 0; }
 .rp-title--fit2 { font-size:18px; line-height:1.08; }
 /* último recurso del ajuste de textos escritos: espacios más ajustados (la tipografía no baja de 13.5 px) */
-.rp-ed-ss .rp-body { gap:3px; }
 .rp-ed-ss .rp-ed { margin-top:2px; padding:3px 10px; }
-.rp-ed-ss .rp-notes { line-height:1.2; }
-.rp-ed-ss .rp-scope { margin:0; line-height:1.2; }

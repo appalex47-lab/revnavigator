@@ -432,7 +432,7 @@
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
     return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
-      <h2 class="rp-title">${esc(ed && ed.title ? ed.title : title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
+      <h2 class="rp-title"${ed && ed.title ? ' data-ed="1"' : ''}>${esc(ed && ed.title ? ed.title : title)}</h2><div class="rp-sub"><p class="rp-q">${esc(q)}</p>${ctxLine ? `<div class="rp-ctx">${esc(ctxLine)}</div>` : ''}</div>${!['summary', 'annex', 'closing', 'campaigns'].includes(u.id) && !(EXT[u.id] && EXT[u.id].noHeadline) && !(u.id === 'recovery' && p.byChannel) && !(u.id === 'traffic' && p.overview) && p.headline ? `<p class="rp-headline">${esc(p.headline)}</p>` : ''}
       <div class="rp-body">${body}${edHtml}</div>${foot}</section>`;
   }
   function docHtml(report, opts = {}) {
@@ -453,7 +453,7 @@
     rootEl.querySelectorAll('.rp-page').forEach((pg) => {
       const b = pg.querySelector('.rp-body'); if (!b) return;
       const over2 = () => b.scrollHeight > b.clientHeight + 1;
-      pg.classList.remove('rp-compact', 'rp-tight', 'rp-ed-s', 'rp-ed-ss'); pg.removeAttribute('data-overflow'); pg.querySelectorAll('.rp-title--fit, .rp-title--fit2').forEach((x) => x.classList.remove('rp-title--fit', 'rp-title--fit2'));
+      pg.classList.remove('rp-compact', 'rp-tight', 'rp-ed-s', 'rp-ed-ss'); pg.removeAttribute('data-overflow'); b.style.gap = ''; b.querySelectorAll(':scope > .rp-notes, :scope > .rp-scope').forEach((x) => { x.style.lineHeight = ''; x.style.margin = ''; }); pg.querySelectorAll('.rp-title--fit, .rp-title--fit2').forEach((x) => x.classList.remove('rp-title--fit', 'rp-title--fit2'));
       b.querySelectorAll('tr.rp-rest, tr.rp-rest-total').forEach((x) => x.remove());   // se recalculan en cada ajuste
       delete pg.dataset.noTotal;
       if (b.scrollHeight > b.clientHeight + 1) { pg.classList.add('rp-compact'); }
@@ -462,7 +462,7 @@
       // Prioridad: las cifras calculadas van ANTES que el texto escrito. Por eso el ajuste va en dos tiempos: (1) antes de quitar filas de datos se compacta, se abrevia al mínimo, se quitan hipótesis
       // desde la última y el título baja a 18 px; (2) si aun quitando filas hace falta, se repite el ajuste sobre lo que quede. Cada abreviatura lo dice en la lámina.
       const edFit = (final) => {
-        if (!(b.scrollHeight > b.clientHeight + 1) || !pg.querySelector('.rp-ed, .rp-title')) return;
+        if (!(b.scrollHeight > b.clientHeight + 1) || !pg.querySelector('.rp-ed, .rp-title[data-ed]')) return;   // solo si la lámina trae texto escrito por la persona (el reporte sin ediciones no cambia)
         if (!pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-s'); const ttl = pg.querySelector('.rp-title'); if (ttl) ttl.classList.add('rp-title--fit'); }
         const ed = pg.querySelector('.rp-ed'), over = () => b.scrollHeight > b.clientHeight + 1;
         if (over() && ed) {
@@ -480,7 +480,7 @@
           }
           if (parts.some((q) => q.tx.textContent !== q.full) || !ed.querySelector('.rp-ed__h li') && pg.__edFull.size > 1) pg.setAttribute('data-trimmed', '1'); else if (!parts.some((q) => q.tx.textContent !== q.full)) { tn.remove(); }
         }
-        if (final && over2() && pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-ss'); const ttl2 = pg.querySelector('.rp-title'); if (ttl2) ttl2.classList.add('rp-title--fit2'); }   // último recurso: el título escrito baja a 18 px (nunca se abrevia)
+        if (final && over2() && pg.classList.contains('rp-ed-s')) { pg.classList.add('rp-ed-ss'); b.style.gap = '3px'; b.querySelectorAll(':scope > .rp-notes, :scope > .rp-scope').forEach((x) => { x.style.lineHeight = '1.2'; x.style.margin = '0'; }); const ttl2 = pg.querySelector('.rp-title'); if (ttl2) ttl2.classList.add('rp-title--fit2'); }   // último recurso: el título escrito baja a 18 px (nunca se abrevia)
       };
       edFit(true);   // el texto escrito se abrevia al mínimo ANTES de quitar cifras: las filas de datos solo se recortan si aun así no cabe
       // Resumen: antes de quitar nada se esconde el gráfico del foco; luego, los hallazgos secundarios (lo dice una nota; siguen en sus láminas).
