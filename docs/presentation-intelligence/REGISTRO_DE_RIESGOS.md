@@ -12,9 +12,9 @@ Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con pru
 | 3 | IA sin prueba real | **Mitigado** | Validación más estricta: solo valen las cifras que la IA recibió (tolerancia 0.5 %, sin redondeo generoso) y no puede nombrar canales que la lámina no menciona. **Abierto:** no se probó con Cohere real. |
 | 4 | Directivo «negocio» vs canal digital | **Cerrado** | La portada de Directivo agrega «Canal digital · no incluye la venta total de la empresa». |
 | 5 | Datos en el navegador / cierre de sesión | **Cerrado** (con servidor simulado) | Botón «Borrar mis ediciones y preferencias guardadas»; prueba del flujo real de cierre de sesión (Supabase simulado): se borra `reportPrefs` y no se vuelve a escribir tras recargar. **Abierto:** no se probó contra el servicio real. |
-| 6 | Umbrales provisionales | **Abierto** | Decisión de negocio. Editables y marcados «Valor provisional» en el anexo. |
+| 6 | Umbrales provisionales | **Mitigado** | Sugerencia según el historial (`js/forecast/thresholdAdvisor.js`): percentil 75 y 90 de la desviación semanal contra el plan (≥ 8 semanas completas; sin historia no inventa). Se recalcula sola al llegar datos y una vez al día, aparece en Pacing › Versiones y parámetros y en la sensibilidad de la presentación, y **nunca se aplica sola**. **Abierto:** que el negocio confirme el criterio (p75/p90) y que haya ≥ 8 semanas de historial (los datos de ejemplo tienen 4). |
 | 7 | Embudo GA4 sin archivo real | **Mitigado** | Prueba con venta y embudo por el importador real (`mockProducts → productImport → productStore`). **Abierto:** datos generados, no un archivo GA4 real. |
-| 8 | Narrativa distinta por audiencia | **Abierto** | Se decidió no reescribir textos reutilizados (riesgo de inventar). |
+| 8 | Narrativa distinta por audiencia | **Mitigado** | Etapa 1: titulares propios (`js/report/voice.js`) para Resumen, Pacing, Factores y Quién suma y resta en Gerencial y Directivo, como plantillas sobre campos de la página. Riesgo propio (plantillas acopladas a los campos): el anexo «Reglas y umbrales» lista qué titulares salieron con la voz del formato y cuáles conservan el del reporte actual (y qué campo faltó), y una prueba sobre 89 reportes reales falla si una regla cae al titular actual teniendo sus campos, si un número no existe en el reporte o si hay lenguaje causal. **Abierto:** Operativo y el resto de láminas. |
 | 9 | Cambio del periodo repetido | **Aceptado** | Aprobado por la persona. |
 | 10 | Dependencia del formato del motor de escenarios | **Cerrado** | Si no hay supuestos/advertencias/cambios legibles, la lámina lo dice en una nota; la prueba con el motor real verifica la forma. |
 | 11 | Ediciones largas desbordan | **Cerrado** | Tras dibujar, se avisa en pantalla qué lámina no cabe con tu texto (probado forzando el desborde). |
@@ -96,6 +96,15 @@ Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con pru
 | H4 | El anexo «Ediciones e IA» se decide al componer y no cuenta en el total del reporte | `needs:'edits'` en el compositor; probado | El conteo «N láminas» del aviso de generación puede diferir en 1 del PDF |
 | H5 | El anexo de reglas refleja los umbrales del momento de generar | La vista previa se marca desactualizada al cambiarlos | — |
 | H6 | `blocks.extend` ahora entrega el perfil a los constructores y excluye del total las páginas `needs` | Probado | Cambio en un contrato interno compartido por todos los formatos |
+
+## I. Riesgos nuevos de las mitigaciones
+| # | Riesgo | Mitigación | Abierto |
+|---|---|---|---|
+| I1 | La sugerencia de umbrales es estadística, no un criterio de negocio: con semanas atípicas (campañas, fechas pico) sube los umbrales | Solo semanas completas; percentiles (no promedio); evidencia visible; nunca se aplica sola | No distingue semanas de campaña |
+| I2 | El cálculo diario/por datos se ejecuta al dibujar la pantalla | Solo recalcula si cambia la corrida del forecast o el día; probado (no repite) | Primera pantalla del día paga el cálculo (≈ms) |
+| I3 | Aplicar la sugerencia de Pacing recalcula la corrida y cambia los semáforos de la herramienta | Botón explícito, deshabilitado si ya coincide | Cambia lo que se ve en Pacing e Inicio para todo el equipo (los ajustes se sincronizan) |
+| I4 | Titulares con voz propia pueden quedar desfasados de las cifras de la lámina | Salen de los mismos campos que las cifras; prueba de números sobre 89 reportes | Solo cubre 2 formatos y 4 láminas |
+| I5 | Las ediciones de texto y los umbrales de la presentación se comparten con el equipo (última escritura gana) | Aviso en el editor | Sin fusión de conflictos |
 
 ## G. Higiene del repositorio (fuera del código)
 Ramas viejas por borrar, 8 PRs de Jules obsoletos (#64, #117, #130, #135, #140, #160, #188, #191), activar «Automatically delete head branches» y desactivar el schedule de Jules.

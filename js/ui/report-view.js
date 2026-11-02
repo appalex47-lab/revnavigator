@@ -428,7 +428,7 @@
         <dl class="rp-cover__meta"><div><dt>Período analizado</dt><dd>${esc(per)}</dd></div><div><dt>Fecha de corte</dt><dd>${esc(x.cutoff)}</dd></div>${x.lastActual ? `<div><dt>Venta real hasta</dt><dd>${esc(x.lastActual)}</dd></div>` : ''}<div><dt>Alcance</dt><dd>${esc(p.scope || x.channelLabel)}</dd></div>${p.filterLabel ? `<div><dt>Filtro</dt><dd>${esc(p.filterLabel)}</dd></div>` : ''}</dl>${p.filterNote ? `<p class="rp-cover__note">${esc(p.filterNote)}</p>` : ''}</div>${brandLogo() ? '<div class="rp-cover__by">RevNavigator</div>' : ''}</section>`;
     }
     const body = u.id === 'summary' ? summaryBody(p, x) : u.id === 'closing' ? closingBody(p, x) : u.id === 'decisions' ? decisionsBody(p) : u.id === 'annex' ? annexBody(p, x, u.sub) : (BODY[u.id] ? BODY[u.id](p, x) : '');
-    const concl = u.id === 'annex' || !FP.reportCopy ? null : (FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
+    const concl = u.id === 'annex' || !FP.reportCopy ? null : ((FP.reportVoice && FP.reportVoice.title(x.editProfile, p, x.report)) || FP.reportCopy.title(p, x.report) || (EXT[u.id] && EXT[u.id].title ? EXT[u.id].title(p, x.report) : null));   // título con conclusión si los datos la permiten; si no, el neutro
     const title = u.id === 'annex' ? u.title : (concl || (u.id === 'pacing' && p.selection ? 'Venta de la selección contra su periodo de referencia' : (TITLES[u.id] || p.title)));
     const q = u.id === 'annex' ? '' : u.id === 'closing' ? '' : (p.question || '');
     return `<section class="rp-page" data-page="${esc(u.id)}${u.sub ? `-${u.sub}` : ''}"><div class="rp-top"><span class="rp-eyebrow">${esc(eyebrow)}</span>${perShown ? `<span class="rp-per">${esc(per)}</span>` : ''}</div>
@@ -552,7 +552,7 @@
 
   /* ================= vista «Presentación (PDF)» ================= */
   /** Sensibilidad del formato elegido (Operativo o Gerencial): a partir de qué desvío contra el plan se marca algo. Vacío = valor por defecto de la configuración. */
-  function thresholdsHtml(rp) {
+  function thresholdsHtml(rp, state) {
     const g = rp.audience === 'gerencial' || rp.audience === 'directivo', D = FP.config.reports[g ? 'gerencial' : 'operativo'], T = rp.options.thresholds || {};
     const inp = (key, label, hint) => `<label class="field rp-th"><span class="field__label">${label}</span><span class="rp-th__in"><input type="text" inputmode="decimal" data-action="rp-threshold" data-key="${key}" value="${T[key] === null || T[key] === undefined ? '' : esc(String(+(T[key] * 100).toFixed(2)))}" placeholder="${+(D[key] * 100).toFixed(2)}" aria-describedby="rp-th-hint"> %</span><span class="field__hint">${hint}</span></label>`;
     const fields = g
@@ -560,7 +560,8 @@
       : inp('belowPlanPct', 'Indicador «bajo el plan» desde', 'Un indicador de canal se marca bajo el plan si se aparta al menos esto de su plan.') + inp('weakPct', 'Semana, mes o día «más flojo» desde', 'Se nombra como el más flojo si su venta queda al menos esto bajo el plan.');
     const defs = g ? `${+(D.okPct * 100).toFixed(2)} % y ${+(D.alertPct * 100).toFixed(2)} %` : `${+(D.belowPlanPct * 100).toFixed(2)} % y ${+(D.weakPct * 100).toFixed(2)} %`;
     return `<fieldset class="rp-step rp-th-box"><legend>Sensibilidad del formato ${rp.audience === 'directivo' ? 'Directivo' : g ? 'Gerencial' : 'Operativo'}</legend>${fields}
-      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${defs}). Se aplica al generar de nuevo y vale mientras la sesión esté abierta.</p></fieldset>`;
+      <p class="field__hint" id="rp-th-hint">Vacío usa el valor provisional (${defs}). Se aplica al generar de nuevo. Se guardan y se comparten con tu equipo.</p>
+      ${FP.thresholdView ? FP.thresholdView.box(state, 'rp') : ''}</fieldset>`;
   }
   function signature(state) {
     const s = state.dx.settings, an = state.an || {};
@@ -621,7 +622,7 @@
           ${filterSelect(state)}
           <div class="rp-opts"><label class="check"><input type="checkbox" data-action="rp-option" data-key="showTags" ${rp.options.showTags ? 'checked' : ''}> Mostrar etiquetas Observado / Calculado / Estimado</label>
             <label class="check"><input type="checkbox" data-action="rp-option" data-key="showBusinessName" ${rp.options.showBusinessName ? 'checked' : ''}> Incluir el nombre del negocio en la portada</label></div>
-          ${(rp.audience === 'operativo' && FP.reportOperativo) || ((rp.audience === 'gerencial' || rp.audience === 'directivo') && FP.reportGerencial) ? thresholdsHtml(rp) : ''}
+          ${(rp.audience === 'operativo' && FP.reportOperativo) || ((rp.audience === 'gerencial' || rp.audience === 'directivo') && FP.reportGerencial) ? thresholdsHtml(rp, state) : ''}
           <div class="btn-row"><button type="button" class="btn ${ready && !stale ? '' : 'btn--primary'}" data-action="rp-generate" ${rp.status === 'busy' ? 'disabled aria-busy="true"' : ''}>${ready ? 'Volver a generar' : 'Generar vista previa'}</button>
             <button type="button" class="btn btn--primary" data-action="rp-print" ${ready ? '' : 'disabled title="Primero genera el reporte"'}>Guardar como PDF</button></div>
           ${rp.gap ? gapWarn(rp.gap) : ''}

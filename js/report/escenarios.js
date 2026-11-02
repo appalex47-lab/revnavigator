@@ -79,7 +79,7 @@
     const notes = []; if (L.fallback && keys.includes('okPct')) notes.push('Los umbrales escritos no eran consistentes (el de «en meta» debe ser menor que el de «fuera de meta»); se usaron los provisionales.');
     notes.push('Los valores provisionales son criterios propuestos, no referencias de mercado: ajústalos con tu historial.');
     return { id, title, status: 'included', annex: false, question: '¿Cómo se leyó esta presentación?', conclusion: 'Cómo se leyó esta presentación: reglas y umbrales vigentes', headline: 'Cómo se leyó esta presentación: reglas y umbrales vigentes', ctx: (profile && profile.label) || 'Reporte actual',
-      kpis: [], tables: [], charts: [], thresholds, seals: SEALS, limits: LIMITS_ALL.concat(LIMITS_BY[pid] || []), notes, sources: ['Configuración del formato'], tags: [TAG().calc] };
+      kpis: [], tables: [], charts: [], thresholds, voice: FP.reportVoice ? FP.reportVoice.audit(pid, report) : [], seals: SEALS, limits: LIMITS_ALL.concat(LIMITS_BY[pid] || []), notes, sources: ['Configuración del formato'], tags: [TAG().calc] };
   }
 
   /* ---------- Anexo «Ediciones e IA» (se rellena al componer con las ediciones vigentes; ver report-escenarios-view.js) ---------- */

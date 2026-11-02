@@ -433,3 +433,6 @@
 .rp-sc td, .rp-sc th { vertical-align:top; } .rp-sc__a { max-width:360px; } .rp-sc__w { color:var(--orange); }
 .rp-sc__two { display:grid; grid-template-columns:1fr 1fr; gap:34px; margin-top:8px; }
 .rp-def { font-size:16px; line-height:1.4; margin:0 0 8px; } .rp-sc__h { display:block; margin-bottom:4px; }
+/* sugerencia de umbrales (herramienta y presentación) */
+.th-box { border:1px solid #D5DCE8; border-radius:10px; padding:12px 16px; display:grid; gap:8px; margin-top:12px; }
+.th-box__h { margin:0; font-size:15px; } .th-box__t { max-width:520px; }

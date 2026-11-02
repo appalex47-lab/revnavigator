@@ -244,6 +244,7 @@
           Completar el real con el histórico del mismo año</label>
           <span class="field__hint">Ambos son venta real. Útil si los meses cerrados del año están en Histórico y el mes en curso en Actual.</span></div>
       </div>
+      ${FP.thresholdView ? FP.thresholdView.box(state, 'fc') : ''}
       <button type="button" class="btn btn--quiet" data-action="fc-reset">Restablecer parámetros del forecast</button>`;
   }
 

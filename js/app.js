@@ -95,6 +95,7 @@
     },
     // Fase 8.1: Categoría → Producto (resultados en memoria; datos en IndexedDB)
     pkg: { busy: false, last: null },
+    th: { sug: null, on: null, sig: null },   // sugerencia de umbrales según el historial (derivada; local)
     rp: { status: 'idle', report: null, error: null, audience: 'actual', type: 'desempeno', depth: 'detallado', include: [], exclude: ['reliability', 'seasonality', 'annex'], options: { showTags: false, showBusinessName: false, ai: false, thresholds: { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null } }, edits: {}, editing: null, aiRes: {}, prefsNote: [], filter: null, sig: null, at: null },   // «Presentación (PDF)»
     pa: { from: null, to: null, comparison: 'previous', channel: 'total', viewBy: 'category', drill: [], next: null, geo: {}, topN: 20, page: 1, result: null, loading: false, key: null,
       trace: null, counts: null, estimate: null, tests: null, testing: false, note: null },
@@ -537,6 +538,20 @@
     // Hay algo guardado que no se puede leer (JSON dañado o versión de esquema desconocida): se avisa, no se adivina
     const raw = lsAdapter.get(`${C.storage.namespace}:${K.businessContext}`);
     state.bc = { draft: ctx || BCX.empty(), storedAt: ctx ? env.savedAt : null, dirty: false, unreadable: Boolean(raw) && !ctx };
+  }
+  /* ---------- Sugerencia de umbrales según el historial (se recalcula sola al llegar datos nuevos y una vez al día; nunca se aplica sola) ---------- */
+  function loadThresholdSuggestion() {
+    const env = storage.load(K.thresholdSuggestion), d = env && env.data;
+    state.th = d && d.sug && d.sug.schema === FP.thresholdAdvisor.SCHEMA && d.sug.version === FP.thresholdAdvisor.VERSION ? { sug: d.sug, on: d.on || null, sig: d.sig || null } : { sug: null, on: null, sig: null };
+  }
+  function thresholdTick(force) {
+    const run = state.fc.run; if (!run || !run.total || !FP.thresholdAdvisor) return false;
+    const weeks = Array.isArray(run.total.weeks) ? run.total.weeks : [], today = Cal.toISODate(new Date());
+    const sig = JSON.stringify([run.generatedAt || null, run.cutoff || null, weeks.reduce((s, w) => s + (w.countedDays || 0), 0)]);
+    if (!force && state.th.sig === sig && state.th.on === today) return false;
+    state.th = { sug: FP.thresholdAdvisor.suggest(run), on: today, sig };
+    if (state.th.sug.status === 'ready') storage.save(K.thresholdSuggestion, state.th); else storage.remove(K.thresholdSuggestion);   // solo se guarda una sugerencia real; con la sesión cerrándose, save no escribe
+    return true;
   }
   /* ---------- Fase 7: selección, umbrales y ediciones de la presentación (local; se borran al cerrar sesión) ---------- */
   let rpSaved = null;   // lo último que se guardó (o se leyó): solo se vuelve a escribir cuando cambia
@@ -1626,6 +1641,7 @@
     FP.navigation.renderNav(state);
     renderView();
     rpPersist();
+    thresholdTick(false);
     restoreDrafts();
     announceView();
     learnFromView();
@@ -4722,6 +4738,22 @@
     'rp-gap-load'() { state.rp.gap = null; root.location.hash = 'carga'; },
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
     'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp), edits: rp.edits }); },
+    'th-suggest'() {
+      if (!state.fc.run) { FP.ui.toast('Primero carga datos para calcular el pacing.'); return; }
+      thresholdTick(true); const s = state.th.sug;
+      FP.ui.toast(s && s.status === 'ready' ? 'Sugerencia actualizada con tu historial.' : (s ? s.reason : 'No hay datos suficientes.')); render();
+    },
+    'th-apply-rp'() {
+      const s = state.th.sug; if (!s || s.status !== 'ready') return;
+      const keys = FP.thresholdView.KEYS[state.rp.audience] || [], th = state.rp.options.thresholds; let n = 0;
+      keys.forEach((k) => { if (typeof s.presentation[k] === 'number') { th[k] = s.presentation[k]; n += 1; } });
+      FP.ui.toast(n ? 'Umbrales de la presentación actualizados con la sugerencia. Vuelve a generar la vista previa.' : 'Esta sugerencia no trae valores para este formato.'); render();
+    },
+    'th-apply-fc'() {
+      const s = state.th.sug; if (!s || s.status !== 'ready') return;
+      state.fc.settings.pacingThresholds = { ...(state.fc.settings.pacingThresholds || {}), aboveFrom: s.pacing.aboveFrom, onPlanFrom: s.pacing.onPlanFrom };
+      saveForecastSettings(); state.fc.run = null; FP.ui.toast('Umbrales de Pacing actualizados con la sugerencia.'); render();
+    },
     'rp-prefs-clear'() {   // borra lo guardado en este navegador (ediciones de texto, umbrales y selección) sin esperar a cerrar sesión
       if (!root.confirm('¿Borrar las ediciones, los umbrales y la selección de la presentación guardados? Si la sincronización con tu equipo está activa, se borran también para el equipo.')) return;
       const rp = state.rp, prof = FP.reportCatalog.resolve('actual', 'desempeno');
@@ -6127,6 +6159,7 @@
     loadProjCalibration();
     loadUx();
     loadRpPrefs();
+    loadThresholdSuggestion();
     loadStore();
     loadYearScoped(C.defaultYear);
     const migrated = migrateLegacyDataset();

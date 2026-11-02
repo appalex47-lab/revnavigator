@@ -10,6 +10,8 @@ const NEEDS = {
   'js/report/operativo.js': ['js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js'],
   'js/report/oportunidades.js': ['js/report/blocks.js', 'js/report/operativo.js'], 'js/report/gerencial.js': ['js/report/operativo.js', 'js/report/oportunidades.js'],
   'js/report/escenarios.js': ['js/report/blocks.js', 'js/report/operativo.js'], 'js/report/directivo.js': ['js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/escenarios.js'],
+  'js/forecast/thresholdAdvisor.js': ['js/forecast/forecastEngine.js'], 'js/ui/threshold-view.js': ['js/forecast/thresholdAdvisor.js'], 'js/ui/report-view.js': ['js/ui/threshold-view.js'],
+  'js/report/voice.js': ['js/report/reportBuilder.js'], 'js/ui/report-view.js': ['js/report/voice.js'],
   'js/report/composer.js': ['js/report/profiles.js'], 'js/report/presentationPrefs.js': ['js/report/profiles.js', 'js/report/catalog.js'],
   'js/ui/report-operativo-view.js': ['js/ui/report-view.js', 'js/report/operativo.js'], 'js/ui/report-gerencial-view.js': ['js/ui/report-view.js', 'js/report/gerencial.js'],
   'js/ui/report-oportunidades-view.js': ['js/ui/report-view.js', 'js/report/oportunidades.js'], 'js/ui/report-directivo-view.js': ['js/ui/report-view.js', 'js/report/directivo.js'],
@@ -19,7 +21,7 @@ const missing = Object.keys(NEEDS).concat(...Object.values(NEEDS)).filter((f, i,
 t('todos los módulos del reporte están en index.html', missing.length === 0, missing);
 const wrong = Object.entries(NEEDS).flatMap(([f, deps]) => deps.filter((d) => at(d) >= at(f)).map((d) => `${f} debe cargar después de ${d}`));
 t('cada módulo se carga después de aquello de lo que depende (orden de scripts)', wrong.length === 0, wrong);
-t('las preferencias y la IA de la presentación se cargan antes de app.js', ['js/report/presentationPrefs.js', 'js/report/presentationAI.js'].every((f) => at(f) >= 0 && at(f) < at('js/app.js')));
+t('las preferencias, la IA y el asesor de umbrales se cargan antes de app.js', ['js/report/presentationPrefs.js', 'js/report/presentationAI.js', 'js/forecast/thresholdAdvisor.js', 'js/ui/threshold-view.js', 'js/report/voice.js'].every((f) => at(f) >= 0 && at(f) < at('js/app.js')));
 t('el reporte se arma sin módulos sueltos: todo js/report/*.js y los js/ui/report-*.js existentes están en index.html', (() => { const files = fs.readdirSync('js/report').map((f) => `js/report/${f}`).concat(fs.readdirSync('js/ui').filter((f) => f.startsWith('report-')).map((f) => `js/ui/${f}`)); return files.filter((f) => at(f) < 0); })().length === 0);
 
 /* ---- 2 · cobertura de páginas por perfil ---- */

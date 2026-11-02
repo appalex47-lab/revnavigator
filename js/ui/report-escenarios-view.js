@@ -23,7 +23,14 @@
     const th = p.thresholds.length ? p.thresholds.map((t) => `<p class="rp-def"><b>${esc(t.label)}:</b> ${esc(f('pct', t.value))} ${tag(t.origin, t.origin === 'Valor provisional' ? 'obs' : 'est')}</p>`).join('') : '<p class="rp-small">Este formato no usa umbrales.</p>';
     return `<div class="rp-op"><div class="rp-sc__two"><div><h3 class="rp-vd__h">Umbrales en uso</h3>${th}<h3 class="rp-vd__h">Sellos</h3>${p.seals.map((s) => `<p class="rp-def">${tag(s.tag, s.tag === 'Estimado' ? 'est' : 'obs')} ${esc(s.what)}</p>`).join('')}</div>
       <div><h3 class="rp-vd__h">Límites</h3>${p.limits.map((l) => `<p class="rp-def">${esc(l)}</p>`).join('')}</div></div>
+      ${voiceHtml(p.voice)}
       <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
+  }
+  /** Titulares escritos para este formato frente a los que se quedan con el del reporte actual (y por qué). */
+  function voiceHtml(v) {
+    if (!v || !v.length) return '';
+    const own = v.filter((x) => x.source === 'voz'), rest = v.filter((x) => x.source !== 'voz');
+    return `<p class="rp-def"><b>Titulares con la voz de este formato:</b> ${own.length} de ${v.length}${rest.length ? `. Conservan el titular del reporte actual: ${rest.map((x) => `${esc(x.title)} (falta ${esc(x.missing)})`).join('; ')}` : ''}.</p>`;
   }
 
   function editsBody(p, x) {

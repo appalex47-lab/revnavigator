@@ -42,6 +42,10 @@ async def main():
         for pg in ('verdict', 'riskOpp'):
             g = await f.evaluate(f"({GEO})('{pg}')")
             chk(f'V10 en impresión «{pg}» es 1122×630, sin desborde, texto ≥ 13.4 px', g['w'] == 1122 and g['h'] == 630 and g['ov'] is None and g['wide'] == 0 and g['small'] == 0, g)
+        await f.click('[data-action="rp-depth"][data-id="detallado"]'); await f.wait_for_timeout(300)
+        tp = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"pacing\"] .rp-title')||{textContent:''}).textContent")
+        chk('V9d el titular de Pacing en Directivo usa su voz corta («Vamos a la par del plan (−0.1 %)» o «Vamos X % por debajo/encima del plan a la fecha»)', tp.startswith('Vamos a la par del plan (') or tp.startswith('Vamos '), tp)
+        await f.click('[data-action="rp-depth"][data-id="ejecutivo"]'); await f.wait_for_timeout(300)
         for d, want in (('resumen', ['cover', 'verdict', 'decisions']), ('detallado', ['cover', 'verdict', 'riskOpp', 'opportunities', 'scenarios', 'pacing', 'movers', 'decisions'])):
             await f.click(f'[data-action="rp-depth"][data-id="{d}"]'); await f.wait_for_timeout(300)
             got = await f.evaluate(PAGES); chk(f'V11 profundidad {d}', got == want, got)
