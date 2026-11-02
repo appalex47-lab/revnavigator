@@ -17,7 +17,7 @@
   function selectionOf(rp) {
     const prof = FP.reportCatalog.resolve(rp.audience, rp.type);
     if (!prof) throw new Error(`No hay un perfil habilitado para la audiencia «${rp.audience}» y el tipo «${rp.type}».`);
-    return { profile: prof.id, depth: prof.depths && prof.depths.length ? (rp.depth || prof.defaultDepth) : undefined, exclude: rp.exclude || [], include: rp.include || [] };
+    return { profile: prof.id, depth: prof.depths && prof.depths.length ? (rp.depth || prof.defaultDepth) : undefined, exclude: rp.exclude || [], include: rp.include || [], edits: rp.edits || null };
   }
 
   const choice = (action, o, pressed) => `<button type="button" class="rp-choice${o.enabled ? '' : ' rp-choice--off'}" data-action="${action}" data-id="${esc(o.id)}" aria-pressed="${pressed ? 'true' : 'false'}"${o.enabled ? '' : ` aria-disabled="true" title="${esc(o.reason)}"`}>

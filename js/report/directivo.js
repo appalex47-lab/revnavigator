@@ -79,12 +79,12 @@
     ],
     defaultDepth: 'ejecutivo',
     slots: [
-      S('cover', 'portada', 'resumen', { required: true }), S('verdict', 'analisis', 'resumen'), S('riskOpp', 'analisis', 'ejecutivo'), S('opportunities', 'analisis', 'ejecutivo'),
+      S('cover', 'portada', 'resumen', { required: true }), S('verdict', 'analisis', 'resumen'), S('riskOpp', 'analisis', 'ejecutivo'), S('opportunities', 'analisis', 'ejecutivo'), S('scenarios', 'analisis', 'detallado'),
       S('pacing', 'analisis', 'detallado'), S('movers', 'analisis', 'detallado'), S('decisions', 'cierre', 'resumen'),
-      S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
+      S('annexRules', 'anexo', 'detallado'), S('annexEdits', 'anexo', 'detallado'), S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
     ],
     annexes: JSON.parse(JSON.stringify(legacy.annexes)),
-    defaultExclude: ['reliability', 'annex']
+    defaultExclude: ['reliability', 'annex', 'annexRules', 'annexEdits']
   });
   FP.reportBlocks.register('verdict', verdict);
   FP.reportBlocks.register('riskOpp', riskOpp);

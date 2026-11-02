@@ -235,8 +235,8 @@
       S('cover', 'portada', 'resumen', { required: true }), S('summary', 'analisis', 'resumen'), S('pacing', 'analisis', 'ejecutivo'), S('channelPacing', 'analisis', 'resumen'),
       S('evolution', 'analisis', 'ejecutivo'), S('funnel', 'analisis', 'ejecutivo'), S('drivers', 'analisis', 'ejecutivo'), S('traffic', 'analisis', 'detallado'), S('trends', 'analisis', 'detallado'),
       S('categories', 'analisis', 'detallado'), S('customers', 'analisis', 'detallado'), S('campaigns', 'analisis', 'detallado'), S('movers', 'analisis', 'ejecutivo'),
-      S('recovery', 'analisis', 'ejecutivo'), S('actions', 'analisis', 'resumen'), S('seasonality', 'analisis', 'detallado'), S('closing', 'cierre', 'resumen'),
-      S('decisions', 'cierre', 'resumen'), S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
+      S('recovery', 'analisis', 'ejecutivo'), S('actions', 'analisis', 'resumen'), S('scenarios', 'analisis', 'ejecutivo'), S('seasonality', 'analisis', 'detallado'), S('closing', 'cierre', 'resumen'),
+      S('decisions', 'cierre', 'resumen'), S('annexRules', 'anexo', 'detallado'), S('annexEdits', 'anexo', 'detallado'), S('reliability', 'anexo', 'detallado', { embeddedIn: 'annex' }), S('annex', 'anexo', 'detallado')
     ],
     annexes: JSON.parse(JSON.stringify(legacy.annexes)),
     defaultExclude: ['reliability', 'seasonality', 'annex']

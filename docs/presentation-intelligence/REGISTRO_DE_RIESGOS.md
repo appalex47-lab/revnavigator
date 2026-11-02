@@ -1,4 +1,4 @@
-# Registro de riesgos — Presentation Intelligence (corte: Fase 7)
+# Registro de riesgos — Presentation Intelligence (corte: Fase 8)
 
 Insumo del reporte final para la otra IA. Se completa al cerrar las Fases 8 y 9. Cada riesgo: qué es, dónde vive, cómo se mitigó y qué queda abierto.
 
@@ -57,6 +57,16 @@ Insumo del reporte final para la otra IA. Se completa al cerrar las Fases 8 y 9.
 | F4 | Lint de diseño estable en 193 hallazgos (línea base, no 0) | Conocido |
 | F5 | Varias pruebas de pantalla usan datos de ejemplo/mocks; el embudo GA4 y la IA no se han probado con datos o servicios reales | Abierto |
 | F6 | Pruebas triviales detectadas y retiradas durante el desarrollo; se usaron mutaciones para verificar las críticas | Hecho |
+
+## H. Escenarios y anexos (Fase 8)
+| # | Riesgo | Mitigación | Abierto |
+|---|---|---|---|
+| H1 | La lámina depende de la forma de `assumptions`/`warnings`/`expectedImpact` que guarda el motor de escenarios (verificada) | Lee solo textos y números; si faltan, muestra «Sin supuestos guardados» o «—» | Un cambio de forma en el motor degradaría la lámina sin error visible |
+| H2 | «% de la brecha» enorme o engañoso con brechas chicas | Sobre 1000 % se escribe «Supera la brecha»; aviso «Revisa los supuestos» sobre 100 % | El impacto simulado sigue siendo un escenario con supuestos |
+| H3 | Supuestos recortados a 110 caracteres pueden perder matiz | Nota «completos en Recuperar» | Solo el primer supuesto/advertencia |
+| H4 | El anexo «Ediciones e IA» se decide al componer y no cuenta en el total del reporte | `needs:'edits'` en el compositor; probado | El conteo «N láminas» del aviso de generación puede diferir en 1 del PDF |
+| H5 | El anexo de reglas refleja los umbrales del momento de generar | La vista previa se marca desactualizada al cambiarlos | — |
+| H6 | `blocks.extend` ahora entrega el perfil a los constructores y excluye del total las páginas `needs` | Probado | Cambio en un contrato interno compartido por todos los formatos |
 
 ## G. Higiene del repositorio (fuera del código)
 Ramas viejas por borrar, 8 PRs de Jules obsoletos (#64, #117, #130, #135, #140, #160, #188, #191), activar «Automatically delete head branches» y desactivar el schedule de Jules.

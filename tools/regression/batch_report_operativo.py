@@ -47,7 +47,7 @@ async def main():
         chk('O11 en impresión las 3 láminas son 16:9 horizontales (1122×630), sin desborde vertical ni tablas fuera del marco', all(not o.get('miss') and o['w'] == 1122 and o['h'] == 630 and o['ov'] is None and o['wide'] == 0 for o in geo['out']), geo)
         chk('O12 (con medida real) el texto de las láminas nuevas no baja de 13.4 px (salvo etiquetas de la gráfica)', all(o['small'] == 0 and o['w'] > 0 for o in geo['out']), geo)
         # profundidad
-        for d, want in (('resumen', ['cover', 'channelPacing', 'actions']), ('ejecutivo', ['cover', 'pacing', 'channelPacing', 'evolution', 'actions'])):
+        for d, want in (('resumen', ['cover', 'channelPacing', 'actions']), ('ejecutivo', ['cover', 'pacing', 'channelPacing', 'evolution', 'actions', 'scenarios'])):
             await f.click(f'[data-action="rp-depth"][data-id="{d}"]'); await f.wait_for_timeout(300)
             got = [x for x in await f.evaluate(PAGES) if x not in ('summary', 'drivers', 'movers', 'closing', 'decisions', 'recovery', 'annex')]
             chk(f'O13 profundidad {d}: ' + ', '.join(want), got == want, got)
