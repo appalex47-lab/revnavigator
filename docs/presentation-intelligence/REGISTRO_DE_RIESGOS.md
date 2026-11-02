@@ -1,4 +1,4 @@
-# Registro de riesgos — Presentation Intelligence (corte: Fase 8 + endurecimiento)
+# Registro de riesgos — Presentation Intelligence (corte: Fases 0–9)
 
 Insumo del reporte final para la otra IA. Se completa al cerrar las Fases 8 y 9. Cada riesgo: qué es, dónde vive, cómo se mitigó y qué queda abierto.
 
@@ -105,6 +105,14 @@ Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con pru
 | I3 | Aplicar la sugerencia de Pacing recalcula la corrida y cambia los semáforos de la herramienta | Botón explícito, deshabilitado si ya coincide | Cambia lo que se ve en Pacing e Inicio para todo el equipo (los ajustes se sincronizan) |
 | I4 | Titulares con voz propia pueden quedar desfasados de las cifras de la lámina | Salen de los mismos campos que las cifras; prueba de números sobre 89 reportes | Solo cubre 2 formatos y 4 láminas |
 | I5 | Las ediciones de texto y los umbrales de la presentación se comparten con el equipo (última escritura gana) | Aviso en el editor | Sin fusión de conflictos |
+
+## J. Pruebas integrales (Fase 9)
+| # | Riesgo | Estado |
+|---|---|---|
+| J1 | Las 48 combinaciones (formato × profundidad × {mes, Q3, año, canal}) pasan, con geometría, texto, coherencia entre láminas y «cifras que existen en el reporte» | **Cerrado** para los datos de ejemplo |
+| J2 | El filtro «nada inventado» no detecta enteros pequeños (1–19) ni números que coincidan por casualidad (tolerancia 0.6 %) | **Abierto** |
+| J3 | Las pruebas integrales usan datos generados y un solo escenario guardado; combinaciones con filtro de producto, semana o varios escenarios no están cubiertas | **Abierto** |
+| J4 | Cada batch integral tarda ≈ 3 min; en la regresión completa aumenta el tiempo y la sensibilidad a carga | **Aceptado** |
 
 ## G. Higiene del repositorio (fuera del código)
 Ramas viejas por borrar, 8 PRs de Jules obsoletos (#64, #117, #130, #135, #140, #160, #188, #191), activar «Automatically delete head branches» y desactivar el schedule de Jules.
