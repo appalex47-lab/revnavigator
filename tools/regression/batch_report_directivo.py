@@ -37,6 +37,8 @@ async def main():
         chk('V8 sin «null», «undefined» ni «NaN» en las láminas nuevas', not any(w in (v + r) for w in ['null', 'undefined', 'NaN']))
         cover = await f.evaluate(TXT('cover'))
         chk('V9 la portada dice «Reporte directivo»', 'Reporte directivo' in cover, cover[:120])
+        chk('V9b la portada de Directivo aclara «Canal digital · no incluye la venta total de la empresa»', 'no incluye la venta total de la empresa' in cover, cover[:200])
+        chk('V9c las láminas con impacto simulado rotulan «(venta)»', 'Impacto simulado (venta)' in await f.evaluate(TXT('opportunities')))
         for pg in ('verdict', 'riskOpp'):
             g = await f.evaluate(f"({GEO})('{pg}')")
             chk(f'V10 en impresión «{pg}» es 1122×630, sin desborde, texto ≥ 13.4 px', g['w'] == 1122 and g['h'] == 630 and g['ov'] is None and g['wide'] == 0 and g['small'] == 0, g)

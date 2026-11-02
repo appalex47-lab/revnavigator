@@ -49,7 +49,7 @@
     const rows = list.map((s) => {
       const rec = recoveryOf(s), ch = (s.changes && changesText(s.changes)) || null, a0 = Array.isArray(s.assumptions) && s.assumptions.length ? s.assumptions[0] : null, w = Array.isArray(s.warnings) ? s.warnings.filter((x) => typeof x === 'string' && x.trim()) : [];
       return { id: s.id || null, name: String(s.name), channel: chLabel(s.channel), impact: isNum(s.impact) ? s.impact : null, recovery: rec.text, exceeds: rec.exceeds, huge: rec.huge,
-        change: ch, assumption: a0 ? oneLine(a0, MAX_TEXT) : null, assumptionsTotal: Array.isArray(s.assumptions) ? s.assumptions.length : 0, warning: w.length ? oneLine(w[0], MAX_TEXT) : null, warningsTotal: w.length };
+        change: ch, assumption: a0 ? oneLine(a0, MAX_TEXT) : null, assumptionFull: a0 ? String(a0).replace(/\s+/g, ' ').trim() : null, warningFull: w.length ? String(w[0]).replace(/\s+/g, ' ').trim() : null, assumptionsTotal: Array.isArray(s.assumptions) ? s.assumptions.length : 0, warning: w.length ? oneLine(w[0], MAX_TEXT) : null, warningsTotal: w.length };
     }).sort((a, b) => (b.impact === null ? -Infinity : b.impact) - (a.impact === null ? -Infinity : a.impact));
     const shown = rows.slice(0, MAX_ROWS), top = rows.find((r) => r.impact !== null), warned = rows.filter((r) => r.exceeds), n = rows.length;
     const conclusion = top ? `${n} ${n === 1 ? 'escenario guardado' : 'escenarios guardados'}; el de mayor impacto simulado es «${top.name}» (${fmt('smoneyC', top.impact)}, Estimado)` : `${n} ${n === 1 ? 'escenario guardado' : 'escenarios guardados'}, ninguno con impacto simulado calculable`;
@@ -57,6 +57,8 @@
     const notes = ['El impacto simulado es un escenario con supuestos guardado en Recuperar (Estimado): no es un resultado y no se suma entre escenarios porque pueden compartir la misma base.',
       '«% de la brecha» es el impacto simulado ÷ la brecha de ese escenario. Por encima de 1000 % se escribe «Supera la brecha» en lugar del número.',
       'Los montos son venta, no utilidad: no hay costos ni márgenes. Los supuestos y advertencias se copian de Recuperar recortados a una línea; los completos están allí.'];
+    // Si el motor guardara los escenarios con otra forma, no se calla: se dice que no hay supuestos ni cambios legibles.
+    if (rows.every((r) => !r.assumption && !r.warning && !r.change)) notes.push('Los escenarios guardados no traen supuestos, advertencias ni cambios en el formato esperado: revísalos en Recuperar.');
     if (n > MAX_ROWS) notes.push(`Se muestran ${MAX_ROWS} de ${n} escenarios, de mayor a menor impacto simulado.`);
     return { id, title, status: 'included', question: '¿Qué escenarios hay sobre la mesa?', conclusion, headline: conclusion, ctx: per.label, kpis: [], tables: [], charts: [], rows: shown, total: n, warning, notes,
       sources: ['Escenarios guardados (Recuperar)'], tags: [TAG().calc, TAG().est] };

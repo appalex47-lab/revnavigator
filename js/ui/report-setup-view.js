@@ -81,7 +81,7 @@
         ${editorHtml(state, plan, prof)}
         ${out ? `<div><h4 class="rp-prop__h">No incluidas</h4><ul class="rp-offlist" id="rp-offlist">${out}</ul></div>` : ''}
         ${lim ? `<div><h4 class="rp-prop__h">Limitaciones detectadas</h4><ul class="rp-limits" id="rp-limits">${lim}</ul></div>` : '<p class="field__hint">No se detectaron limitaciones declaradas en las páginas incluidas.</p>'}
-        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-reset-selection">Restablecer la selección</button></div>
+        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="rp-reset-selection">Restablecer la selección</button> <button type="button" class="btn btn--ghost" data-action="rp-prefs-clear">Borrar mis ediciones y preferencias guardadas</button></div>
       </div></section>`;
   }
 

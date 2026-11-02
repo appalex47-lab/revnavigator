@@ -1,6 +1,34 @@
-# Registro de riesgos — Presentation Intelligence (corte: Fase 8)
+# Registro de riesgos — Presentation Intelligence (corte: Fase 8 + endurecimiento)
 
 Insumo del reporte final para la otra IA. Se completa al cerrar las Fases 8 y 9. Cada riesgo: qué es, dónde vive, cómo se mitigó y qué queda abierto.
+
+## Estado tras el endurecimiento (corrección de los 18 riesgos abiertos)
+Leyenda: **Cerrado** = corregido y con prueba · **Mitigado** = reducido con prueba, el riesgo de fondo sigue · **Abierto** = no se puede cerrar con código.
+
+| # | Riesgo | Estado | Qué se hizo / qué falta |
+|---|---|---|---|
+| 1 | Venta ≠ utilidad | **Mitigado** | Las columnas de impacto dicen «Impacto simulado (venta)» y las notas lo repiten. Sin costos ni márgenes cargados no hay cierre posible. |
+| 2 | Impacto simulado > brecha | **Mitigado** | Aviso, «Supera la brecha» sobre 1000 % y rótulo «(venta)». Sigue siendo un escenario. |
+| 3 | IA sin prueba real | **Mitigado** | Validación más estricta: solo valen las cifras que la IA recibió (tolerancia 0.5 %, sin redondeo generoso) y no puede nombrar canales que la lámina no menciona. **Abierto:** no se probó con Cohere real. |
+| 4 | Directivo «negocio» vs canal digital | **Cerrado** | La portada de Directivo agrega «Canal digital · no incluye la venta total de la empresa». |
+| 5 | Datos en el navegador / cierre de sesión | **Cerrado** (con servidor simulado) | Botón «Borrar mis ediciones y preferencias guardadas»; prueba del flujo real de cierre de sesión (Supabase simulado): se borra `reportPrefs` y no se vuelve a escribir tras recargar. **Abierto:** no se probó contra el servicio real. |
+| 6 | Umbrales provisionales | **Abierto** | Decisión de negocio. Editables y marcados «Valor provisional» en el anexo. |
+| 7 | Embudo GA4 sin archivo real | **Mitigado** | Prueba con venta y embudo por el importador real (`mockProducts → productImport → productStore`). **Abierto:** datos generados, no un archivo GA4 real. |
+| 8 | Narrativa distinta por audiencia | **Abierto** | Se decidió no reescribir textos reutilizados (riesgo de inventar). |
+| 9 | Cambio del periodo repetido | **Aceptado** | Aprobado por la persona. |
+| 10 | Dependencia del formato del motor de escenarios | **Cerrado** | Si no hay supuestos/advertencias/cambios legibles, la lámina lo dice en una nota; la prueba con el motor real verifica la forma. |
+| 11 | Ediciones largas desbordan | **Cerrado** | Tras dibujar, se avisa en pantalla qué lámina no cabe con tu texto (probado forzando el desborde). |
+| 12 | Contrato interno compartido | **Mitigado** | Pruebas de integridad nuevas (`test-report-integrity.js`). |
+| 13 | Acoplamiento y orden de scripts | **Cerrado** | `test-report-integrity.js` verifica el orden de carga y que no haya módulos sueltos (verificado por mutación). |
+| 14 | Perfil estricto y páginas nuevas | **Cerrado** | La misma prueba obliga a decidir (slot o lista explícita) para cada página nueva del armador. |
+| 15 | Choques de clases CSS | **Cerrado** | La misma prueba falla si una clase de las Fases 3–8 redefine una anterior (salvo 3 acotadas bajo `.rp-op`). |
+| 16 | Conteo «N páginas» ≠ PDF | **Cerrado** | Con un formato nuevo el aviso cuenta las láminas que saldrán en el PDF. |
+| 17 | Supuestos recortados | **Mitigado** | El texto completo queda como detalle (tooltip) en pantalla; la lámina impresa sigue recortada. |
+| 18 | Preferencias por navegador | **Abierto** | Por diseño (privacidad). |
+
+**Pruebas que antes faltaban:** contraste AA de colores de estado (corregido el chip «en seguimiento»: 4.49:1 → 5.01:1), celular 390 px con editor y sensibilidad abiertos (sin desborde), tiempo de generación (≈7 s con datos de ejemplo, umbral de prueba 20 s).
+**Fallos preexistentes (ya no hay):** `batch_dias_excluidos` (X3), `batch_evolucion_filtro` y `batch_movil` (M-11) eran pruebas desactualizadas por rediseños de pantalla (Inicio «Ver más», Producto y evolución, veredicto de Pacing), no errores del producto; se adaptaron sin cambiar lo que verifican. `batch_editorial` ya pasa desde cualquier carpeta.
+**Siguen sin corregirse:** lint de diseño en 193 hallazgos (línea base), PPTX, pruebas sensibles a carga paralela (`batch_drill`, `batch_restaurar_carga`), la higiene del repositorio (sección G).
 
 ## A. Decisiones de negocio provisionales
 | # | Riesgo | Dónde | Estado |

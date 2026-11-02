@@ -12,9 +12,9 @@
   function scenariosBody(p) {
     const body = p.rows.map((r) => `<tr><th scope="row">${r.exceeds ? '<span class="rp-warnmark" role="img" aria-label="Revisar supuestos" title="El impacto simulado supera la brecha del periodo">⚠</span> ' : ''}${esc(r.name)}${r.change ? `<span class="rp-op__sub">${esc(r.change)}</span>` : ''}</th>
       <td>${esc(r.channel)}</td><td class="num">${r.impact === null ? na('Sin escenario') : `${esc(f('smoneyC', r.impact))} ${tag('Estimado', 'est')}`}</td><td class="num">${r.recovery ? esc(r.recovery) : '<span class="rp-na">—</span>'}</td>
-      <td class="rp-sc__a">${r.assumption ? esc(r.assumption) : na('Sin supuestos guardados')}${r.warning ? `<span class="rp-op__sub rp-sc__w">Advertencia: ${esc(r.warning)}</span>` : ''}</td></tr>`).join('');
+      <td class="rp-sc__a"${r.assumptionFull && r.assumptionFull !== r.assumption ? ` title="${esc(r.assumptionFull)}"` : ''}>${r.assumption ? esc(r.assumption) : na('Sin supuestos guardados')}${r.warning ? `<span class="rp-op__sub rp-sc__w">Advertencia: ${esc(r.warning)}</span>` : ''}</td></tr>`).join('');
     const more = p.rows.some((r) => r.assumptionsTotal > 1 || r.warningsTotal > 1);
-    return `<div class="rp-op"><table class="rp-t rp-op__t rp-sc"><caption class="sr-only">Escenarios guardados</caption><thead><tr><th scope="col">Escenario</th><th scope="col">Canal</th><th scope="col" class="num">Impacto simulado</th><th scope="col" class="num">% de la brecha</th><th scope="col">Supuesto principal</th></tr></thead><tbody>${body}</tbody></table>
+    return `<div class="rp-op"><table class="rp-t rp-op__t rp-sc"><caption class="sr-only">Escenarios guardados</caption><thead><tr><th scope="col">Escenario</th><th scope="col">Canal</th><th scope="col" class="num">Impacto simulado (venta)</th><th scope="col" class="num">% de la brecha</th><th scope="col">Supuesto principal</th></tr></thead><tbody>${body}</tbody></table>
       ${p.warning ? `<div class="rp-callout rp-callout--warn"><strong>Revisa los supuestos.</strong> ${esc(p.warning)}</div>` : ''}
       <div class="rp-op__notes">${more ? '<p class="rp-small">Supuestos completos en Recuperar.</p>' : ''}${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
   }

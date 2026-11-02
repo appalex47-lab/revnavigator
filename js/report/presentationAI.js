@@ -36,21 +36,15 @@
     while ((m = re.exec(String(text || '')))) out.push(parseFloat(`${m[1].replace(/,/g, '')}${m[2] ? `.${m[2]}` : ''}`));
     return out;
   }
-  /** Cifras que la lámina trae: todas las hojas numéricas de la página y los números escritos en sus textos. */
+  /** Cifras permitidas: SOLO las que la IA recibió (los números escritos en el payload: titular, cifras, lectura y notas), con su escala (K, M). No se aceptan cifras que solo existían en el dato crudo. */
   function allowedOf(page) {
-    const set = [], walk = (v) => {
-      if (v === null || v === undefined) return;
-      if (typeof v === 'number') { if (Number.isFinite(v)) set.push(v); return; }
-      if (typeof v === 'string') { numbersIn(v).forEach((n) => set.push(n)); return; }
-      if (Array.isArray(v)) { v.forEach(walk); return; }
-      if (typeof v === 'object') Object.keys(v).forEach((k) => { if (k !== 'tags') walk(v[k]); });
-    };
-    walk(page);
-    const vals = new Set();
-    set.forEach((v) => { [v, Math.abs(v), v * 100, Math.abs(v) * 100, v / 1e3, v / 1e6, Math.abs(v) / 1e3, Math.abs(v) / 1e6].forEach((x) => vals.add(x)); });
+    const base = numbersIn(JSON.stringify(payloadOf(page))), vals = new Set();
+    base.forEach((v) => { [v, v * 1e3, v * 1e6].forEach((x) => vals.add(x)); });
     return [...vals];
   }
-  const near = (a, v) => Math.abs(a - v) < 0.051 || Math.abs(Math.round(a) - v) < 0.5 || Math.abs(a - v) / Math.max(Math.abs(a), 1) < 0.005;
+  /** Nombres de canal que aparecen en un texto (los de la configuración). */
+  const channelsIn = (text) => (FP.config && FP.config.channels ? FP.config.channels.map((c) => c.label).filter((l) => l && new RegExp(`\\b${String(l).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)) : []);
+  const near = (a, v) => Math.abs(a - v) <= Math.max(0.051, Math.abs(a) * 0.005);   // mismo número con otro formato o redondeo mínimo; no «cerca» de otro
   const numberAllowed = (n, allowed) => allowed.some((a) => near(a, n));
 
   /** Lo que se envía: títulos y textos de la lámina y cifras con su etiqueta; nada más. */
@@ -76,6 +70,8 @@
       if (FORBIDDEN_BUSINESS.test(text)) errors.push(`La hipótesis ${i + 1} menciona margen, ROI, ROAS o CAC, que no se calculan.`);
       const bad = numbersIn(text).filter((n) => !numberAllowed(n, allowed));
       if (bad.length) errors.push(`La hipótesis ${i + 1} cita cifras que no están en la lámina: ${[...new Set(bad)].slice(0, 3).join(', ')}.`);
+      const known = JSON.stringify(payloadOf(page)), foreign = channelsIn(text).filter((c) => !new RegExp(`\\b${String(c).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(known));
+      if (foreign.length) errors.push(`La hipótesis ${i + 1} nombra canales que la lámina no menciona: ${foreign.join(', ')}.`);
       const k = text.toLowerCase(); if (seen.has(k)) { errors.push(`La hipótesis ${i + 1} está repetida.`); return; } seen.add(k);
       out.push(text);
     });

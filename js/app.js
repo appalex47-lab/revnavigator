@@ -4712,7 +4712,8 @@
       }
       rp.gap = null; rp.gapOk = false;
       rp.status = 'busy'; rp.error = null; FP.reportView.render(state);
-      try { rp.report = await buildExecutiveReport(); rp.report.context.lastActual = lastActualDate(); rp.sig = FP.reportView.signature(state); rp.at = new Date().toISOString(); rp.status = 'ready'; FP.ui.toast(`Presentación lista: ${rp.report.total} página${rp.report.total === 1 ? '' : 's'}${rp.report.omitted.length ? `, ${rp.report.omitted.length} sin datos suficientes (ver anexo)` : ''}.`); }
+      try { rp.report = await buildExecutiveReport(); rp.report.context.lastActual = lastActualDate(); rp.sig = FP.reportView.signature(state); rp.at = new Date().toISOString(); rp.status = 'ready'; const nPg = rp.report.profile ? FP.reportComposer.units(rp.report, rp.exclude, FP.reportSetupView.selectionOf(rp)).length : rp.report.total;   // con un formato nuevo, las láminas que de verdad saldrán en el PDF (incluye anexos y edita lo propio)
+      FP.ui.toast(`Presentación lista: ${nPg} página${nPg === 1 ? '' : 's'}${rp.report.omitted.length ? `, ${rp.report.omitted.length} sin datos suficientes (ver anexo)` : ''}.`); }
       catch (e) { rp.status = 'error'; rp.error = e && e.message ? e.message : String(e); }
       render();
     },
@@ -4721,6 +4722,13 @@
     'rp-gap-load'() { state.rp.gap = null; root.location.hash = 'carga'; },
     'rp-gap-cancel'() { state.rp.gap = null; render(); },
     'rp-print'() { const rp = state.rp; if (rp.report) FP.reportView.print(rp.report, { exclude: rp.exclude, tags: rp.options.showTags, sel: FP.reportSetupView.selectionOf(rp), edits: rp.edits }); },
+    'rp-prefs-clear'() {   // borra lo guardado en este navegador (ediciones de texto, umbrales y selección) sin esperar a cerrar sesión
+      if (!root.confirm('¿Borrar las ediciones, los umbrales y la selección de la presentación guardados en este navegador?')) return;
+      const rp = state.rp, prof = FP.reportCatalog.resolve('actual', 'desempeno');
+      Object.assign(rp, { audience: 'actual', type: 'desempeno', depth: prof.defaultDepth, include: [], exclude: prof.defaultExclude.slice(), edits: {}, editing: null, aiRes: {}, report: null, status: 'idle', sig: null, gap: null, prefsNote: [] });
+      Object.assign(rp.options, { showTags: false, showBusinessName: false, ai: false }); Object.assign(rp.options.thresholds, { belowPlanPct: null, weakPct: null, okPct: null, alertPct: null });
+      storage.remove(K.reportPrefs); rpSaved = JSON.stringify(FP.reportPrefs.serialize(rp)); render(); FP.ui.toast('Se borró lo guardado de la presentación en este navegador.');
+    },
     /* Fase 7 · editor de la lámina: título y nota de la persona (texto, nunca cifras calculadas) y las hipótesis de IA que acepte */
     'rp-edit-open'(el) { state.rp.editing = el.dataset.id; render(); },
     'rp-edit-close'() { state.rp.editing = null; render(); },

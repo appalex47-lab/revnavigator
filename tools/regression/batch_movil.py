@@ -49,9 +49,9 @@ async def main():
         chk('M-9 elegir una página cambia de vista y cierra el panel', s4 == ['#prodevol', False, 'false'], s4)
         # datos primero
         await q.goto(u + '#pacing'); await q.wait_for_timeout(500)
-        mo = await q.evaluate("(()=>{const m=document.getElementById('ux-more'),bt=document.querySelector('.ux-head__morebtn');return {more:getComputedStyle(m).display,btn:getComputedStyle(bt).display,exp:bt.getAttribute('aria-expanded'),top:Math.round(document.querySelector('#view-pacing table, #view-pacing svg, #view-pacing .kpi, #view-pacing .ds-kpi, #view-pacing canvas').getBoundingClientRect().top+scrollY)}})()")
+        mo = await q.evaluate("(()=>{const m=document.getElementById('ux-more'),bt=document.querySelector('.ux-head__morebtn');return {more:getComputedStyle(m).display,btn:getComputedStyle(bt).display,exp:bt.getAttribute('aria-expanded'),top:Math.round(Math.min(...['#view-pacing table, #view-pacing svg, #view-pacing .kpi, #view-pacing .ds-kpi, #view-pacing canvas', '#view-pacing .px h2'].map(q=>{const e=document.querySelector(q);return e?e.getBoundingClientRect().top+scrollY:Infinity})))}})()")
         chk('M-10 en móvil «Qué hay aquí / Qué hago» llega plegado y hay un botón para verlo', mo['more'] == 'none' and mo['btn'] != 'none' and mo['exp'] == 'false', mo)
-        chk('M-11 el primer dato de Pacing aparece más arriba que antes (antes ≈976 px)', mo['top'] < 800, mo)
+        chk('M-11 el primer dato de Pacing (el veredicto de Pacing y forecast o la primera tabla, gráfica o cifra) aparece arriba (antes ≈976 px)', mo['top'] < 800, mo)
         await q.click('.ux-head__morebtn'); await q.wait_for_timeout(200)
         mo2 = await q.evaluate("[getComputedStyle(document.getElementById('ux-more')).display, document.querySelector('.ux-head__morebtn').getAttribute('aria-expanded'), document.getElementById('ux-more').innerText.includes('Qué hago aquí')]")
         chk('M-12 el botón despliega el texto y marca aria-expanded', mo2[0] != 'none' and mo2[1] == 'true' and mo2[2], mo2)

@@ -99,7 +99,7 @@ async def main():
         for k, L in scen.items():
             hs = [s for pa, s in L if pa == 'cover.headline']
             chk(f'ED-29 portada {k}: cerrado → «resultados», abierto → «acumulado … al corte» (nunca ambos)', len(hs) == 1 and ((re.search(r': \w+ \d{4}$', hs[0]) and 'al corte' not in hs[0]) or ('acumulado' in hs[0] and 'al corte' in hs[0])), hs)
-        base = json.load(open('tools/regression/data/editorial_baseline.json'))
+        base = json.load(open(os.path.join(ROOT, 'tools/regression/data/editorial_baseline.json')))
         for k in ('base', 'mes_anterior', 'excedente'):
             cur = nums[k]
             chk(f'ED-8 cifras idénticas a línea base ({k})', cur['nums'] == base[k]['nums'] and cur['ids'] == base[k]['ids'])
