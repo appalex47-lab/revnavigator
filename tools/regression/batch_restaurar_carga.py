@@ -107,7 +107,10 @@ async def main():
         t = await q.evaluate("document.querySelector('#entry-dialog').innerText")
         chk('R4a el error se muestra con Reintentar y «Continuar sin restaurar», y dice que no se aplicó nada', 'No pude terminar la carga' in t and 'Reintentar' in t and 'No se aplicó nada' in t and await q.evaluate(NACT) == 0, t)
         M['failAfter'] = None
-        await q.click('#entry-dialog [data-action="entry-restore"]'); await q.wait_for_timeout(5000)
+        await q.click('#entry-dialog [data-action="entry-restore"]')
+        try: await q.wait_for_function('(' + NACT.strip().rstrip(';') + ') > 0', timeout=60000)   # espera la condición (datos cargados), no un tiempo fijo
+        except Exception: pass
+        await q.wait_for_timeout(500)
         chk('R4b reintentar funciona y carga los datos', await q.evaluate(NACT) > 0 and await q.evaluate(DLG) == [], (await q.evaluate(NACT), await q.evaluate(DLG)))
         await c.close()
         # ---- R5 error → continuar sin restaurar → cuatro escenarios ----
