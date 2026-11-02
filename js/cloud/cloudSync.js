@@ -221,8 +221,10 @@
      dos subidas simultáneas ya no se pisan (sin la función se conserva la ventana de una consulta + una subida). */
   const BASE_KEY = 'fp.cloudBase';
   const baseMap = () => { try { return JSON.parse(root.localStorage.getItem(BASE_KEY) || '{}') || {}; } catch (e) { return {}; } };
-  const getBase = (k) => baseMap()[k] || null;
-  const setBase = (k, iso) => { try { const m = baseMap(); m[k] = iso; root.localStorage.setItem(BASE_KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ } };
+  /** «Base» de una clave = lo último en lo que este navegador y la nube coincidieron: { at: fecha de la nube, v: versión del servidor (o null), d: huella del contenido }. */
+  const getBase = (k) => { const b = baseMap()[k]; return !b ? null : (typeof b === 'string' ? { at: b, v: null, d: null } : b); };
+  const dataDigest = (data) => digest(JSON.stringify(data === undefined ? null : data));
+  const setBase = (k, at, v, data) => { try { const m = baseMap(); m[k] = { at, v: (v === undefined ? null : v), d: data === undefined ? null : dataDigest(data) }; root.localStorage.setItem(BASE_KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ } };
   const clearBases = () => { try { root.localStorage.removeItem(BASE_KEY); } catch (e) { /* sin storage */ } };
   const isConflictKey = (key) => { const l = cfg().conflictKeys || []; return l.includes('*') || l.includes(String(key).split(':')[0]); };
   const sameData = (a, b) => JSON.stringify(a && a.data) === JSON.stringify(b && b.data);
@@ -241,7 +243,9 @@
       await rest(`${table}?on_conflict=team_id,key,part`, { method: 'POST', body: rows.slice(b, b + 4), prefer: 'resolution=merge-duplicates,return=minimal', fetchImpl, session });
     }
     await rest(`${table}?key=eq.${encodeURIComponent(key)}&part=gte.${parts.length}`, { method: 'DELETE', fetchImpl, session });
-    setBase(key, at);   // este navegador y la nube coinciden en esta fecha
+    let ver = null;   // versión que quedó en el servidor (si ya tiene la columna): con ella este navegador sabe que lo siguiente que cambie en la nube NO es suyo
+    try { const m = await rest(`${table}?select=version&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session }); if (m && m[0] && m[0].version !== undefined && m[0].version !== null) ver = Number(m[0].version); } catch (e) { ver = null; }
+    setBase(key, at, ver, env && env.data);   // este navegador y la nube coinciden en esta fecha y versión
     return { text, parts: parts.length, at };
   }
 
@@ -312,10 +316,13 @@
   async function listKeys({ fetchImpl } = {}) {
     const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: false, error: 'Inicia sesión para consultar la copia de tu equipo.' };
     let rows;
-    try { rows = await rest(`${cfg().table}?select=key,updated_at&part=eq.0`, { fetchImpl, session: se.session }); }
-    catch (e) { return { ok: false, error: e.message }; }
-    const at = {}; (rows || []).forEach((r) => { if (r.updated_at) at[r.key] = r.updated_at; });   // «at»: fecha de guardado del dato en la nube, por clave
-    return { ok: true, keys: [...new Set((rows || []).map((r) => r.key))], at };
+    try { rows = await rest(`${cfg().table}?select=key,updated_at,version&part=eq.0`, { fetchImpl, session: se.session }); }
+    catch (e) {
+      if (!/42703|version/i.test(String(e.message))) return { ok: false, error: e.message };
+      try { rows = await rest(`${cfg().table}?select=key,updated_at&part=eq.0`, { fetchImpl, session: se.session }); } catch (e2) { return { ok: false, error: e2.message }; }   // servidor sin la columna version (migración pendiente)
+    }
+    const at = {}, ver = {}; (rows || []).forEach((r) => { if (r.updated_at) at[r.key] = r.updated_at; if (r.version !== undefined && r.version !== null) ver[r.key] = Number(r.version); });   // «at»: fecha en la nube; «ver»: versión del servidor, por clave
+    return { ok: true, keys: [...new Set((rows || []).map((r) => r.key))], at, ver };
   }
 
   /* ---------- S2: sincronización automática de lo liviano ---------- */
@@ -329,16 +336,18 @@
     return !(isDataKey && isDataKey(key)) && !cfg().skipKeys.includes(b) && !cfg().autoSkipKeys.includes(b);
   }
 
-  /** Escritura condicional (RPC `put_blob_cas`, ver supabase/migrations/20261102_put_blob_cas.sql): reemplaza la clave solo si en la nube sigue la fecha que vimos.
-   *  Devuelve { ok:true } | { ok:false, conflict:true } | { unavailable:true } (la función aún no está instalada en Supabase: se usa la subida de siempre). */
-  async function casPut(session, key, env, expectedIso, fetchImpl) {
+  /** Escritura condicional (RPC `put_blob_cas`, ver supabase/migrations/20261102_put_blob_cas.sql): reemplaza la clave solo si en el servidor sigue la VERSIÓN que el cliente leyó
+   *  (null = «la clave no existía»). Validación y escritura ocurren en una sola transacción del servidor. Devuelve { ok:true, version } | { ok:false, conflict:true, version } |
+   *  { unavailable:true } (la función aún no está instalada: se usa la subida de siempre). */
+  async function casPut(session, key, env, expectedVersion, fetchImpl) {
     const text = JSON.stringify(env), parts = split(text, cfg().chunkChars), at = (env && env.savedAt && !isNaN(Date.parse(env.savedAt))) ? new Date(env.savedAt).toISOString() : new Date().toISOString();
     const rows = parts.map((p, n) => ({ part: n, total: parts.length, payload: p, bytes: p.length, updated_at: at }));
     let r;
-    try { r = await rest('rpc/put_blob_cas', { method: 'POST', body: { p_key: key, p_expected: expectedIso || null, p_rows: rows }, fetchImpl, session }); }
+    try { r = await rest('rpc/put_blob_cas', { method: 'POST', body: { p_key: key, p_expected_version: expectedVersion === undefined ? null : expectedVersion, p_rows: rows }, fetchImpl, session }); }
     catch (e) { if (/PGRST202|respondió 404/.test(String(e.message))) return { unavailable: true }; throw e; }
-    if (r && r.ok) { setBase(key, at); return { ok: true }; }
-    return { ok: false, conflict: true };
+    if (r && r.ok) { setBase(key, at, r.version, env && env.data); return { ok: true, version: r.version }; }
+    if (r && r.conflict) return { ok: false, conflict: true, version: r.version };
+    throw new Error(`El servidor rechazó la subida de «${key}»${r && r.error ? ` (${r.error})` : ''}.`);
   }
 
   /**
@@ -350,30 +359,39 @@
   async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress, force = [] } = {}) {
     const se = await ensureSession({ fetchImpl, captchaImpl }); if (!se.ok) return se;
     let n = 0; const conflicts = [];
-    const asConflict = async (key, env, cloudIso) => {
+    const cloudOf = async (key) => {
       const meta = await rest(`${cfg().table}?select=total,updated_at&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
       const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
       if (!cloud) throw new Error(`No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.`);
-      conflicts.push({ key, local: env, cloud, cloudAt: (meta[0] && meta[0].updated_at) || cloudIso });
+      return { cloud, at: meta[0].updated_at };
     };
     try {
-      let at = null;
+      let cl = null;
       for (const key of keys) {
         const env = await provider.read(key); if (!env) continue;
         if (isConflictKey(key)) {
-          if (!at) { const cl = await listKeys({ fetchImpl }); if (!cl.ok) return { ok: false, error: cl.error }; at = cl.at || {}; }
-          const cloudIso = at[key] || null, base = getBase(key);
-          if (cloudIso && !force.includes(key) && (!base || Date.parse(cloudIso) > Date.parse(base) + 2000)) {   // la nube cambió desde nuestra última sincronización
-            const meta = await rest(`${cfg().table}?select=total&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
-            const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
-            if (!cloud) return { ok: false, error: `No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.` };
-            if (sameData(env, cloud)) { setBase(key, cloudIso); continue; }   // mismo contenido: nada que subir ni que resolver
-            conflicts.push({ key, local: env, cloud, cloudAt: cloudIso }); continue;
+          if (!cl) { cl = await listKeys({ fetchImpl }); if (!cl.ok) return { ok: false, error: cl.error }; }
+          const cloudIso = (cl.at || {})[key] || null, cloudVer = (cl.ver || {})[key], hasVer = cloudVer !== undefined, base = getBase(key);
+          const exists = Boolean(cloudIso);
+          // ¿la nube cambió desde la última vez que este navegador se sincronizó? (por versión; sin versión en el servidor, por fecha)
+          const changed = exists && (hasVer ? !(base && base.v === cloudVer) : (!base || Date.parse(cloudIso) > Date.parse(base.at) + 2000));
+          if (!changed && exists && base && base.d && base.d === dataDigest(env.data) && !force.includes(key)) continue;   // nada cambió aquí desde la última sincronización: no se sube (evita subir versiones sin cambios)
+          if (changed && !force.includes(key)) {
+            const { cloud, at } = await cloudOf(key);
+            if (sameData(env, cloud)) { setBase(key, cloudIso, hasVer ? cloudVer : null, cloud.data); continue; }   // mismo contenido: nada que subir ni que resolver
+            conflicts.push({ key, local: env, cloud, cloudAt: at, cloudVersion: hasVer ? cloudVer : null }); continue;
           }
-          const c = await casPut(se.session, key, env, cloudIso, fetchImpl);   // condicional: solo si la nube sigue como la vimos
-          if (c.ok) { n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); continue; }
-          if (c.conflict) { await asConflict(key, env, cloudIso); continue; }
-          // c.unavailable → función no instalada todavía: subida de siempre (con la ventana de carrera documentada)
+          if (hasVer || !exists) {
+            const c = await casPut(se.session, key, env, exists ? cloudVer : null, fetchImpl);   // condicional y atómica en el servidor
+            if (c.ok) { n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); continue; }
+            if (c.conflict) {
+              // otra persona escribió entre nuestra lectura y la subida. Si lo que quedó en la nube es justo lo nuestro (reintento tras perder la respuesta), no hay conflicto.
+              const { cloud, at } = await cloudOf(key), cur = (await listKeys({ fetchImpl })).ver || {};
+              if (sameData(env, cloud)) { setBase(key, at, cur[key] === undefined ? null : cur[key], cloud.data); continue; }
+              conflicts.push({ key, local: env, cloud, cloudAt: at, cloudVersion: c.version }); continue;
+            }
+            // c.unavailable → función no instalada todavía: subida de siempre
+          }
         }
         await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length });
       }
@@ -389,20 +407,23 @@
     const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: true, applied: [], conflicts: [], none: true };
     const session = se.session, applied = [], conflicts = [];
     try {
-      const metas = await rest(`${cfg().table}?select=key,total,updated_at&part=eq.0`, { fetchImpl, session });
+      let metas;
+      try { metas = await rest(`${cfg().table}?select=key,total,updated_at,version&part=eq.0`, { fetchImpl, session }); }
+      catch (e) { if (!/42703|version/i.test(String(e.message))) throw e; metas = await rest(`${cfg().table}?select=key,total,updated_at&part=eq.0`, { fetchImpl, session }); }
       for (const m of metas || []) {
         if (!isAutoKey(m.key, isDataKey)) continue;
-        const local = await provider.read(m.key);
+        const local = await provider.read(m.key), base = getBase(m.key), hasVer = m.version !== undefined && m.version !== null, ver = hasVer ? Number(m.version) : null;
         const localAt = local && local.savedAt ? Date.parse(local.savedAt) : 0, cloudAt = Date.parse(m.updated_at);
-        if (!(cloudAt > localAt + 2000)) continue;
+        if (hasVer) { if (base && base.v === ver) continue; }   // la nube no cambió desde nuestra última sincronización
+        else if (!(cloudAt > localAt + 2000)) continue;           // servidor sin versiones: regla por fecha
         const env = await fetchEnv(session, m.key, m.total, fetchImpl); if (!env) continue;   // incompleta o ilegible: no se toca lo local
-        if (local && JSON.stringify(local) === JSON.stringify(env)) { setBase(m.key, m.updated_at); continue; }   // mismo contenido: nada que aplicar
+        if (local && JSON.stringify(local) === JSON.stringify(env)) { setBase(m.key, m.updated_at, ver, env.data); continue; }   // mismo contenido: nada que aplicar
         if (local && isConflictKey(m.key)) {
-          const base = getBase(m.key);
-          const dirty = !base || localAt > Date.parse(base) + 2000;   // este navegador cambió la clave desde su última sincronización (o nunca se sincronizó)
-          if (dirty && !sameData(local, env)) { conflicts.push({ key: m.key, local, cloud: env, cloudAt: m.updated_at }); continue; }   // NO se pisa: la persona decide
+          // ¿este navegador cambió la clave desde su última sincronización? (por huella del contenido; sin huella, por fecha; sin base: se asume que sí)
+          const dirty = !base || (base.d ? dataDigest(local.data) !== base.d : localAt > Date.parse(base.at) + 2000);
+          if (dirty && !sameData(local, env)) { conflicts.push({ key: m.key, local, cloud: env, cloudAt: m.updated_at, cloudVersion: ver }); continue; }   // NO se pisa: la persona decide
         }
-        await provider.write(m.key, env); setBase(m.key, m.updated_at); applied.push(m.key);
+        await provider.write(m.key, env); setBase(m.key, m.updated_at, ver, env.data); applied.push(m.key);
       }
     } catch (e) { return { ok: false, error: e.message, applied, conflicts }; }
     return { ok: true, applied, conflicts };

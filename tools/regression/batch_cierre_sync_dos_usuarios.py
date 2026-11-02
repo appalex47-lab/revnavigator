@@ -20,10 +20,17 @@ async def wire(q):
         tk = (r.headers.get('authorization') or '').replace('Bearer ', '')
         if tk not in USERS: return await jr(401, {'message': 'JWT'})
         if u.path == '/rest/v1/team_members': return await jr(200, [{'team_id': 'T', 'teams': {'name': 'Equipo'}}])
+        if u.path == '/rest/v1/rpc/put_blob_cas':   # réplica de la función SQL por versión (el servidor real se probó aparte, por SQL)
+            b = json.loads(r.post_data); cur = next((y for y in rows if y['key'] == b['p_key'] and y['part'] == 0), None); ev = b['p_expected_version']
+            if (cur and (ev is None or int(ev) != cur.get('version', 1))) or (not cur and ev not in (None, 0)): return await jr(200, {'ok': False, 'conflict': True, 'version': cur.get('version', 1) if cur else 0})
+            nv = (cur.get('version', 1) + 1) if cur else 1
+            rows[:] = [y for y in rows if y['key'] != b['p_key']] + [{'key': b['p_key'], 'version': nv, **x} for x in b['p_rows']]
+            return await jr(200, {'ok': True, 'version': nv})
         if u.path.startswith('/rest/v1/team_blobs'):
             qs = dict(p.split('=', 1) for p in u.query.split('&') if '=' in p)
             if r.method == 'POST':
                 for x in json.loads(r.post_data):
+                    old = next((y for y in rows if y['key'] == x['key'] and y['part'] == x['part']), None); x['version'] = (old.get('version', 1) + (1 if x['part'] == 0 else 0)) if old else 1
                     rows[:] = [y for y in rows if not (y['key'] == x['key'] and y['part'] == x['part'])] + [x]
                 return await route.fulfill(status=201, headers=CORS, body='')
             sel = list(rows); k = qs.get('key', ''); p_ = qs.get('part', '')
@@ -34,7 +41,7 @@ async def wire(q):
             if r.method == 'DELETE':
                 for x in sel: rows.remove(x)
                 return await route.fulfill(status=204, headers=CORS, body='')
-            return await jr(200, [{kk: x[kk] for kk in ('key', 'part', 'total', 'payload', 'updated_at', 'bytes')} for x in sel])
+            return await jr(200, [{kk: x[kk] for kk in ('key', 'part', 'total', 'payload', 'updated_at', 'bytes', 'version')} for x in sel])
         return await jr(404, {})
     await q.route('https://odsaouldxxjurniizefc.supabase.co/**', h)
 async def person(b, name):

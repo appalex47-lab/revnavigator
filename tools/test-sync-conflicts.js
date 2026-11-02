@@ -8,17 +8,22 @@ let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!
 const CFG = { url: 'https://x.supabase.co', publishableKey: 'pk', table: 'team_blobs', chunkChars: 400000, skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion'], autoSkipKeys: ['uxSettings', 'productSettings'], conflictKeys: ['*'] };
 
 // ---- servidor simulado (compartido por el equipo) ----
-const rows = []; let puts = 0, casMode = false;
+const rows = []; let puts = 0, casMode = false, dropRpcResponse = false;
 const resp = (status, obj) => ({ ok: status < 300, status, json: async () => obj, text: async () => (obj === null ? '' : JSON.stringify(obj)) });
+function applyCas(b) {
+  const cur = rows.find((r) => r.key === b.p_key && r.part === 0);
+  if (cur ? (b.p_expected_version === null || Number(b.p_expected_version) !== cur.version) : (b.p_expected_version !== null && Number(b.p_expected_version) !== 0)) return { ok: false, conflict: true, version: cur ? cur.version : 0 };
+  const nv = cur ? cur.version + 1 : 1;
+  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].key === b.p_key) rows.splice(i, 1);
+  b.p_rows.forEach((r) => rows.push({ team_id: 'T', key: b.p_key, ...r, version: nv }));
+  return { ok: true, version: nv };
+}
 async function server(url, o) {
   const u = new URL(url), q = (k) => u.searchParams.get(k);
-  if (u.pathname === '/rest/v1/rpc/put_blob_cas') {   // réplica de supabase/migrations/20261102_put_blob_cas.sql (atómica: un solo turno del bucle de eventos)
+  if (u.pathname === '/rest/v1/rpc/put_blob_cas') {   // réplica de supabase/migrations/20261102_put_blob_cas.sql (atómica: un solo turno del bucle de eventos). La prueba REAL contra PostgreSQL está en docs (ver informe).
     if (!casMode) return resp(404, { code: 'PGRST202', message: 'Could not find the function' });
-    const b = JSON.parse(o.body), cur = rows.find((r) => r.key === b.p_key && r.part === 0);
-    if (cur && (b.p_expected === null || new Date(cur.updated_at).getTime() !== new Date(b.p_expected).getTime())) return resp(200, { ok: false, current: cur.updated_at });
-    for (let i = rows.length - 1; i >= 0; i--) if (rows[i].key === b.p_key) rows.splice(i, 1);
-    b.p_rows.forEach((r) => rows.push({ team_id: 'T', key: b.p_key, ...r }));
-    return resp(200, { ok: true });
+    if (dropRpcResponse) { dropRpcResponse = false; applyCas(JSON.parse(o.body)); throw new TypeError('Failed to fetch'); }   // el servidor aplicó la escritura pero la respuesta se perdió
+    return resp(200, applyCas(JSON.parse(o.body)));
   }
   if (!u.pathname.startsWith('/rest/v1/team_blobs')) return resp(404, {});
   let sel = rows.slice();
@@ -26,9 +31,9 @@ async function server(url, o) {
   if (kf && kf.startsWith('eq.')) sel = sel.filter((r) => r.key === kf.slice(3));
   if (pf && pf.startsWith('eq.')) sel = sel.filter((r) => r.part === +pf.slice(3));
   if (pf && pf.startsWith('gte.')) sel = sel.filter((r) => r.part >= +pf.slice(4));
-  if (o.method === 'POST') { puts++; JSON.parse(o.body).forEach((r) => { const i = rows.findIndex((x) => x.key === r.key && x.part === r.part); if (i >= 0) rows[i] = r; else rows.push(r); }); return resp(201, null); }
+  if (o.method === 'POST') { puts++; JSON.parse(o.body).forEach((r) => { const i = rows.findIndex((x) => x.key === r.key && x.part === r.part); if (i >= 0) rows[i] = { ...r, version: r.part === 0 ? rows[i].version + 1 : rows[i].version }; else rows.push({ ...r, version: 1 }); }); return resp(201, null); }
   if (o.method === 'DELETE') { sel.forEach((r) => rows.splice(rows.indexOf(r), 1)); return resp(204, null); }
-  return resp(200, sel.map((r) => ({ key: r.key, part: r.part, total: r.total, payload: r.payload, updated_at: r.updated_at, bytes: r.bytes })));
+  return resp(200, sel.map((r) => ({ key: r.key, part: r.part, total: r.total, payload: r.payload, updated_at: r.updated_at, bytes: r.bytes, version: r.version })));
 }
 // ---- un navegador: su propio localStorage, su propio FP y su propio «disco» de claves ----
 function browser(name) {
@@ -138,6 +143,39 @@ const cloudData = () => { const r = rows.filter((x) => x.key === 'reportPrefs').
   M.save('reportPrefs', P('m2'), iso(61)); N.save('reportPrefs', P('n2'), iso(62));
   const [rm, rn] = await Promise.all([M.push(['reportPrefs']), N.push(['reportPrefs'])]);
   t('sin la función instalada se conserva el comportamiento anterior (subida normal; la ventana de carrera documentada)', rm.ok && rn.ok);
+  // ---------- 8c. más escenarios exigidos: repetición, desconexión, reintento, sesión vencida ----------
+  casMode = true;
+  let allOk = true, detail = [];
+  for (let i = 0; i < 25; i++) {
+    const X = browser('x' + i), Y = browser('y' + i), key = 'reportPrefs';
+    rows.length = 0; X.save(key, P('base'), iso(1)); await X.push([key]); await Y.pull();
+    X.save(key, P('X ' + i), iso(2)); Y.save(key, P('Y ' + i), iso(3));
+    const [a, b] = await Promise.all(i % 2 ? [X.push([key]), Y.push([key])] : [Y.push([key]), X.push([key])]);
+    const w = [a, b].filter((x) => x.pushed === 1).length, l = [a, b].filter((x) => x.conflicts.length === 1).length;
+    if (!(w === 1 && l === 1 && /^[XY] \d+$/.test(note(cloudData())))) { allOk = false; detail.push([i, w, l, note(cloudData())]); }
+  }
+  t('25 rondas de dos escrituras simultáneas (orden alternado): en TODAS pasa exactamente una y la otra recibe conflicto; nunca dos aceptadas', allOk, detail.slice(0, 3));
+  // la versión solo sube cuando se acepta una escritura
+  rows.length = 0; const V1 = browser('v1'); V1.save('reportPrefs', P('v1'), iso(1)); await V1.push(['reportPrefs']);
+  const verOf = () => rows.find((x) => x.key === 'reportPrefs' && x.part === 0).version;
+  const v0 = verOf(); V1.save('reportPrefs', P('v2'), iso(2)); await V1.push(['reportPrefs']);
+  t('la versión sube de 1 en 1 solo con escrituras aceptadas', v0 === 1 && verOf() === 2, [v0, verOf()]);
+  // desconexión durante la escritura: el servidor aplicó el cambio pero la respuesta se perdió; el reintento NO debe verse como conflicto ni duplicar la escritura
+  V1.save('reportPrefs', P('v3 con corte de red'), iso(3)); dropRpcResponse = true;
+  r = await V1.push(['reportPrefs']);
+  t('desconexión durante la escritura (respuesta perdida) + reintento: se reconoce que la escritura ya estaba en el servidor, sin conflicto falso y sin doble versión', r.ok && r.conflicts.length === 0 && note(cloudData()) === 'v3 con corte de red' && verOf() === 3, { ok: r.ok, c: r.conflicts.length, v: verOf() });
+  r = await V1.push(['reportPrefs']); t('reintentar la misma operación no cambia nada (idempotente)', r.conflicts.length === 0 && verOf() === 3, verOf());
+  // otra persona escribió justo mientras se perdía la respuesta: eso SÍ es conflicto
+  const V2 = browser('v2'); await V2.pull(); V2.save('reportPrefs', P('otra persona'), iso(10)); await V2.push(['reportPrefs']);
+  V1.save('reportPrefs', P('mi cambio sobre base vieja'), iso(11)); r = await V1.push(['reportPrefs']);
+  t('si entre tanto otra persona escribió, el reintento es conflicto real y lo suyo queda intacto en la nube', r.conflicts.length === 1 && note(cloudData()) === 'otra persona', note(cloudData()));
+  t('el cambio local rechazado se conserva completo para combinarlo (no se pierde)', note(r.conflicts[0].local.data) === 'mi cambio sobre base vieja' && V1.get('reportPrefs').data.edits['operativo|pacing'].note === 'mi cambio sobre base vieja');
+  // sesión vencida: nada se escribe y el cambio local sigue en el navegador
+  const S1 = browser('s1'); S1.save('reportPrefs', P('s1'), iso(20)); S1.ls.set('fp.cloudSession', JSON.stringify({ access_token: 'x', refresh_token: 'r', expires_at: 1, user_id: 's1', anonymous: false, team_id: 'T' }));
+  const before2 = JSON.stringify(rows);
+  const savedFetch = S1.FP.cloud; r = await S1.FP.cloud.pushKeys(S1.provider, ['reportPrefs'], { fetchImpl: async () => resp(400, { error: 'bad' }) });
+  t('sesión vencida (renovar falla): no se escribe nada en la nube y el cambio local sigue guardado', (r.ok === false || r.pushed === 0) && JSON.stringify(rows) === before2 && S1.get('reportPrefs').data.edits['operativo|pacing'].note === 's1', r);
+  casMode = false;
   // ---------- 9. configuración ----------
   t('la configuración declara la detección de conflictos para todas las claves de sincronización automática', JSON.parse(JSON.stringify(require('./_cfg.js'))).conflictKeys.includes('*'));
   console.log(bad ? `\n${bad} FALLAS` : '\nTODO OK'); process.exit(bad ? 1 : 0);

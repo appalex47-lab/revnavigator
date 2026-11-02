@@ -6237,7 +6237,7 @@
     const i = state.cloud.conflicts.findIndex((c) => c.key === key); if (i < 0) return;
     const c = state.cloud.conflicts[i];
     if (choice === 'theirs') {   // se usa la del equipo (se descartan mis cambios locales)
-      await cloudWriter.write(key, c.cloud); FP.cloud.setBase(key, c.cloudAt);
+      await cloudWriter.write(key, c.cloud); FP.cloud.setBase(key, c.cloudAt, c.cloudVersion, c.cloud.data);
       if (applyPulledHot([key])) state.cloud.restored = true;
     } else {
       const data = choice === 'merge' && key === 'reportPrefs' ? FP.reportPrefs.merge(c.local.data, c.cloud.data).data : c.local.data;
