@@ -25,6 +25,7 @@ async def main():
         chk('B3 chips: venta real hasta, días comparados, calidad y preparación', any('Venta real hasta' in c for c in chips) and any('días comparados' in c for c in chips) and any('Preparación' in c for c in chips), chips)
         k = await q.evaluate("[...document.querySelectorAll('#home-b .px-kpi__l')].map(x=>x.innerText.trim())")
         chk('B4 cuatro cifras: cumplimiento, gap, forecast de cierre y por revisar', k == ['Cumplimiento', 'Gap (brecha)', 'Forecast de cierre', 'Por revisar'], k)
+        await q.evaluate("document.querySelector('[data-home-fold]').open = true")   # el resumen llega plegado (diseño nuevo): se abre para leerlo
         short = await q.evaluate("document.querySelector('[data-home-summary]').innerText"); n = await q.locator('[data-home-summary] .px-sum__r').count()
         chk('B5 resumen general con filas condicionales (cómo voy, cierre, confianza…)', n >= 3 and 'CÓMO VOY' in short.upper() and 'CONFIANZA' in short.upper(), short[:300])
         await q.click('#home-md [data-v=l]'); await q.wait_for_timeout(500)

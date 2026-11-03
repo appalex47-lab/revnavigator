@@ -133,6 +133,8 @@ async def main():
         await q.fill('#cloud-pw-new', 'nueva-clave-1'); await q.fill('#cloud-pw-new2', 'nueva-clave-1'); await q.click('[data-action="cloud-password-change"]'); await q.wait_for_timeout(800)
         chk('L17 cambio correcto', 'Contraseña cambiada' in await q.inner_text('#cloud-msg'), await q.inner_text('#cloud-msg'))
         await signout_flow(q, '#view-ajustes [data-action="cloud-signout"]')
+        try: await q.wait_for_selector('#view-ajustes [data-action="login-open"]', state='attached', timeout=30000)   # espera la condición (la página recarga tras cerrar sesión), no un tiempo fijo
+        except Exception: pass
         chk('L18 cerrar sesión: vuelve «Iniciar sesión» y borra la sesión local', await q.locator('#view-ajustes [data-action="login-open"]').count() == 1 and await q.evaluate("localStorage.getItem('fp.cloudSession')") is None)
         await login('ana@empresa.com', 'clave-ana-1')
         chk('L19 la contraseña vieja ya no entra', 'incorrectos' in await q.inner_text('#login-msg'))

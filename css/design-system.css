@@ -269,10 +269,15 @@ body { padding-left: var(--ds-sidebar-w); }
   .lesson-body { grid-template-columns: 1fr; }
   .topbar { grid-template-columns: 1fr minmax(160px, 320px) auto; }
 }
-/* El botón que pliega «Qué hay aquí» solo existe en móvil */
-.ux-head__morebtn { display: none; }
+/* El botón «Cómo leer esta página» pliega «Qué hay aquí / Qué hago aquí» en todos los tamaños (en Modo Aprendiz llega abierto) */
+/* datos primero: «Qué hay aquí / Qué hago» llega plegado */
+.ux-head__morebtn { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--ds-s3); margin: 2px 0; border: 1px solid var(--ds-border, #d7dde6); border-radius: 999px; background: var(--ds-surface, #fff); color: var(--ds-accent); font: inherit; font-weight: 650; font-size: 13px; cursor: pointer; }
+.ux-head__morebtn::after { content: "▾"; margin-left: 8px; transition: transform .15s; }
+.ux-head__morebtn[aria-expanded="true"]::after { transform: rotate(180deg); }
+.ux-head__more[data-open="false"] { display: none; }
 .nav-backdrop { display: none; }
 @media (max-width: 860px) {
+  .ux-head__morebtn { min-height: 44px; }
   body { padding-left: 0; }
   .app-header { margin-left: 0; }
   .app-header__inner { padding: 0 var(--ds-s3); }
@@ -286,11 +291,6 @@ body { padding-left: var(--ds-sidebar-w); }
   .nav-backdrop { display: none; border: 0; padding: 0; margin: 0; cursor: default; position: fixed; inset: var(--ds-header-h) 0 0 0; background: rgba(20, 33, 61, .45); z-index: 35; }
   body.nav-open .nav-backdrop { display: block; }
   body.nav-open { overflow: hidden; }
-  /* datos primero: «Qué hay aquí / Qué hago» llega plegado */
-  .ux-head__morebtn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--ds-s3); margin: 2px 0; border: 1px solid var(--ds-border, #d7dde6); border-radius: 999px; background: var(--ds-surface, #fff); color: var(--ds-accent); font: inherit; font-weight: 650; font-size: 13px; cursor: pointer; }
-  .ux-head__morebtn::after { content: "▾"; margin-left: 8px; transition: transform .15s; }
-  .ux-head__morebtn[aria-expanded="true"]::after { transform: rotate(180deg); }
-  .ux-head__more[data-open="false"] { display: none; }
   .tour-card__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ref-grid { grid-template-columns: 1fr; }
   .ds-accordion__body { padding-left: var(--ds-s4); }
@@ -2496,3 +2496,17 @@ tr.is-total th, tr.is-total td { font-weight: 600; }
 #home-b .px-kpi__v { overflow-wrap: anywhere; }
 #home-b .px-tchip { white-space: normal; }
 #home-b .px-sum__r > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Inicio (reordenado): veredicto y canales a la izquierda, «¿Qué hago hoy?» a la derecha desde el primer pantallazo; en pantallas angostas va veredicto → acción → canales */
+.home-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); grid-template-areas: "a b" "c b"; gap: var(--ds-s4, 16px); align-items: start; }
+.home-cols__a { grid-area: a; min-width: 0; } .home-cols__b { grid-area: b; min-width: 0; } .home-cols__c { grid-area: c; min-width: 0; }
+@media (max-width: 1100px) { .home-cols { grid-template-columns: minmax(0, 1fr); grid-template-areas: "a" "b" "c"; } }
+.intro--fold > summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+/* en la columna angosta de Inicio: las cuatro cifras en 2×2 y los pasos de la ruta en vertical (no caben en fila) */
+.home-cols__a .px .px-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-cols__b .nbs__steps { flex-direction: column; gap: var(--ds-s2); }
+.home-cols__b .nbs__st { display: grid; grid-template-columns: 28px 1fr; grid-template-areas: "dot t" "dot s"; justify-items: start; text-align: left; column-gap: var(--ds-s3); row-gap: 0; padding: 0; }
+.home-cols__b .nbs__st::before { display: none; }
+.home-cols__b .nbs__dot { grid-area: dot; align-self: center; } .home-cols__b .nbs__stt { grid-area: t; align-self: end; } .home-cols__b .nbs__sts { grid-area: s; align-self: start; }
+@media (max-width: 1100px) { .home-cols__a .px .px-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .home-cols__a .px .px-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

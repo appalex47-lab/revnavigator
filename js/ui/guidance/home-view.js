@@ -89,8 +89,8 @@
     const html = `<div class="px" id="home-b"><div class="app" id="home-frame"><section class="verdict" data-home-verdict="1"><p class="eyebrow">Inicio · ${esc(FP.navigation.contextLabel({ channel: f.ch }))} · ${esc(f.label)}</p><h2>${R.verdict}</h2>
       <div class="trust" aria-label="Confiabilidad y contexto">${R.chips.map((c) => `<span class="tchip ${c[0]}" tabindex="0" data-tip="${esc(c[2])}">${c[1]}</span>`).join('')}</div>
       <div class="kpis">${R.kpis.map((k) => `<div class="kpi"><div class="kpi__l">${esc(k[0])}</div><div class="kpi__v num">${esc(k[1])}</div><div class="kpi__d mu">${k[2]}</div></div>`).join('')}</div></section>
-      <section class="intro"><div class="intro__h"><h3>Resumen general</h3><div class="mini" id="home-md" role="group" aria-label="Versión del resumen"><button type="button" data-v="c" aria-pressed="${!long}">Versión corta</button><button type="button" data-v="l" aria-pressed="${long}">Versión larga</button></div></div>
-        <div class="sum${long ? ' sum--l' : ''}" data-home-summary="1">${rows.map((r) => `<div class="sum__r"><span>${esc(r[0])}</span><span>${long ? r[2] : r[1]}</span></div>`).join('')}<div class="sum__f">Descriptivo: repite lo que ya calcularon Pacing, Forecast y el Diagnóstico; no dice causas.</div></div></section></div></div>`;
+      <details class="intro intro--fold" data-home-fold="1"${u.sumOpen ? ' open' : ''}><summary class="intro__sum">Resumen en texto <span class="mu">(corta o larga)</span></summary><div class="intro__h"><h3>Resumen general</h3><div class="mini" id="home-md" role="group" aria-label="Versión del resumen"><button type="button" data-v="c" aria-pressed="${!long}">Versión corta</button><button type="button" data-v="l" aria-pressed="${long}">Versión larga</button></div></div>
+        <div class="sum${long ? ' sum--l' : ''}" data-home-summary="1">${rows.map((r) => `<div class="sum__r"><span>${esc(r[0])}</span><span>${long ? r[2] : r[1]}</span></div>`).join('')}<div class="sum__f">Descriptivo: repite lo que ya calcularon Pacing, Forecast y el Diagnóstico; no dice causas.</div></div></details></div></div>`;
     return FP.pxView.P(html);
   }
 
@@ -195,12 +195,13 @@ ${cards}
       // Versión B: veredicto, chips, 4 cifras y resumen general arriba; «Lo esencial» completo pasa a «Ver más» y las tarjetas de siguiente paso, atención y «Desde ayer» se juntan en «¿Qué hago hoy?»
       let headB = '';
       try { headB = homeHead(state, f, sum, ready); } catch (e) { headB = ''; }
-      body = `${sum.banner || ''}${headB}
-      <section class="home-hoy" id="h-hoy" aria-labelledby="h-hoy-t"><div class="home-hoy__h"><h3 id="h-hoy-t">¿Qué hago hoy?</h3><p class="ds-card__sub">Tu siguiente paso, lo que necesita atención y lo que cambió desde ayer, en un solo lugar.</p></div>
+      body = `${sum.banner || ''}<div class="home-cols">
+      <div class="home-cols__a">${headB}</div>
+      <section class="home-hoy home-cols__b" id="h-hoy" aria-labelledby="h-hoy-t"><div class="home-hoy__h"><h3 id="h-hoy-t">¿Qué hago hoy?</h3><p class="ds-card__sub">Tu siguiente paso, lo que necesita atención y lo que cambió desde ayer, en un solo lugar.</p></div>
       ${sum.nextStep || ''}${sum.attention || ''}
       ${FP.changesView && FP.changesView.stripHtml ? FP.changesView.stripHtml(state) : ''}
       ${promoLine(state)}</section>
-      ${(sum.blocks.find((b) => b.id === 'channels') || {}).html || ''}
+      <div class="home-cols__c">${(sum.blocks.find((b) => b.id === 'channels') || {}).html || ''}</div></div>
       <p class="home-layer"><strong>Ver más</strong> · los mismos datos, un clic abajo</p>
       ${sum.key ? more('key', '¿Cómo voy en detalle?', 'Resultado comercial (A), motores de la venta (B) y resumen ejecutivo', `${sum.key}<p class="field__hint">Las 7 cifras del periodo (venta acumulada, meta acumulada, gap, cumplimiento, forecast, gap forecast y presión de recuperación) están en <a href="#pacing" data-nav="pacing">Pacing &amp; Forecast →</a></p>`) : ''}
       ${sum.blocks.filter((b) => b.id !== 'channels').map((b) => more(b.id, b.title, b.hint, b.html)).join('\n')}
@@ -228,7 +229,7 @@ ${body}
       <p class="home-conv ds-card__sub"><strong>Convenciones</strong> · plan, actual, forecast, reforecast, escenario y observado no son equivalentes. <a href="#ayuda" data-nav="ayuda">Ver qué significa cada uno en ¿Cómo funciona? →</a></p></div>`;
     if (!f) FP.help.enhanceEmpty($('home'), FP.contextEngine.requirements('inicio', status));
     const hm = $('home');
-    if (hm && !hm._homeBound) { hm._homeBound = true; hm.addEventListener('click', (e) => { const b = e.target.closest('#home-md button'); if (!b) return; (state.ux.home = state.ux.home || { sum: 'c' }).sum = b.dataset.v; const y = root.scrollY; if (FP.app) FP.app.render(); root.scrollTo(0, y); }); }
+    if (hm && !hm._homeBound) { hm._homeBound = true; hm.addEventListener('click', (e) => { const b = e.target.closest('#home-md button'); if (!b) return; (state.ux.home = state.ux.home || { sum: 'c' }).sum = b.dataset.v; state.ux.home.sumOpen = true; /* el resumen sigue abierto mientras se elige la versión */ const y = root.scrollY; if (FP.app) FP.app.render(); root.scrollTo(0, y); }); }
     if (FP.agentLauncher && FP.agentLauncher.paintLine) FP.agentLauncher.paintLine();   // Fase 3: la línea del Analista bajo el encabezado
   }
 
