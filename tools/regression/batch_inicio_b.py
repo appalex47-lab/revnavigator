@@ -21,6 +21,7 @@ async def main():
         await q.evaluate("FP.app.actions['generate-mock']()"); await q.wait_for_timeout(1800)
         v = await q.evaluate("(document.querySelector('#home-b .px-verdict h2')||{innerText:''}).innerText")
         chk('B2 veredicto: dice cómo vas contra la meta acumulada y al ritmo actual', 'meta acumulada' in v and 'al ritmo actual' in v, v)
+        await q.evaluate("document.querySelector('[data-home-trust]').open = true")   # la confiabilidad llega plegada en un chip (diseño nuevo): se abre para leer cada chip
         chips = await q.evaluate("[...document.querySelectorAll('#home-b .px-tchip')].map(c=>c.innerText.trim())")
         chk('B3 chips: venta real hasta, días comparados, calidad y preparación', any('Venta real hasta' in c for c in chips) and any('días comparados' in c for c in chips) and any('Preparación' in c for c in chips), chips)
         k = await q.evaluate("[...document.querySelectorAll('#home-b .px-kpi__l')].map(x=>x.innerText.trim())")

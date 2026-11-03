@@ -2510,3 +2510,7 @@ tr.is-total th, tr.is-total td { font-weight: 600; }
 .home-cols__b .nbs__dot { grid-area: dot; align-self: center; } .home-cols__b .nbs__stt { grid-area: t; align-self: end; } .home-cols__b .nbs__sts { grid-area: s; align-self: start; }
 @media (max-width: 1100px) { .home-cols__a .px .px-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .home-cols__a .px .px-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* confiabilidad: un solo chip que resume y se despliega */
+.trust-fold > summary { cursor: pointer; list-style: none; display: inline-block; } .trust-fold > summary::-webkit-details-marker { display: none; }
+.trust-fold[open] > summary { margin-bottom: 6px; }
