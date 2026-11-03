@@ -15,7 +15,7 @@
   function scorecardBody(p) {
     const row = (r, tot) => `<tr${tot ? ' class="rp-total"' : ''}><th scope="row">${esc(r.label)}</th><td class="num">${esc(f('moneyC', r.actual))}</td><td class="num">${esc(f('moneyC', r.plan))}</td>
       <td class="num ${cls(r.gap)}">${isNum(r.gap) ? arrow(r.gap) + esc(f('smoneyC', r.gap)) : '—'}</td><td class="num ${cls(r.gapPct)}">${isNum(r.gapPct) ? esc(f('spct', r.gapPct)) : '—'}</td><td>${chip(r.status)}</td></tr>`;
-    const c = p.counts, tile = (k, n) => `<div class="rp-sem-tile rp-sem-tile--${k}"><span class="rp-sem-tile__n">${n}</span><span class="rp-sem-tile__l">${chip(k)}</span></div>`;
+    const c = p.counts, tile = (k, n) => `<div class="rp-sem-tile rp-sem-tile--${k}"><span class="rp-sem-tile__n">${Number.isFinite(n) ? n : '—'}</span><span class="rp-sem-tile__l">${chip(k)}</span></div>`;
     return `<div class="rp-op"><div class="rp-sem-tiles">${tile('ok', c.ok)}${tile('watch', c.watch)}${tile('alert', c.alert)}</div>
       <table class="rp-t rp-op__t"><caption class="sr-only">Cumplimiento de venta por canal</caption><thead><tr><th scope="col">Canal</th><th scope="col" class="num">Venta real</th><th scope="col" class="num">Plan a la fecha</th><th scope="col" class="num">Brecha</th><th scope="col" class="num">vs plan</th><th scope="col">Estado</th></tr></thead>
       <tbody>${p.rows.map((r) => row(r)).join('')}${p.total ? row(p.total, true) : ''}</tbody></table>

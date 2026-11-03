@@ -6,6 +6,7 @@ import os as _os
 _miss=[x for x in ['/tmp/w/venta.xlsx'] if not _os.path.exists(x)]
 if _miss:
     print('OMITIDA: requiere archivos externos que no están en este entorno: '+', '.join(_miss)); raise SystemExit(0)
+from sim_proxy import sim
 import asyncio, sys, os, re, json, datetime as dt, threading, functools, http.server, socketserver
 from playwright.async_api import async_playwright
 ROOT = os.path.abspath(sys.argv[1])
@@ -115,10 +116,11 @@ async def main():
         # ---------- 5 · encabezado desconocido  y 6 · mapeo con Cohere simulado + privacidad ----------
         c, q = await fresh(b); q.on('pageerror', lambda e: errs.append(str(e)))
         await q.goto(u + '#carga'); await q.wait_for_timeout(400)
+        await q.evaluate(sim(True))   # sesión de equipo y servidor simulados (el servidor real no se prueba aquí)
         res = await q.evaluate("""async()=>{const sent=[];const orig=window.fetch;window.fetch=async(url,opt)=>{sent.push(JSON.parse(opt.body).messages.map(m=>m.content).join('\\n'));
             return {ok:true,status:200,json:async()=>({message:{content:[{type:'text',text:JSON.stringify({mappings:[{header:'Monto vendido',field:'revenue',confidence:0.95},{header:'Correo cliente',field:'revenue',confidence:0.4}]})}]}})}};
           const r=await FP.normalize.suggestHeaderMappingWithAI(['fecha','canal','Monto vendido','pedidos','traffic_volume','Correo cliente','Tel contacto'],
-            {dataType:'actual',apiKey:'k',samples:{'Monto vendido':['1200','900'],'Correo cliente':['ana@x.com','luis@y.mx'],'Tel contacto':['abc','55 1234 5678 90']}});
+            {dataType:'actual',samples:{'Monto vendido':['1200','900'],'Correo cliente':['ana@x.com','luis@y.mx'],'Tel contacto':['abc','55 1234 5678 90']}});
           window.fetch=orig;return {mapping:r.mapping,sent:sent[0]||''}}""")
         sent = res['sent']
         chk('6 Cohere solo propone campos válidos: «Monto vendido» → venta; la propuesta de baja confianza no se acepta', res['mapping'].get('Monto vendido') == 'revenue' and res['mapping'].get('Correo cliente') in (None, ''), res['mapping'])

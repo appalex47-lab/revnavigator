@@ -33,11 +33,12 @@
     return `<p class="rp-def"><b>Titulares con la voz de este formato:</b> ${own.length} de ${v.length}${rest.length ? `. Conservan el titular del reporte actual: ${rest.map((x) => `${esc(x.title)} (falta ${esc(x.missing)})`).join('; ')}` : ''}.</p>`;
   }
 
+  const one = (v, n) => FP.reportScenarios.oneLine(v, n);   // el texto completo está en la lámina editada
   function editsBody(p, x) {
     const edits = x.edits || {}, prefix = `${x.editProfile}|`, byId = new Map((x.report.pages || []).map((q) => [q.id, q]));
     const rows = Object.keys(edits).filter((k) => k.startsWith(prefix)).map((k) => { const id = k.slice(prefix.length), e = edits[k], pg = byId.get(id); return { title: pg ? pg.title : id, e }; }).filter((r) => r.e && (r.e.title || r.e.note || (r.e.hyp && r.e.hyp.length)));
-    const body = rows.map((r) => `<tr><th scope="row">${esc(r.title)}</th><td>${r.e.title ? `Título: «${esc(r.e.title)}»` : ''}${r.e.note ? `<span class="rp-op__sub">Nota: «${esc(r.e.note)}»</span>` : ''}${!r.e.title && !r.e.note ? na('Ninguna') : ''}</td>
-      <td>${r.e.hyp && r.e.hyp.length ? r.e.hyp.map((h) => `<span class="rp-sc__h">${esc(h)}</span>`).join('') : na('Ninguna')}</td></tr>`).join('');
+    const body = rows.map((r) => `<tr><th scope="row">${esc(r.title)}</th><td>${r.e.title ? `Título: «${esc(one(r.e.title, 90))}»` : ''}${r.e.note ? `<span class="rp-op__sub">Nota: «${esc(one(r.e.note, 130))}»</span>` : ''}${!r.e.title && !r.e.note ? na('Ninguna') : ''}</td>
+      <td>${r.e.hyp && r.e.hyp.length ? r.e.hyp.map((h) => `<span class="rp-sc__h">${esc(one(h, 110))}</span>`).join('') : na('Ninguna')}</td></tr>`).join('');
     return `<div class="rp-op"><table class="rp-t rp-op__t rp-sc"><caption class="sr-only">Ediciones y sugerencias de IA</caption><thead><tr><th scope="col">Lámina</th><th scope="col">Edición de la persona</th><th scope="col">Hipótesis de IA aceptada (por validar)</th></tr></thead><tbody>${body}</tbody></table>
       <div class="rp-op__notes"><p class="rp-small">Ninguna edición cambia una cifra calculada. Las hipótesis de IA son suposiciones a investigar, no hechos; se validaron para no traer cifras ajenas a la lámina ni lenguaje causal.</p></div></div>`;
   }

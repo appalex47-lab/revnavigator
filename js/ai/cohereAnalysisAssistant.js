@@ -168,14 +168,14 @@
     return { ok: true, errors: [] };
   }
 
-  async function ask(question, state, { apiKey, model, fetchImpl, panorama = null } = {}) {
+  async function ask(question, state, { model, fetchImpl, panorama = null } = {}) {
     const q = String(question || '').trim();
     if (!q) return { ok: false, status: 'invalid', result: null, errors: ['Escribe una pregunta.'] };
     const context = buildContext(state);
     if (panorama) context.panorama = panorama;
     const user = JSON.stringify({ question: q, context }, null, 2);
     const call = async (extra) => {
-      const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Asistente conversacional de Análisis' }, system: SYSTEM_RULES, user: extra ? `${user}\n\n${extra}` : user, schema: RESPONSE_SCHEMA, apiKey, model, fetchImpl });
+      const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Asistente conversacional de Análisis' }, system: SYSTEM_RULES, user: extra ? `${user}\n\n${extra}` : user, schema: RESPONSE_SCHEMA, model, fetchImpl });
       if (!r.ok) return { fail: { ok: false, status: r.status, result: null, errors: r.errors || ['No se pudo consultar Cohere.'] } };
       const parsed = FP.cohereClient.parseJson(r.text);
       if (!parsed.ok) return { fail: { ok: false, status: 'invalid', result: null, errors: ['Cohere respondió en un formato no válido.'] } };

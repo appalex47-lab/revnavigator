@@ -88,12 +88,12 @@
   }
 
   /** @returns Promise<{ ok, status, result, errors, model }> — nunca lanza; sin narrative válida, status lo dice. */
-  async function narrate(narrative, { apiKey, model = C().diagnostics.cohere.model, fetchImpl } = {}) {
+  async function narrate(narrative, { model = C().diagnostics.cohere.model, fetchImpl } = {}) {
     if (!narrative || !narrative.readyToNarrate || !narrative.readyToNarrate.performance) {
       return { ok: false, status: 'unavailable', result: null, errors: ['No hay suficiente narrativa calculada todavía.'], model };
     }
     const payload = buildPayload(narrative);
-    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Narrativa ejecutiva' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, apiKey, model, fetchImpl,
+    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Narrativa ejecutiva' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, model, fetchImpl,
       user: `Redacta la narrativa ejecutiva a partir de esta información ya calculada:\n${JSON.stringify(payload)}` });
     if (!r.ok) return { ok: false, status: r.status, result: null, errors: r.errors, model };
     const p = FP.cohereClient.parseJson(r.text);
@@ -104,7 +104,7 @@
     // La validación no se relaja: el segundo texto pasa por el mismo filtro.
     if (!v.ok && v.invalidNumbers.length && v.errors.length === 1) {
       retried = true;
-      const r2 = await FP.cohereClient.chatJson({ audit: { purpose: 'Narrativa ejecutiva' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, apiKey, model, fetchImpl,
+      const r2 = await FP.cohereClient.chatJson({ audit: { purpose: 'Narrativa ejecutiva' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, model, fetchImpl,
         user: `Redacta la narrativa ejecutiva a partir de esta información ya calculada:\n${JSON.stringify(payload)}\n\n` +
           `Tu respuesta anterior incluyó cifras que no aparecen en los claims: ${v.invalidNumbers.slice(0, 5).join(', ')}. ` +
           'Reescríbela citando solo cifras escritas en los claims, sin calcular diferencias, complementos, sumas ni porcentajes nuevos.' });

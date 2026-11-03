@@ -192,7 +192,7 @@
   const navOpen = {};       // estado efectivo de cada grupo (abierto/cerrado)
   let navLastView = null;
   let uxMoreOpen = false;      // móvil: el bloque «Qué hay aquí / Qué hago» llega plegado para ver primero los datos
-  const toggleMore = () => { uxMoreOpen = !uxMoreOpen; const m = document.getElementById('ux-more'), b = document.querySelector('.ux-head__morebtn'); if (m) m.dataset.open = String(uxMoreOpen); if (b) b.setAttribute('aria-expanded', String(uxMoreOpen)); };
+  const toggleMore = () => { const mm = document.getElementById('ux-more'); uxMoreOpen = !(mm && mm.dataset.open === 'true'); const m = document.getElementById('ux-more'), b = document.querySelector('.ux-head__morebtn'); if (m) m.dataset.open = String(uxMoreOpen); if (b) b.setAttribute('aria-expanded', String(uxMoreOpen)); };
   let navKeepDrawer = false;   // en móvil, al elegir una sección el panel se queda abierto para ver sus opciones
   const CHEV = '<svg class="snav__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
@@ -414,8 +414,8 @@
           return `<li>${target && i < arr.length - 1 ? `<a href="#${target}">${esc(c)}</a>` : `<span ${i === arr.length - 1 ? 'aria-current="location"' : ''}>${esc(c)}</span>`}${qn}</li>`;
         }).join('')}</ol></nav>`}
         <h2 class="ux-head__title" id="ux-title">${esc(v.title || view)}${inlineCtx ? `<span class="ux-head__ctxchip" title="${esc(contextLabel(chipCtx))}" aria-label="${esc('Contexto: ' + contextLabel(chipCtx))}">${esc(contextLabelShort(chipCtx))}</span><span class="ux-head__break" aria-hidden="true"></span>` : ''}${headline ? `<span class="ux-head__state ux-head__state--${tone}">${esc(headline)}</span>` : ''}</h2>
-        <button type="button" class="ux-head__morebtn" data-action="ux-more" aria-expanded="${uxMoreOpen}" aria-controls="ux-more">Qué hay aquí y qué hago</button>
-        <div class="ux-head__more" id="ux-more" data-open="${uxMoreOpen}">
+        <button type="button" class="ux-head__morebtn" data-action="ux-more" aria-expanded="${uxMoreOpen || state.ux.mode === 'learner'}" aria-controls="ux-more">Cómo leer esta página</button>
+        <div class="ux-head__more" id="ux-more" data-open="${uxMoreOpen || state.ux.mode === 'learner'}">
         ${what ? `<p class="ux-head__line ux-context__purpose"><b>Qué hay aquí</b> ${esc(what)}</p>` : ''}
         ${d.whatToDo ? `<p class="ux-head__line ux-context__action"><b>Qué hago aquí</b> ${esc(term(d.whatToDo))}</p>` : ''}
         ${detail ? `<p class="ux-head__line ux-head__line--detail"><b>Detalle</b> ${esc(detail)}</p>` : ''}

@@ -238,7 +238,7 @@
   /** Botón de Cohere junto al título de Hipótesis: solo el botón y el estado de la IA; el resto de la explicación va en el tooltip. */
   function aiControl(state, d) {
     const esc = H().esc, ai = state.dx;
-    const pill = FP.cohereProxy && FP.cohereProxy.available() ? H().pill('ok', 'IA por el servidor del equipo') : ai.apiKey ? H().pill('ok', 'API key configurada') : H().pill('na', 'Sin API key');
+    const pill = FP.cohereProxy && FP.cohereProxy.available() ? H().pill('ok', 'IA por el servidor del equipo') : H().pill('na', 'Requiere sesión');
     const tip = 'Hipótesis con Cohere (opcional). La API key, el modelo y si se recuerda en este navegador se configuran en Configuración de RevNavigator. Cohere solo recibe los datos ya calculados (brecha, drivers, señales, calidad) y reglas estrictas: no calcula ni cambia cifras, no inventa dimensiones y debe citar señales existentes. Su respuesta se valida; si falla, todo lo demás sigue funcionando.';
     return `<div class="dx-ai-ctl">${pill}
       <button type="button" class="btn btn--primary btn--small" data-action="dx-ai" ${d.status === 'ok' && ai.ai.status !== 'busy' ? '' : 'disabled'}>Generar hipótesis con Cohere</button>

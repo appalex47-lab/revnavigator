@@ -2,6 +2,7 @@
 Datos de la parte 1: Uso: python3 batch_t.py <raiz>   Sale 1 si alguna falla.
 Datos con resultado conocido (calculado aquí, aparte de la app): Móvil = mucho tráfico y CR bajo; Escritorio = estrella; Tableta = poco tráfico y CR alto;
 Smart TV = poco volumen (CR 10 % que NO debe liderar rankings). Campañas con CR casi igual al total y poco volumen → «no concluyente»."""
+from sim_proxy import sim
 import asyncio, sys, os, re, json, zlib, datetime as dt, threading, functools, http.server, socketserver
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from recovery_state import prepare
@@ -81,6 +82,7 @@ async def main():
           let calls=0;const sent=[];const fetchImpl=async(url,opt)=>{calls++;sent.push(JSON.parse(opt.body).messages[1].content);const body=(mode==='fix'&&calls===2)?good:bad;
           return {ok:true,status:200,json:async()=>({message:{content:[{type:'text',text:JSON.stringify(body)}]}})}};
           const r=await FP.cohereNarrative.narrate(n,{apiKey:'k',fetchImpl});return {ok:r.ok,retried:r.retried,calls,errors:r.errors,asked:(sent[1]||'').includes('38.1')}}"""
+        await q.evaluate(sim(True))   # sesión de equipo y servidor simulados: la consulta pasa por FP.cohereProxy (el servidor real no se prueba aquí)
         fx = await q.evaluate(JS, 'fix'); rp = await q.evaluate(JS, 'bad')
         chk('V-2 Cohere: si inventa una cifra (38.1) se le pide una vez quitarla diciéndole cuál; si la quita, el texto se muestra', fx['ok'] and fx['retried'] and fx['calls'] == 2 and fx['asked'], fx)
         chk('V-2 si la repite, sigue rechazado (la validación no se relaja) y el aviso explica que fue un cálculo propio y que se reintentó', not rp['ok'] and rp['calls'] == 2 and any('repitió el problema al reintentar' in e for e in rp['errors']), rp)

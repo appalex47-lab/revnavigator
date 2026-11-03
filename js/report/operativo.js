@@ -107,8 +107,9 @@
     ];
     if (rows.some((r) => METRICS.some((m) => r.cells[m.id].actual === null)) || (total && METRICS.some((m) => total.cells[m.id].actual === null))) notes.push('«No disponible» significa que el dato no está cargado para ese canal o periodo; no es cero.');
     if (without.length) notes.push(`Sin venta real contada en el periodo: ${without.join(', ')}.`);
+    rows.forEach((r) => { r.below = flagsOf(r, T).below.map((x) => NAME[x.id](r)); });   // indicadores bajo el plan de cada canal (los usa la voz del formato)
     return page(id, title, {
-      question: '¿Dónde está la desviación?', conclusion, headline: conclusion, ctx: per.label, columns: METRICS, rows, total, review, notes,
+      question: '¿Dónde está la desviación?', conclusion, headline: conclusion, ctx: per.label, columns: METRICS, rows, total, review, notes, belowPlanPct: T,
       sources: ['Pacing y forecast (series por canal)'], tags: [TAG().obs, TAG().calc]
     });
   }

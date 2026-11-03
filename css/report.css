@@ -436,3 +436,12 @@
 /* sugerencia de umbrales (herramienta y presentación) */
 .th-box { border:1px solid #D5DCE8; border-radius:10px; padding:12px 16px; display:grid; gap:8px; margin-top:12px; }
 .th-box__h { margin:0; font-size:15px; } .th-box__t { max-width:520px; }
+
+/* Cierre técnico: ajuste de los textos escritos por la persona cuando la lámina no cabe */
+.rp-ed-s .rp-ed { margin-top:6px; padding:5px 12px; font-size:13.5px; line-height:1.22; }
+.rp-ed-s .rp-ed p { margin:0 0 2px; } .rp-ed-s .rp-ed ul { margin:2px 0 0; padding-left:16px; }
+.rp-title--fit { font-size:22px; line-height:1.1; }
+.rp-ed__trim { font-size:13.5px; color:var(--muted, #5B6B85); font-style:italic; } p.rp-ed__trim { margin:2px 0 0; }
+.rp-title--fit2 { font-size:18px; line-height:1.08; }
+/* último recurso del ajuste de textos escritos: espacios más ajustados (la tipografía no baja de 13.5 px) */
+.rp-ed-ss .rp-ed { margin-top:2px; padding:3px 10px; }

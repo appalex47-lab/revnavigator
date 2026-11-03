@@ -82,7 +82,7 @@
   async function ask(page, opts) {
     const o = opts || {};
     if (!page || page.status !== 'included') return { ok: false, status: 'unavailable', hypotheses: [], errors: ['La lámina no tiene datos.'] };
-    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Hipótesis de presentación' }, system: SYSTEM_RULES, schema: SCHEMA, apiKey: o.apiKey, model: o.model, fetchImpl: o.fetchImpl,
+    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Hipótesis de presentación' }, system: SYSTEM_RULES, schema: SCHEMA, model: o.model, fetchImpl: o.fetchImpl,
       user: `Propón hipótesis a investigar sobre esta lámina, usando solo esta información ya calculada:\n${JSON.stringify(payloadOf(page))}` });
     if (!r.ok) return { ok: false, status: r.status, hypotheses: [], errors: r.errors || ['No se pudo consultar la IA.'] };
     const p = FP.cohereClient.parseJson(r.text);

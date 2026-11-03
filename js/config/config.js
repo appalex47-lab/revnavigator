@@ -474,7 +474,6 @@
       },
       minObservations: 7,        // días mínimos para confianza suficiente
       cohere: {
-        endpoint: 'https://api.cohere.com/v2/chat',
         model: 'command-a-03-2025',
         timeoutMs: 45000,
         maxHypotheses: 6,
@@ -576,6 +575,7 @@
       // S2: lo que NO se sincroniza solo (preferencias por dispositivo)
       autoSkipKeys: ['uxSettings', 'productSettings', 'productsCloud'],
       autoDebounceMs: 4000,
+      conflictKeys: ['*'],   // cierre técnico: en TODAS las claves de sincronización automática una escritura ajena nunca se pisa en silencio (ver cloudSync.js)
       skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion']   // secretos y banderas locales: nunca viajan a la nube
     },
     storageDb: {

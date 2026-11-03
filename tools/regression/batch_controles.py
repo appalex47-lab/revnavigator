@@ -26,11 +26,12 @@ INV = """(actions)=>{
       else kind='deshabilitado sin explicación';
     } else if(tag==='a'){
       if(e.dataset.skip){kind='funcional'} else if(!href||href==='#') {kind='roto';why='enlace sin destino';}
-      else if(href.startsWith('#')&&!e.dataset.skip){const v=href.slice(1); if(!document.querySelector('[data-view="'+v+'"]')&&!document.getElementById(v)&&!document.getElementById('view-'+v)){kind='roto';why='destino inexistente '+href}}
+      else if(href.startsWith('#')&&!e.dataset.skip){const v=href.slice(1); if(['producto','analisis','negocio','paquete'].includes(v)){kind='funcional'} else if(!document.querySelector('[data-view="'+v+'"]')&&!document.getElementById(v)&&!document.getElementById('view-'+v)){kind='roto';why='destino inexistente '+href}}
     } else if(tag==='summary'||tag==='select'||tag==='input'||tag==='textarea'){ kind='funcional'; if((tag==='input'||tag==='select'||tag==='textarea')&&!act&&!e.id&&!e.name&&!Object.keys(e.dataset).length&&!e.closest('label')) {kind='decorativo?';why='campo sin id/acción'} }
     else if(act){ if(!(act in actions)){kind='roto';why='acción inexistente '+act} }
     else if(e.getAttribute('data-nav')||e.getAttribute('aria-expanded')!==null||e.getAttribute('aria-controls')||e.getAttribute('role')==='tab'||e.closest('[data-delegate]')) kind='funcional';
     else if(tag==='button'&&e.type==='submit'&&e.form){kind='funcional'}
+    else if(tag==='button'&&e.hasAttribute('aria-pressed')&&(e.id||e.dataset.v||e.dataset.sum)&&e.closest('[role=group]')){kind='funcional'}   // alternancia Resumen/Completo y versión corta/larga: oyente delegado de su vista (se prueba abajo, MN-5)
     else { kind='decorativo?'; why='botón sin data-action ni destino'; }
     if(kind!=='funcional') out.push({tag,name,kind,why,act:act||null,view:location.hash});
   });
@@ -48,12 +49,18 @@ async def main():
                 # --- menú: cada vista con acceso coherente y único
                 nav = await q.evaluate("""(()=>{const links=[...document.querySelectorAll('#app-nav a[data-nav]')].map(a=>a.dataset.nav);const V=Object.keys(FP.guidanceConfig.VIEWS);const G=FP.guidanceConfig.GROUPS;
                   const inGroups=G.flatMap(g=>g.views);return {links,V,inGroups,dupLinks:links.filter((v,i)=>links.indexOf(v)!==i),dupGroups:inGroups.filter((v,i)=>inGroups.indexOf(v)!==i),
-                  noGroup:V.filter(v=>!inGroups.includes(v)&&!['ajustes','ayuda','negocio'].includes(v)),orphanLinks:links.filter(v=>!V.includes(v)),groupOfMissing:V.filter(v=>!FP.guidanceConfig.VIEWS[v].group)}})()""")
+                  noGroup:V.filter(v=>!inGroups.includes(v)&&!['ajustes','ayuda','negocio','producto','analisis'].includes(v)),orphanLinks:links.filter(v=>!V.includes(v)),groupOfMissing:V.filter(v=>!FP.guidanceConfig.VIEWS[v].group&&!['negocio','producto','analisis'].includes(v))}})()""")
                 chk('MN-1 ninguna vista aparece dos veces en el menú (ni en grupos ni en enlaces)', not nav['dupLinks'] and not nav['dupGroups'], nav)
                 chk('MN-2 toda vista definida pertenece a un grupo del menú o a los accesos fijos (Configuración, Ayuda)', not nav['noGroup'] and not nav['groupOfMissing'], nav)
                 chk('MN-3 ningún enlace del menú apunta a una vista que no existe', not nav['orphanLinks'], nav['orphanLinks'])
-                miss = await q.evaluate("(()=>{const V=Object.keys(FP.guidanceConfig.VIEWS);return V.filter(v=>v!=='negocio'&&!document.querySelector('[data-view=\"'+v+'\"]'))})()"); neg = await q.evaluate("!!document.getElementById('st-negocio')"); chk('MN-4b «negocio» vive como sección dentro de Configuración', neg)
+                miss = await q.evaluate("(()=>{const V=Object.keys(FP.guidanceConfig.VIEWS);return V.filter(v=>!['negocio','producto','analisis'].includes(v)&&!document.querySelector('[data-view=\"'+v+'\"]'))})()"); neg = await q.evaluate("!!document.getElementById('st-negocio')"); chk('MN-4b «negocio» vive como sección dentro de Configuración', neg)
                 chk('MN-4 toda vista tiene su sección en la página', not miss, miss)
+                # rutas heredadas: siguen funcionando y abren el capítulo equivalente
+                alias = []
+                for h, v in (('producto', 'prodevol'), ('analisis', 'prodevol')):
+                    await q.evaluate(f"location.hash='#{h}'"); await q.wait_for_timeout(500); alias.append((h, await q.evaluate('FP.app.state.view')))
+                chk('MN-4c las rutas heredadas #producto y #analisis redirigen a Producto y evolución', all(v == 'prodevol' for _, v in alias), alias)
+                await q.evaluate("location.hash='#inicio'"); await q.wait_for_timeout(300)
                 reach = await q.evaluate("(()=>{const V=Object.keys(FP.guidanceConfig.VIEWS);return V.filter(v=>!document.querySelector('#app-nav a[data-nav=\"'+v+'\"]'))})()")
                 print('  (vistas sin enlace propio en el menú:', reach, ')')
                 # sección activa

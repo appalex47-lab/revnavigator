@@ -213,6 +213,28 @@
   }
 
 
+  /* ---------- Cierre técnico (hallazgo 4): detección de conflictos de sincronización ----------
+     Para las claves en `cloud.conflictKeys` (p. ej. reportPrefs: ediciones de la presentación), «gana la última escritura» podía borrar en silencio lo que otra persona
+     (u otro navegador) escribió. Ahora cada navegador recuerda la fecha de la nube con la que se sincronizó por última vez (la «base», en localStorage, fuera de los
+     datos del equipo). Hay CONFLICTO cuando este navegador cambió la clave desde esa base Y la nube también cambió Y el contenido es distinto: no se escribe nada
+     (ni local ni en la nube) hasta que la persona elija. Además, con la función `put_blob_cas` instalada en Supabase la subida de estas claves es condicional y atómica en el servidor, así que
+     dos subidas simultáneas ya no se pisan (sin la función se conserva la ventana de una consulta + una subida). */
+  const BASE_KEY = 'fp.cloudBase';
+  const baseMap = () => { try { return JSON.parse(root.localStorage.getItem(BASE_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  /** «Base» de una clave = lo último en lo que este navegador y la nube coincidieron: { at: fecha de la nube, v: versión del servidor (o null), d: huella del contenido }. */
+  const getBase = (k) => { const b = baseMap()[k]; return !b ? null : (typeof b === 'string' ? { at: b, v: null, d: null } : b); };
+  const dataDigest = (data) => digest(JSON.stringify(data === undefined ? null : data));
+  const setBase = (k, at, v, data) => { try { const m = baseMap(); m[k] = { at, v: (v === undefined ? null : v), d: data === undefined ? null : dataDigest(data) }; root.localStorage.setItem(BASE_KEY, JSON.stringify(m)); } catch (e) { /* sin storage */ } };
+  const clearBases = () => { try { root.localStorage.removeItem(BASE_KEY); } catch (e) { /* sin storage */ } };
+  const isConflictKey = (key) => { const l = cfg().conflictKeys || []; return l.includes('*') || l.includes(String(key).split(':')[0]); };
+  const sameData = (a, b) => JSON.stringify(a && a.data) === JSON.stringify(b && b.data);
+  /** Descarga y arma el sobre completo de una clave de la nube (null si está incompleto o ilegible). */
+  async function fetchEnv(session, key, total, fetchImpl) {
+    const parts = await rest(`${cfg().table}?select=part,payload&key=eq.${encodeURIComponent(key)}&order=part.asc`, { fetchImpl, session });
+    if (!parts || parts.length < total || Array.from({ length: total }, (_, i) => parts.find((x) => x.part === i)).some((x) => !x)) return null;
+    try { return JSON.parse(parts.slice().sort((a, b) => a.part - b.part).map((x) => x.payload).join('')); } catch (e) { return null; }
+  }
+
   /** Sube un sobre (partido en trozos) y borra trozos sobrantes de una subida anterior más larga. */
   async function putKey(session, key, env, fetchImpl) {
     const table = cfg().table, text = JSON.stringify(env), parts = split(text, cfg().chunkChars), at = (env && env.savedAt && !isNaN(Date.parse(env.savedAt))) ? new Date(env.savedAt).toISOString() : new Date().toISOString();   // updated_at = fecha de guardado del dato: base de «gana el más nuevo»
@@ -221,6 +243,9 @@
       await rest(`${table}?on_conflict=team_id,key,part`, { method: 'POST', body: rows.slice(b, b + 4), prefer: 'resolution=merge-duplicates,return=minimal', fetchImpl, session });
     }
     await rest(`${table}?key=eq.${encodeURIComponent(key)}&part=gte.${parts.length}`, { method: 'DELETE', fetchImpl, session });
+    let ver = null;   // versión que quedó en el servidor (si ya tiene la columna): con ella este navegador sabe que lo siguiente que cambie en la nube NO es suyo
+    try { const m = await rest(`${table}?select=version&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session }); if (m && m[0] && m[0].version !== undefined && m[0].version !== null) ver = Number(m[0].version); } catch (e) { ver = null; }
+    setBase(key, at, ver, env && env.data);   // este navegador y la nube coinciden en esta fecha y versión
     return { text, parts: parts.length, at };
   }
 
@@ -291,10 +316,13 @@
   async function listKeys({ fetchImpl } = {}) {
     const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: false, error: 'Inicia sesión para consultar la copia de tu equipo.' };
     let rows;
-    try { rows = await rest(`${cfg().table}?select=key,updated_at&part=eq.0`, { fetchImpl, session: se.session }); }
-    catch (e) { return { ok: false, error: e.message }; }
-    const at = {}; (rows || []).forEach((r) => { if (r.updated_at) at[r.key] = r.updated_at; });   // «at»: fecha de guardado del dato en la nube, por clave
-    return { ok: true, keys: [...new Set((rows || []).map((r) => r.key))], at };
+    try { rows = await rest(`${cfg().table}?select=key,updated_at,version&part=eq.0`, { fetchImpl, session: se.session }); }
+    catch (e) {
+      if (!/42703|version/i.test(String(e.message))) return { ok: false, error: e.message };
+      try { rows = await rest(`${cfg().table}?select=key,updated_at&part=eq.0`, { fetchImpl, session: se.session }); } catch (e2) { return { ok: false, error: e2.message }; }   // servidor sin la columna version (migración pendiente)
+    }
+    const at = {}, ver = {}; (rows || []).forEach((r) => { if (r.updated_at) at[r.key] = r.updated_at; if (r.version !== undefined && r.version !== null) ver[r.key] = Number(r.version); });   // «at»: fecha en la nube; «ver»: versión del servidor, por clave
+    return { ok: true, keys: [...new Set((rows || []).map((r) => r.key))], at, ver };
   }
 
   /* ---------- S2: sincronización automática de lo liviano ---------- */
@@ -308,37 +336,97 @@
     return !(isDataKey && isDataKey(key)) && !cfg().skipKeys.includes(b) && !cfg().autoSkipKeys.includes(b);
   }
 
-  /** Sube solo estas claves (sin tocar ni borrar las demás de la nube). */
-  async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress } = {}) {
+  /** Escritura condicional (RPC `put_blob_cas`, ver supabase/migrations/20261102_put_blob_cas.sql): reemplaza la clave solo si en el servidor sigue la VERSIÓN que el cliente leyó
+   *  (null = «la clave no existía»). Validación y escritura ocurren en una sola transacción del servidor. Devuelve { ok:true, version } | { ok:false, conflict:true, version } |
+   *  { unavailable:true } (la función aún no está instalada: se usa la subida de siempre). */
+  async function casPut(session, key, env, expectedVersion, fetchImpl) {
+    const text = JSON.stringify(env), parts = split(text, cfg().chunkChars), at = (env && env.savedAt && !isNaN(Date.parse(env.savedAt))) ? new Date(env.savedAt).toISOString() : new Date().toISOString();
+    const rows = parts.map((p, n) => ({ part: n, total: parts.length, payload: p, bytes: p.length, updated_at: at }));
+    let r;
+    try { r = await rest('rpc/put_blob_cas', { method: 'POST', body: { p_key: key, p_expected_version: expectedVersion === undefined ? null : expectedVersion, p_rows: rows }, fetchImpl, session }); }
+    catch (e) { if (/PGRST202|respondió 404/.test(String(e.message))) return { unavailable: true }; throw e; }
+    if (r && r.ok) { setBase(key, at, r.version, env && env.data); return { ok: true, version: r.version }; }
+    if (r && r.conflict) return { ok: false, conflict: true, version: r.version };
+    throw new Error(`El servidor rechazó la subida de «${key}»${r && r.error ? ` (${r.error})` : ''}.`);
+  }
+
+  /**
+   * Sube solo estas claves (sin tocar ni borrar las demás de la nube).
+   * Las claves de `conflictKeys` no se suben si la nube cambió desde la última sincronización de este navegador y su contenido es distinto: se devuelven en
+   * `conflicts` ({ key, local, cloud, cloudAt }) y NO se escribe nada. `force` (lista de claves) omite esa revisión: solo para cuando la persona ya eligió conservar la suya.
+   * Además, la subida de esas claves es CONDICIONAL en el servidor (casPut): si otra persona escribe entre la revisión y la subida, el servidor la rechaza y también es conflicto.
+   */
+  async function pushKeys(provider, keys, { fetchImpl, captchaImpl, onProgress, force = [] } = {}) {
     const se = await ensureSession({ fetchImpl, captchaImpl }); if (!se.ok) return se;
-    let n = 0;
-    try { for (const key of keys) { const env = await provider.read(key); if (!env) continue; await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); } }
-    catch (e) { return { ok: false, error: e.message }; }
-    return { ok: true, pushed: n, at: new Date().toISOString() };
+    let n = 0; const conflicts = [];
+    const cloudOf = async (key) => {
+      const meta = await rest(`${cfg().table}?select=total,updated_at&key=eq.${encodeURIComponent(key)}&part=eq.0`, { fetchImpl, session: se.session });
+      const cloud = meta && meta[0] ? await fetchEnv(se.session, key, meta[0].total, fetchImpl) : null;
+      if (!cloud) throw new Error(`No se pudo revisar «${key}» en la nube antes de subirla; no se subió nada para no pisar cambios de otra persona.`);
+      return { cloud, at: meta[0].updated_at };
+    };
+    try {
+      let cl = null;
+      for (const key of keys) {
+        const env = await provider.read(key); if (!env) continue;
+        if (isConflictKey(key)) {
+          if (!cl) { cl = await listKeys({ fetchImpl }); if (!cl.ok) return { ok: false, error: cl.error }; }
+          const cloudIso = (cl.at || {})[key] || null, cloudVer = (cl.ver || {})[key], hasVer = cloudVer !== undefined, base = getBase(key);
+          const exists = Boolean(cloudIso);
+          // ¿la nube cambió desde la última vez que este navegador se sincronizó? (por versión; sin versión en el servidor, por fecha)
+          const changed = exists && (hasVer ? !(base && base.v === cloudVer) : (!base || Date.parse(cloudIso) > Date.parse(base.at) + 2000));
+          if (!changed && exists && base && base.d && base.d === dataDigest(env.data) && !force.includes(key)) continue;   // nada cambió aquí desde la última sincronización: no se sube (evita subir versiones sin cambios)
+          if (changed && !force.includes(key)) {
+            const { cloud, at } = await cloudOf(key);
+            if (sameData(env, cloud)) { setBase(key, cloudIso, hasVer ? cloudVer : null, cloud.data); continue; }   // mismo contenido: nada que subir ni que resolver
+            conflicts.push({ key, local: env, cloud, cloudAt: at, cloudVersion: hasVer ? cloudVer : null }); continue;
+          }
+          if (hasVer || !exists) {
+            const c = await casPut(se.session, key, env, exists ? cloudVer : null, fetchImpl);   // condicional y atómica en el servidor
+            if (c.ok) { n++; if (onProgress) onProgress({ key, index: n, of: keys.length }); continue; }
+            if (c.conflict) {
+              // otra persona escribió entre nuestra lectura y la subida. Si lo que quedó en la nube es justo lo nuestro (reintento tras perder la respuesta), no hay conflicto.
+              const { cloud, at } = await cloudOf(key), cur = (await listKeys({ fetchImpl })).ver || {};
+              if (sameData(env, cloud)) { setBase(key, at, cur[key] === undefined ? null : cur[key], cloud.data); continue; }
+              conflicts.push({ key, local: env, cloud, cloudAt: at, cloudVersion: c.version }); continue;
+            }
+            // c.unavailable → función no instalada todavía: subida de siempre
+          }
+        }
+        await putKey(se.session, key, env, fetchImpl); n++; if (onProgress) onProgress({ key, index: n, of: keys.length });
+      }
+    } catch (e) { return { ok: false, error: e.message }; }
+    return { ok: true, pushed: n, at: new Date().toISOString(), conflicts };
   }
 
   /**
    * Trae las claves chicas que en la nube son MÁS NUEVAS que las locales (gana la última escritura; gracias a updated_at
-   * del primer trozo). `provider`: { keys, read, write(key, envelope) }. Devuelve { ok, applied:[keys], pushedNewer:[keys] }.
+   * del primer trozo). `provider`: { keys, read, write(key, envelope) }. Devuelve { ok, applied:[keys], conflicts:[{ key, local, cloud, cloudAt }] }: las claves en conflicto NO se aplican ni se suben.
    */
   async function pullNewer(provider, isDataKey, { fetchImpl } = {}) {
-    const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: true, applied: [], none: true };
-    const session = se.session, applied = [];
+    const se = await ensureSession({ fetchImpl }); if (!se.ok) return { ok: true, applied: [], conflicts: [], none: true };
+    const session = se.session, applied = [], conflicts = [];
     try {
-      const metas = await rest(`${cfg().table}?select=key,total,updated_at&part=eq.0`, { fetchImpl, session });
+      let metas;
+      try { metas = await rest(`${cfg().table}?select=key,total,updated_at,version&part=eq.0`, { fetchImpl, session }); }
+      catch (e) { if (!/42703|version/i.test(String(e.message))) throw e; metas = await rest(`${cfg().table}?select=key,total,updated_at&part=eq.0`, { fetchImpl, session }); }
       for (const m of metas || []) {
         if (!isAutoKey(m.key, isDataKey)) continue;
-        const local = await provider.read(m.key);
+        const local = await provider.read(m.key), base = getBase(m.key), hasVer = m.version !== undefined && m.version !== null, ver = hasVer ? Number(m.version) : null;
         const localAt = local && local.savedAt ? Date.parse(local.savedAt) : 0, cloudAt = Date.parse(m.updated_at);
-        if (!(cloudAt > localAt + 2000)) continue;
-        const parts = await rest(`${cfg().table}?select=part,payload&key=eq.${encodeURIComponent(m.key)}&order=part.asc`, { fetchImpl, session });
-        if (!parts || parts.length < m.total || Array.from({ length: m.total }, (_, i) => parts.find((x) => x.part === i)).some((x) => !x)) continue;   // incompleta: no se toca lo local
-        let env; try { env = JSON.parse(parts.slice().sort((a, b) => a.part - b.part).map((x) => x.payload).join('')); } catch (e) { continue; }
-        if (local && JSON.stringify(local) === JSON.stringify(env)) continue;   // mismo contenido: nada que aplicar
-        await provider.write(m.key, env); applied.push(m.key);
+        if (hasVer) { if (base && base.v === ver) continue; }   // la nube no cambió desde nuestra última sincronización
+        else if (!(cloudAt > localAt + 2000)) continue;           // servidor sin versiones: regla por fecha
+        const env = await fetchEnv(session, m.key, m.total, fetchImpl); if (!env) continue;   // incompleta o ilegible: no se toca lo local
+        if (local && JSON.stringify(local) === JSON.stringify(env)) { setBase(m.key, m.updated_at, ver, env.data); continue; }   // mismo contenido: nada que aplicar
+        if (local && isConflictKey(m.key)) {
+          // ¿este navegador cambió la clave desde su última sincronización? (por huella del contenido; sin huella, por fecha; sin base: se asume que sí)
+          const dirty = !base || (base.d ? dataDigest(local.data) !== base.d : localAt > Date.parse(base.at) + 2000);
+          if (dirty && !sameData(local, env)) { conflicts.push({ key: m.key, local, cloud: env, cloudAt: m.updated_at, cloudVersion: ver }); continue; }   // NO se pisa: la persona decide
+        }
+        await provider.write(m.key, env); setBase(m.key, m.updated_at, ver, env.data); applied.push(m.key);
       }
-    } catch (e) { return { ok: false, error: e.message, applied }; }
-    return { ok: true, applied };
+    } catch (e) { return { ok: false, error: e.message, applied, conflicts }; }
+    return { ok: true, applied, conflicts };
   }
 
   /** Compara lo subido con lo que hay en la nube (claves, tamaño y suma de verificación). */
@@ -445,5 +533,5 @@
     return { ok: true };
   }
 
-  FP.cloud = { setRetryHook: (f) => { retryHook = f; }, listKeys, rest, consumeAuthHash, redirectUrl, autoOn, setAuto, isAutoKey, pushKeys, pullNewer, loginPassword, changePassword, loadTeam, validEmail, getCaptchaToken, loadSession, ensureSession, signOut, upload, download, downloadProgress, verify, pruneKeys, remove, planCleanup, currentRefs, deleteChunks, chunkRefsOfText, digest, split };
+  FP.cloud = { setRetryHook: (f) => { retryHook = f; }, listKeys, rest, consumeAuthHash, redirectUrl, autoOn, setAuto, isAutoKey, pushKeys, pullNewer, getBase, setBase, clearBases, isConflictKey, loginPassword, changePassword, loadTeam, validEmail, getCaptchaToken, loadSession, ensureSession, signOut, upload, download, downloadProgress, verify, pruneKeys, remove, planCleanup, currentRefs, deleteChunks, chunkRefsOfText, digest, split };
 })(typeof window !== 'undefined' ? window : globalThis);

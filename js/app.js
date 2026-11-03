@@ -60,7 +60,7 @@
     settings: null,
     staging: { items: [], activeId: null, issueFilter: 'all' },
     sheets: { links: [], busy: false },
-    cloud: { busy: false, msg: null, tone: null, last: null, session: null, auto: { on: false, last: null, error: null, pulled: [] } },   // Fase S1: copia en la nube (Supabase)   // Fase 15: enlaces de Google Sheets publicados (solo URL)
+    cloud: { busy: false, msg: null, tone: null, last: null, session: null, conflicts: [], auto: { on: false, last: null, error: null, pulled: [] } },   // Fase S1: copia en la nube (Supabase)   // Fase 15: enlaces de Google Sheets publicados (solo URL)
     quality: null,
     availableYears: [],
     qualityType: 'historical',
@@ -149,7 +149,7 @@
       settings: { comparison: 'actual_vs_plan', periodType: 'month', periodKey: null, channel: 'total', metric: 'revenue', method: C.diagnostics.attributionMethod },
       run: null, base: null, baseRf: null,
       ai: { status: null, result: null },
-      apiKey: '', rememberKey: false, model: C.diagnostics.cohere.model,
+      model: C.diagnostics.cohere.model,
       showAllSignals: false
     },
     // Fase 9.2: narrativa ejecutiva. No tiene settings propios: narra el mismo canal/periodo/comparación
@@ -163,17 +163,14 @@
   /*
    * Conexión Cohere única de la aplicación.
    * Todas las funcionalidades que usan Cohere (Diagnóstico, Narrativa, Recovery e Importación)
-   * consultan este proveedor; no existe una segunda API key para importaciones.
+   * consultan este proveedor. Cierre técnico: no hay API key en el navegador; Cohere solo se llama por el servidor del equipo.
    */
   FP.cohereConnection = {
     get() {
-      return {
-        apiKey: state.dx.apiKey || '',
-        model: state.dx.model || C.diagnostics.cohere.model
-      };
+      return { model: state.dx.model || C.diagnostics.cohere.model };
     },
-    /** Hay IA disponible si hay sesión de equipo (servidor) o una key local. */
-    isConfigured() { return Boolean(state.dx.apiKey) || Boolean(FP.cohereProxy && FP.cohereProxy.available()); }
+    /** Hay IA disponible solo con sesión de equipo (servidor). */
+    isConfigured() { return Boolean(FP.cohereProxy && FP.cohereProxy.available()); }
   };
 
   /* ================= Persistencia ================= */
@@ -402,16 +399,13 @@
     const env = storage.load(K.diagnosticSettings);
     const d = env && env.data ? env.data : {};
     state.dx.settings = { ...state.dx.settings, ...(d.settings || {}), periodKey: null };
-    state.dx.rememberKey = Boolean(d.rememberKey);
     state.dx.model = d.model || C.diagnostics.cohere.model;
-    const key = state.dx.rememberKey ? storage.load(K.cohereApiKey) : null;
-    state.dx.apiKey = key && key.data ? key.data : '';
+    // Cierre técnico: una API key guardada por una versión anterior se borra de este navegador (ya no se usa ni se conserva).
+    try { storage.remove(K.cohereApiKey); } catch (e) { /* sin almacenamiento */ }
   }
   function saveDiagnosticSettings() {
     const { periodKey, ...rest } = state.dx.settings;
-    storage.save(K.diagnosticSettings, { settings: rest, rememberKey: state.dx.rememberKey, model: state.dx.model });
-    if (state.dx.rememberKey && state.dx.apiKey) storage.save(K.cohereApiKey, state.dx.apiKey);
-    else storage.remove(K.cohereApiKey);
+    storage.save(K.diagnosticSettings, { settings: rest, model: state.dx.model });
   }
 
   /** Diagnóstico sobre el forecast vigente (y el reforecast, para la comparación de recuperación). Solo lee. */
@@ -3064,7 +3058,7 @@
       repaintAn();
       const wantsPanorama = a.panorama || PANORAMA_RE.test(q);
       (wantsPanorama ? buildPanorama() : Promise.resolve({ ok: true, panorama: null }))
-        .then((pr) => (pr.ok ? FP.cohereAnalysisAssistant.ask(q, state, { apiKey: state.dx.apiKey, model: state.dx.model, panorama: pr.panorama })
+        .then((pr) => (pr.ok ? FP.cohereAnalysisAssistant.ask(q, state, { model: state.dx.model, panorama: pr.panorama })
           : { ok: false, status: 'unavailable', result: null, errors: [pr.error] }))
         .then(r => {
           const history = [...(state.an.assistant.history || []), { question: q, result: r.result, errors: r.errors || [], ok: r.ok }].slice(-5);
@@ -3108,7 +3102,7 @@
         comparison: state.an.comparisonInfo ? state.an.comparisonInfo.text : (state.an.share?.comparisonLabel || null),
         sections
       };
-      FP.cohereNarrative.narrate(payload, { apiKey: state.dx.apiKey, model: state.dx.model })
+      FP.cohereNarrative.narrate(payload, { model: state.dx.model })
         .then(r => {
           state.an.ai = { status: r.ok ? 'ok' : 'error', result: r.result, errors: r.errors || [] };
           repaintAn();
@@ -4070,10 +4064,12 @@
       return cloudRun(async () => {
         const pull = await FP.cloud.pullNewer(cloudWriter, FP.repository.isDataKey, {});
         if (pull.ok && pull.applied.length) { state.cloud.restored = true; state.cloud.auto.pulled = pull.applied; }
-        const keys = (await cloudProvider.keys()).filter((k) => FP.cloud.isAutoKey(k, FP.repository.isDataKey) && !(pull.applied || []).includes(k));
+        if (pull.conflicts && pull.conflicts.length) noteConflicts(pull.conflicts);
+        const keys = (await cloudProvider.keys()).filter((k) => FP.cloud.isAutoKey(k, FP.repository.isDataKey) && !(pull.applied || []).includes(k) && !state.cloud.conflicts.some((c) => c.key === k));
         const r = await FP.cloud.pushKeys(cloudProvider, keys, {});
         if (!r.ok) { state.cloud.auto.error = r.error; return cloudNote(r.error, 'bad'); }
         state.cloud.auto.last = r.at;
+        if (r.conflicts && r.conflicts.length) noteConflicts(r.conflicts);
         cloudNote(`Sincronización automática encendida. Subí ${r.pushed} ajuste(s)${pull.applied && pull.applied.length ? ` y traje ${pull.applied.length} más nuevos de la nube (recarga para aplicarlos)` : ''}.`, 'ok');
       });
     },
@@ -4259,13 +4255,13 @@
       const rc = state.rc;
       const sc = rc.scenarioStore.scenarios.find((s) => s.scenarioId === rc.actionScenario);
       const hyp = sc ? rc.analysis.hypotheses.find((h) => h.id === sc.links.hypothesisId) : null;
-      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión (o pega tu API key de Cohere en Configuración de RevNavigator).'); return; }
+      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión para usar la IA (la API key vive en el servidor del equipo).'); return; }
       rc.ai = { status: 'busy', actions: [], errors: [] }; render();
       const input = { hypothesis: hyp || (sc ? { id: sc.links.hypothesisId, hypothesis: sc.links.hypothesis, driver: sc.links.driver } : null),
         signals: rc.analysis.signals.filter((s) => (sc ? sc.links.signalIds : []).includes(s.id)), scenario: sc,
         availableDimensions: rc.analysis.dataQuality.availableTargets, dataQuality: { diagnosis: rc.diagnosis ? rc.diagnosis.confidence.level : null },
         constraints: rc.constraints, catalog: FP.actionLibrary.applicable(rc.custom, { driver: sc ? sc.links.driver : null }) };
-      const res = await FP.cohereActions.suggestActions(input, { apiKey: state.dx.apiKey, model: state.dx.model });
+      const res = await FP.cohereActions.suggestActions(input, { model: state.dx.model });
       rc.ai = { status: res.status, actions: res.actions, errors: res.errors };
       render();
       FP.ui.toast(res.ok ? `Cohere propuso ${res.actions.length} líneas de acción (requieren validación).` : 'Análisis con IA no disponible; el resto del módulo sigue funcionando.');
@@ -4363,25 +4359,16 @@
     async 'dx-proxy-test'() {
       state.dx.proxyTest = { busy: true, msg: null, ok: false }; render();
       const r = await FP.cohereClient.chatJson({ system: 'Responde únicamente con JSON.', user: 'Devuelve {"ok": true}.', schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] }, model: state.dx.model || undefined, audit: { purpose: 'Prueba de conexión' } });
-      state.dx.proxyTest = { busy: false, ok: r.ok, msg: r.ok ? `Funciona: Cohere respondió por ${r.via === 'server' ? 'el servidor del equipo' : 'este navegador (respaldo)'}.` : (r.errors && r.errors[0]) || 'No respondió.' };
+      state.dx.proxyTest = { busy: false, ok: r.ok, msg: r.ok ? `Funciona: Cohere respondió por ${r.via === 'server' ? 'el servidor del equipo' : 'el servidor'}.` : (r.errors && r.errors[0]) || 'No respondió.' };
       render();
     },
-    'dx-key-clear'() {
-      state.dx.apiKey = ''; state.dx.rememberKey = false; saveDiagnosticSettings();
-      FP.ui.toast('La API key se quitó de este navegador. Para volver a usar Cohere, pega una nueva.'); render();
-    },
-    'dx-key'(el) { state.dx.apiKey = el.value.trim(); saveDiagnosticSettings(); },
-    'dx-remember'(el) { state.dx.rememberKey = el.checked; saveDiagnosticSettings(); render(); },
     'dx-model'(el) { state.dx.model = el.value.trim() || C.diagnostics.cohere.model; saveDiagnosticSettings(); },
     async 'dx-ai'() {
       const d = ensureDiagnostic();
-      const keyInput = document.getElementById('dx-key-input');   // vive en Configuración: solo se lee si está a la vista (si no, manda el estado)
-      const key = keyInput && keyInput.offsetParent !== null ? keyInput.value : undefined;
-      if (key !== undefined) state.dx.apiKey = key.trim();
-      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión (o pega tu API key de Cohere en Configuración de RevNavigator) para generar hipótesis con IA.'); return; }
+      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión para generar hipótesis con IA (la API key vive en el servidor del equipo).'); return; }
       state.dx.ai = { status: 'busy', result: null };
       render();
-      const result = await FP.cohereDiagnostic.generateWithCohere(d, { apiKey: state.dx.apiKey, model: state.dx.model });
+      const result = await FP.cohereDiagnostic.generateWithCohere(d, { model: state.dx.model });
       if (state.dx.run !== d) return; // el diagnóstico cambió mientras esperábamos
       state.dx.ai = { status: result.status, result };
       render();
@@ -4396,10 +4383,10 @@
     async 'nx-ai'() {
       const n = ensureNarrative();
       if (!n) { FP.ui.toast('Todavía no hay narrativa calculada.'); return; }
-      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión (o pega tu API key de Cohere en Configuración de RevNavigator) para redactar con IA.'); return; }
+      if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión para redactar con IA (la API key vive en el servidor del equipo).'); return; }
       state.nx.ai = { status: 'busy', result: null, errors: [] };
       render();
-      const result = await FP.cohereNarrative.narrate(n, { apiKey: state.dx.apiKey, model: state.dx.model });
+      const result = await FP.cohereNarrative.narrate(n, { model: state.dx.model });
       if (state.nx.narrative !== n) return; // la narrativa cambió mientras esperábamos
       state.nx.ai = result;
       render();
@@ -4771,11 +4758,12 @@
       const s = P.sanitizeEdit(cur); if (s) rp.edits[key] = s; else delete rp.edits[key];
       render();
     },
+    'rp-conflict'(el) { return resolveConflict(el.dataset.key, el.dataset.choice); },
     'rp-edit-reset'() { const rp = state.rp; delete rp.edits[FP.reportPrefs.editKey(FP.reportSetupView.selectionOf(rp).profile, rp.editing)]; render(); FP.ui.toast('Lámina restaurada al texto original.'); },
     async 'rp-ai-ask'() {
       const rp = state.rp, id = rp.editing, page = rp.report && rp.report.pages.find((p) => p.id === id); if (!page || !rp.options.ai || rp.aiRes[id] && rp.aiRes[id].busy) return;
       rp.aiRes[id] = { busy: true }; render();
-      const r = await FP.presentationAI.ask(page, { apiKey: state.dx.apiKey, model: state.dx.model });
+      const r = await FP.presentationAI.ask(page, { model: state.dx.model });
       rp.aiRes[id] = { busy: false, status: r.status, ok: r.ok, hypotheses: r.hypotheses, errors: r.errors }; render();
     },
     'rp-ai-accept'(el) {
@@ -5817,14 +5805,14 @@
     const item = (rc._catalogItems || []).find((a) => a.actionId === actionId);
     const sc = rc.scenarioStore.scenarios.find((s) => s.scenarioId === rc.actionScenario);
     if (!item || !sc || !sc.links.hypothesisId) { FP.ui.toast('Elige una acción y un escenario ligado a una hipótesis.'); return; }
-    if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión (o pega tu API key de Cohere en Configuración de RevNavigator).'); return; }
+    if (!FP.cohereConnection.isConfigured()) { FP.ui.toast('Inicia sesión para usar la IA (la API key vive en el servidor del equipo).'); return; }
     const token = ++expandToken;
     rc.expand = { actionId, style, status: 'busy', draft: null, original: null, errors: [] }; render();
     const hyp = rc.analysis.hypotheses.find((h) => h.id === sc.links.hypothesisId) || { id: sc.links.hypothesisId, hypothesis: sc.links.hypothesis, driver: sc.links.driver };
     const res = await FP.cohereActions.expandAction({ item, hypothesis: hyp, signals: rc.analysis.signals.filter((z) => (sc.links.signalIds || []).includes(z.id)), scenario: sc,
       availableDimensions: rc.analysis.dataQuality.availableTargets, constraints: rc.constraints, style,
       goal: FP.actionPlan.operativeGoalFrom(sc, (() => { const w = actionWindow(item); return { start: w.start, end: w.end }; })()) || FP.actionPlan.operativeGoalFrom(sc),
-      channelLabel: FP.navigation && FP.navigation.contextLabel ? FP.navigation.contextLabel({ channel: rc.ctx.channel }) : '' }, { apiKey: state.dx.apiKey, model: state.dx.model });
+      channelLabel: FP.navigation && FP.navigation.contextLabel ? FP.navigation.contextLabel({ channel: rc.ctx.channel }) : '' }, { model: state.dx.model });
     if (token !== expandToken || !rc.expand) return;   // se canceló o se pidió otro: se descarta esta respuesta
     rc.expand = res.ok ? { actionId, style, status: 'ready', draft: res.detail, original: JSON.parse(JSON.stringify(res.detail)), errors: [] }
       : { actionId, style, status: 'error', draft: null, original: null, errors: res.errors };
@@ -6037,9 +6025,7 @@
   function installGlobalErrorHandlers() {
     let shown = 0, lastAt = 0;
     const report = (kind, err, where) => {
-      let msg = String(err && err.message || err || 'error desconocido');
-      const key = state.dx && state.dx.apiKey;
-      if (key) msg = msg.split(key).join('[key]');
+      const msg = String(err && err.message || err || 'error desconocido');
       try { console.error(`[RevNavigator] ${kind}:`, msg, where || '', err && err.stack || ''); } catch (e) { /* sin consola */ }
       const now = Date.now();
       if (shown >= 5 || now - lastAt < 5000) return;
@@ -6219,6 +6205,7 @@
     if (box) box.innerHTML = FP.ui.loader.html({ id: 'cloud-auto-bar', compact: true, label: 'Sincronizando ajustes con la nube', pct: 0, t0 });
     const r = await FP.cloud.pushKeys(cloudProvider, keys, { onProgress: (o) => FP.ui.loader.update('cloud-auto-bar', { label: `Sincronizando ajustes (${o.index} de ${o.of})`, pct: Math.round(100 * o.index / o.of) }) });
     autoBusy = false; const box2 = document.getElementById('cloud-auto-progress'); if (box2) box2.innerHTML = '';
+    if (r.ok && r.conflicts && r.conflicts.length) noteConflicts(r.conflicts);   // no se subieron: otra persona cambió lo mismo; la persona elige
     if (r.ok) { state.cloud.auto.last = r.at; state.cloud.auto.error = null; } else { state.cloud.auto.error = r.error; keys.forEach((k) => autoPending.add(k)); }
     autoPaint(); cloudRefreshSession();
     if (r.ok) autoCleanLater();
@@ -6227,21 +6214,51 @@
   function autoSchedule() { clearTimeout(autoTimer); autoTimer = setTimeout(autoFlush, C.cloud.autoDebounceMs); }
   function autoMark(key) {
     if (!state.cloud.auto.on || !FP.cloud.isAutoKey(key, FP.repository.isDataKey)) return;
+    if (state.cloud.conflicts.some((c) => c.key === key)) return;   // en conflicto: no se sube nada hasta que la persona elija (la elección vuelve a guardar y sube)
     autoPending.add(key); autoSchedule();
   }
   let wiping = false;   // true mientras se borran los datos al cerrar sesión: nada vuelve a escribirse
   const _save = storage.save.bind(storage);
   storage.save = (key, data) => { if (wiping) return false; const ok = _save(key, data); if (ok) autoMark(key); return ok; };
+  /** Cierre técnico (hallazgo 4): conflictos de sincronización pendientes (la copia local y la del equipo cambiaron sin verse). Nada se pisa hasta que la persona elige. */
+  function noteConflicts(list) {
+    let isNew = false;
+    (list || []).forEach((c) => { const i = state.cloud.conflicts.findIndex((x) => x.key === c.key); if (i < 0) { state.cloud.conflicts.push(c); isNew = true; } else state.cloud.conflicts[i] = c; });
+    if (isNew) { FP.ui.toast(list.some((c) => c.key === 'reportPrefs') ? 'La presentación se cambió en otro navegador o por otra persona del equipo. Revisa el aviso en «Presentación (PDF)» y elige qué conservar.' : 'Un ajuste se cambió en otro navegador o por otra persona del equipo. Revisa el aviso en Configuración → Cuenta y nube y elige qué conservar.'); render(); }
+  }
+  /** Aplica en caliente lo que se trajo de la nube (misma lógica en autoPull y al resolver un conflicto con «usar la del equipo»). Devuelve true si hay que recargar. */
+  function applyPulledHot(keys) {
+    if (keys.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
+    if (keys.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
+    if (keys.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
+    return keys.includes('businessContext');   // config.js lo lee antes de arrancar
+  }
+  async function resolveConflict(key, choice) {
+    const i = state.cloud.conflicts.findIndex((c) => c.key === key); if (i < 0) return;
+    const c = state.cloud.conflicts[i];
+    if (choice === 'theirs') {   // se usa la del equipo (se descartan mis cambios locales)
+      await cloudWriter.write(key, c.cloud); FP.cloud.setBase(key, c.cloudAt, c.cloudVersion, c.cloud.data);
+      if (applyPulledHot([key])) state.cloud.restored = true;
+    } else {
+      const data = choice === 'merge' && key === 'reportPrefs' ? FP.reportPrefs.merge(c.local.data, c.cloud.data).data : c.local.data;
+      storage.save(key, data);   // fecha nueva: así la nube y los demás navegadores la ven más reciente que la que se reemplaza
+      if (choice === 'merge') loadRpPrefs();
+      const r = await FP.cloud.pushKeys(cloudProvider, [key], { force: [key] });
+      if (!r.ok) { FP.ui.toast(`No se pudo subir tu elección: ${r.error}`); return; }
+      if (r.conflicts && r.conflicts.length) { state.cloud.conflicts[i] = r.conflicts[0]; FP.ui.toast('La nube cambió otra vez mientras elegías. Revisa de nuevo.'); render(); return; }
+    }
+    state.cloud.conflicts.splice(i, 1);
+    FP.ui.toast(choice === 'theirs' ? 'Se usó la versión del equipo.' : choice === 'merge' ? 'Se combinaron las dos: tus ediciones y las del equipo (donde chocan, quedó la tuya).' : 'Se conservó la tuya y reemplazó a la del equipo.');
+    render();
+  }
   async function autoPull(announce) {
     const r = await FP.cloud.pullNewer(cloudWriter, FP.repository.isDataKey, {});
     if (!r.ok) { state.cloud.auto.error = r.error; autoPaint(); return r; }
     state.cloud.auto.error = null;
+    if (r.conflicts && r.conflicts.length) noteConflicts(r.conflicts);
     if (r.applied.length) {
       state.cloud.auto.pulled = r.applied;
-      if (r.applied.includes('reportBrand')) { loadBrand(); render(); }   // la marca se aplica en caliente
-      if (r.applied.includes('reportPrefs')) { loadRpPrefs(); render(); }   // la selección, los umbrales y las ediciones de la presentación del equipo se aplican en caliente
-      if (r.applied.includes('projectionCalibration')) { loadProjCalibration(); render(); }   // la calibración de la proyección se aplica en caliente
-      const needReload = r.applied.includes('businessContext');   // config.js lo lee antes de arrancar
+      const needReload = applyPulledHot(r.applied);
       if (needReload) state.cloud.restored = true;
       FP.ui.toast(`Se trajeron ${r.applied.length} ajuste(s) más nuevos de la nube${needReload ? '. Recarga la página para aplicar los del negocio.' : '.'}`);
       cloudNote(`Se trajeron de la nube ${r.applied.length} ajuste(s) más nuevos (${r.applied.slice(0, 4).join(', ')}${r.applied.length > 4 ? '…' : ''})${needReload ? '. Recarga para aplicar los del negocio.' : '.'}`, 'ok');
@@ -6252,10 +6269,10 @@
 
 
   /* ---------- Cerrar sesión: el navegador no conserva los datos del equipo ----------
-     Se conservan (preferencias de este navegador, sin datos de negocio): uxSettings, productSettings, cohereApiKey, storageMigration, onboardingDone.
+     Se conservan (preferencias de este navegador, sin datos de negocio): uxSettings, productSettings, storageMigration, onboardingDone. Ya no se guarda ninguna API key de Cohere en el navegador (y si una versión anterior la dejó, se borra al arrancar y al cerrar sesión).
      Se borran: todo lo demás de la app (datos en IndexedDB, claves fp.v1: de negocio, avance de ruta, cola de cambios) y la sesión.
      La copia de la nube del equipo no se toca. Antes de borrar se compara cada bloque local con la nube; lo que no esté respaldado se avisa. */
-  const SIGNOUT_KEEP = ['uxSettings', 'productSettings', 'cohereApiKey', 'storageMigration', 'onboardingDone'];
+  const SIGNOUT_KEEP = ['uxSettings', 'productSettings', 'storageMigration', 'onboardingDone'];
   const signout = { phase: 'idle', audit: null, busy: false, ack: false, msg: '' };
   const baseOf = (k) => String(k).split(':')[0];
   const KEY_LABEL = { removalLog: 'Registro de eliminaciones', projectionCalibration: 'Calibración de la proyección', confidenceCalibration: 'Calibración de la confianza', actualData: 'Venta real', historicalData: 'Histórico', planData: 'Plan diario', segmentsData: 'Segmentos', targets: 'Metas', events: 'Eventos', milestones: 'Hitos', versions: 'Versiones de metas', settings: 'Ajustes', aliases: 'Equivalencias', dataset: 'Datos del año', plans: 'Planes', forecasts: 'Pronósticos', reforecasts: 'Repronósticos', scenarios: 'Escenarios', actionPlan: 'Plan de acción', promotions: 'Promociones', offers: 'Ofertas recibidas', activation: 'Activación sugerida', requests: 'Solicitudes de oferta', exposures: 'Exposiciones', proposals: 'Propuestas exportadas', goals: 'Metas por campaña', businessContext: 'Contexto del negocio', sheetsLinks: 'Enlaces de Google Sheets' };
@@ -6267,6 +6284,7 @@
     if (!cl.ok) return { ok: false, error: cl.error };
     const skip = new Set(C.cloud.skipKeys.concat(C.cloud.autoSkipKeys, SIGNOUT_KEEP, ['authChoice']));
     const unsynced = []; let checked = 0;
+    state.cloud.conflicts.forEach((c) => unsynced.push(`${keyName(c.key)}: conflicto sin resolver (la copia local y la del equipo son distintas)`));
     for (const key of await cloudProvider.keys()) {
       if (skip.has(baseOf(key)) || FP.productSync.isKey(key)) continue;
       const env = await cloudProvider.read(key); if (!env) continue;
@@ -6372,7 +6390,7 @@
     Object.keys(keep).forEach((k) => lsAdapter.set(`${C.storage.namespace}:${k}`, keep[k]));
     await st('Cerrando la sesión', 92);
     FP.cloud.signOut();
-    ['fp.route.v1', 'fp.route.origin.v1', 'fp.changes.v1', 'fp.pe.visit.v1', 'fp.cloudAuto', 'fp.cloudPrevRefs', 'fp.cloudGcLast'].forEach((k) => { try { root.localStorage.removeItem(k); } catch (e) { /* nada */ } });
+    ['fp.route.v1', 'fp.route.origin.v1', 'fp.changes.v1', 'fp.pe.visit.v1', 'fp.cloudAuto', 'fp.cloudBase', 'fp.cloudPrevRefs', 'fp.cloudGcLast'].forEach((k) => { try { root.localStorage.removeItem(k); } catch (e) { /* nada */ } });
     ['fp.route.origin.v1', 'fp.loginAsked'].forEach((k) => { try { root.sessionStorage.removeItem(k); } catch (e) { /* nada */ } });
   }
   async function signoutConfirm() {

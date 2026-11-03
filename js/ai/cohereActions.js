@@ -69,10 +69,10 @@
   }
 
   /** @returns Promise<{ ok, status, actions, errors, model }> — nunca lanza. */
-  async function suggestActions(input, { apiKey, model = C().diagnostics.cohere.model, fetchImpl } = {}) {
+  async function suggestActions(input, { model = C().diagnostics.cohere.model, fetchImpl } = {}) {
     if (!input || !input.hypothesis) return { ok: false, status: 'unavailable', actions: [], errors: ['Selecciona una hipótesis: las acciones deben partir de evidencia.'], model };
     const payload = buildPayload(input);
-    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Líneas de acción' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, apiKey, model, fetchImpl,
+    const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Líneas de acción' }, system: SYSTEM_RULES, schema: RESPONSE_SCHEMA, model, fetchImpl,
       user: `Propón posibles líneas de acción para validar o atender esta hipótesis. Datos ya calculados:\n${JSON.stringify(payload)}` });
     if (!r.ok) return { ok: false, status: r.status, actions: [], errors: r.errors, model };
     const v = parseAndValidate(r.text, { knownSignals: new Set((input.signals || []).map((s) => s.id)) });
@@ -160,11 +160,11 @@
   }
 
   /** @returns Promise<{ ok, status, detail, errors, model }> — nunca lanza. Solo redacta un plan de trabajo; no calcula nada. */
-  async function expandAction(input, { apiKey, model = C().diagnostics.cohere.model, fetchImpl } = {}) {
+  async function expandAction(input, { model = C().diagnostics.cohere.model, fetchImpl } = {}) {
     if (!input || !input.item || !input.hypothesis) return { ok: false, status: 'unavailable', detail: null, errors: ['Elige una acción y un escenario ligado a una hipótesis.'], model };
     const payload = expandPayload(input);
     const userMsg = `Desarrolla el plan de trabajo de esta acción (estilo ${payload.style === 'detailed' ? 'detallado' : 'resumido'}). Datos ya calculados:\n${JSON.stringify(payload)}`;
-    const call = (extra) => FP.cohereClient.chatJson({ audit: { purpose: 'Ampliar acción del plan' }, system: EXPAND_RULES, schema: EXPAND_SCHEMA, apiKey, model, fetchImpl, user: extra ? `${userMsg}\n\n${extra}` : userMsg });
+    const call = (extra) => FP.cohereClient.chatJson({ audit: { purpose: 'Ampliar acción del plan' }, system: EXPAND_RULES, schema: EXPAND_SCHEMA, model, fetchImpl, user: extra ? `${userMsg}\n\n${extra}` : userMsg });
     let r = await call(null);
     if (!r.ok) return { ok: false, status: r.status, detail: null, errors: r.errors, model };
     let v = parseExpand(r.text, payload);

@@ -240,7 +240,6 @@
     dataType,
     samples = {},
     customPrompt = '',
-    apiKey = '',
     model = null,
     timeoutMs = null
   } = {}) {
@@ -257,15 +256,14 @@
     if (!unknownHeaders.length && !missingRequired.length) {
       return { ok: true, mapping: staticMapping, usedAI: false, mapped: [], unmapped: [] };
     }
-    // Reutiliza la conexión central de Ajustes si el caller no pasó una key.
-    if (!apiKey && FP.cohereConnection && typeof FP.cohereConnection.get === 'function') {
+    // Reutiliza la conexión central (modelo); la IA solo funciona con sesión de equipo (servidor).
+    if (FP.cohereConnection && typeof FP.cohereConnection.get === 'function') {
       const connection = FP.cohereConnection.get();
-      apiKey = connection && connection.apiKey ? connection.apiKey : '';
       if (!model && connection && connection.model) model = connection.model;
     }
-    if (!apiKey && !(FP.cohereProxy && FP.cohereProxy.available())) {
+    if (!(FP.cohereProxy && FP.cohereProxy.available())) {
       return { ok: false, status: 'unavailable', mapping: staticMapping, usedAI: false,
-        mapped: [], unmapped: unknownHeaders, errors: ['No hay conexión Cohere configurada en Ajustes. El mapeo estático se conserva.'] };
+        mapped: [], unmapped: unknownHeaders, errors: ['La IA necesita sesión de equipo (Cohere se llama desde el servidor). El mapeo estático se conserva.'] };
     }
     if (!FP.cohereClient || typeof FP.cohereClient.chatJson !== 'function') {
       return { ok: false, status: 'unavailable', mapping: staticMapping, usedAI: false,
@@ -331,7 +329,7 @@
 
     const result = await FP.cohereClient.chatJson({
       audit: { purpose: 'Mapeo de columnas', columns: auditColumns },
-      system, user, schema, apiKey,
+      system, user, schema,
       model: model || C().diagnostics.cohere.model,
       timeoutMs: timeoutMs || C().diagnostics.cohere.timeoutMs
     });
