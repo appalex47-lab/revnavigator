@@ -16,7 +16,7 @@ def chk(n, ok, d=''):
     print(('✔ ' if ok else '✘ ') + n + (' — ' + str(d)[:380] if d and not ok else ''))
     if not ok: fails.append(n)
 TABS = {'cuenta': ['st-nube'], 'ia': ['st-ia', 'st-ia-log', 'st-ia-aprendido', 'st-ia-privacidad'], 'datos': ['st-fuentes', 'st-equivalencias', 'st-almacenamiento'],
-        'herramienta': ['st-estado', 'st-modo', 'st-otras'], 'negocio': ['st-negocio']}
+        'herramienta': ['st-estado', 'st-modo', 'st-margen', 'st-otras'], 'negocio': ['st-negocio']}
 VIS = "(()=>[...document.querySelectorAll('#view-ajustes section.stsec')].filter(d=>d.checkVisibility()).map(d=>d.id))()"
 async def main():
     async with async_playwright() as p:

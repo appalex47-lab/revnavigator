@@ -1,7 +1,7 @@
 // Pruebas de la Fase 2 · Analista de Números (historia del periodo, ruta) y Auditor de Conversión (embudo por producto).
 // Uso: node tools/test-agents-fase2.js     (estado, almacén de productos y motores simulados: no depende de los datos de demo)
 global.window = global; global.FP = {};
-['js/config/config.js', 'js/analytics/trafficConversionEngine.js', 'js/ai/cohereClient.js', 'js/ai/cohereAnalysisAssistant.js', 'js/agents/analistaDetectors.js', 'js/agents/analistaStory.js',
+['js/config/config.js', 'js/calculations/metrics.js', 'js/diagnostics/attribution.js', 'js/analytics/trafficConversionEngine.js', 'js/ai/cohereClient.js', 'js/ai/cohereAnalysisAssistant.js', 'js/agents/analistaDetectors.js', 'js/agents/analistaStory.js',
   'js/agents/auditorDetectors.js', 'js/agents/agentRunner.js', 'js/agents/agentLauncher.js'].forEach((f) => require('../' + f));
 let n = 0, fails = 0;
 const ok = (name, c, d) => { n++; if (!c) { fails++; console.log('✘', name, d !== undefined ? JSON.stringify(d).slice(0, 500) : ''); } };

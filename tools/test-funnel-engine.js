@@ -2,7 +2,7 @@
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 const c = { console }; vm.createContext(c); c.window = c;
-for (const f of ['js/analytics/trafficConversionEngine.js', 'js/analytics/funnelEngine.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), c, { filename: f });
+for (const f of ['js/config/config.js', 'js/calculations/metrics.js', 'js/diagnostics/attribution.js', 'js/analytics/trafficConversionEngine.js', 'js/analytics/funnelEngine.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), c, { filename: f });
 const E = c.FP.funnelEngine;
 const checks = []; const t = (n, ok, d) => checks.push({ n, ok: !!ok, d });
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
