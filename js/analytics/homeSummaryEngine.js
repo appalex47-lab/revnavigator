@@ -31,8 +31,10 @@
     const ok = [cur, base].every((a) => fin(a.trafficVolume) && a.trafficVolume > 0 && fin(a.orders) && fin(a.revenue));
     if (!ok) { out.why = 'no_traffic'; return out; }
     const e = FP.trafficConversionEngine.effects({ t: base.trafficVolume, o: base.orders, r: base.revenue }, { t: cur.trafficVolume, o: cur.orders, r: cur.revenue });
-    out.effects = { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta };
-    out.reconciles = Math.abs(e.traffic + e.cr + e.aov - delta) < 0.5;
+    out.effects = e.attributed ? { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta } : null;   // sin base comparable no se presenta ninguna contribución como atribuida
+    out.attribution = { status: e.status, attributed: e.attributed, unattributed: e.unattributed, reason: e.reason };
+    out.reconciles = Math.abs(e.traffic + e.cr + e.aov + e.unattributed - delta) < 0.5;
+    if (!e.attributed) { out.why = e.status; out.kind = e.kind; return out; }
     const rank = Object.entries({ traffic: e.traffic, cr: e.cr, aov: e.aov }).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
     out.dominant = rank[0][0];
     out.kind = e.kind;

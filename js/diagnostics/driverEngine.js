@@ -127,6 +127,22 @@
 
   /* ---------- Nivel 1 ---------- */
 
+  /**
+   * Atribución de un par de agregados con la regla única de FP.attribution (Fase 2 · punto A). Si la atribución por tasas no es calculable
+   * (p. ej. 0 pedidos en un lado), se consulta el escenario: casos atribuibles (sin_trafico_actual, conversion_cero_actual) completan la
+   * atribución; los demás quedan «insufficient_data» con el estado explícito en `scenario` (nunca se reparte sin base comparable).
+   */
+  function attributeAgg(base, cur, { method, metric }) {
+    const attr = FP.attribution.attribute(base, cur, { method, factors: factorsFor(metric) });
+    if (attr.status === 'ok' || metric !== 'revenue') return attr;
+    const q = (a) => ({ t: a.trafficVolume, o: a.orders, r: a.revenue });
+    const seg = FP.attribution.attributeSegment(q(base), q(cur), { method });
+    attr.scenario = { status: seg.status, reason: seg.reason, unattributed: seg.unattributed };
+    if (!seg.attributed || seg.status === 'sin_actividad') return attr;
+    const contributions = { trafficVolume: seg.traffic, conversionRate: seg.cr, aov: seg.aov };
+    return { ...attr, status: 'ok', contributions, baseValue: base.revenue, currentValue: cur.revenue, total: seg.delta, residual: seg.unattributed, closes: Math.abs(seg.unattributed) < 1e-6, note: seg.reason };
+  }
+
   function factorsFor(metric) {
     return metric === 'orders' ? ['trafficVolume', 'conversionRate'] : C().diagnostics.attributionOrder.slice();
   }
@@ -138,7 +154,7 @@
     const cur = aggregate(pairs.map((p) => p.current));
     const base = aggregate(pairs.map((p) => p.baseline));
     const g = delta(cur[metric], base[metric]);
-    const attr = FP.attribution.attribute(base, cur, { method, factors: factorsFor(metric) });
+    const attr = attributeAgg(base, cur, { method, metric });
     const drivers = attr.factors.map((f) => {
       const d = delta(cur[f], base[f]);
       const contribution = attr.contributions ? attr.contributions[f] : null;
@@ -157,7 +173,7 @@
       positives: drivers.filter((d) => d.sign === 'positive'),
       statement: main
         ? `${main.label} representa la mayor contribución matemática a la brecha observada bajo el método de atribución ${methodLabel}.`
-        : 'No se pudo atribuir la brecha: faltan volumen, CR o AOV en alguno de los lados.'
+        : `No se reparte la brecha entre volumen, CR y AOV: ${attr.scenario && attr.scenario.reason ? attr.scenario.reason : 'faltan volumen, CR o AOV en alguno de los lados.'}`
     };
   }
 
@@ -177,7 +193,7 @@
     const groups = [...map.entries()].map(([k, ps]) => {
       const cur = aggregate(ps.map((p) => p.current));
       const base = aggregate(ps.map((p) => p.baseline));
-      const attr = FP.attribution.attribute(base, cur, { method, factors: factorsFor(metric) });
+      const attr = attributeAgg(base, cur, { method, metric });
       const metrics = {};
       ['revenue', 'orders', 'trafficVolume', 'conversionRate', 'aov', ...EXTRA, 'itemsPerOrder'].forEach((m) => { metrics[m] = delta(cur[m], base[m]); });
       return {
@@ -270,14 +286,14 @@
         .map(([k, s]) => ({ key: k, label: s.label, current: aggregate(s.current), baseline: aggregate(s.baseline), n: Math.min(s.current.length, s.baseline.length) }));
       if (items.length < 2) { dropped.push(dimLabel(dim)); return; }
       const groups = items.map((it) => {
-        const attr = FP.attribution.attribute(it.baseline, it.current, { method, factors: factorsFor(metric) });
+        const attr = attributeAgg(it.baseline, it.current, { method, metric });
         const metrics = {};
         ['revenue', 'orders', 'trafficVolume', 'conversionRate', 'aov', ...EXTRA, 'itemsPerOrder'].forEach((m) => { metrics[m] = delta(it.current[m], it.baseline[m]); });
         return { value: it.key, label: it.label, observations: it.n, current: it.current, baseline: it.baseline, metrics,
           exposure: M().safeDivide(it.baseline.revenue, baseAll.revenue), trafficExposure: M().safeDivide(it.baseline.trafficVolume, baseAll.trafficVolume),
           currentShare: M().safeDivide(it.current.revenue, curAll.revenue), contributions: attr.contributions, gap: metrics[metric].delta };
       }).sort((a, b) => (b.baseline.revenue || 0) - (a.baseline.revenue || 0));
-      const parentL1 = { attribution: FP.attribution.attribute(baseAll, curAll, { method, factors: factorsFor(metric) }) };
+      const parentL1 = { attribution: attributeAgg(baseAll, curAll, { method, metric }) };
       result.dims.push({ dimension: dim, label: dimLabel(dim), source: 'segments', reference: sameRef ? 'same' : 'yoy', referenceLabel: result.reference,
         groups, mix: mixEffects({ ...parentL1 }, groups), parent,
         coverage: M().safeDivide(curAll.revenue, curCoreRev) });

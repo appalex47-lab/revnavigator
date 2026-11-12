@@ -24,7 +24,7 @@
     { id: 'cuenta', label: 'Cuenta y nube', hint: 'Sesión, equipo y copia en la nube', sections: ['st-nube'] },
     { id: 'ia', label: 'Inteligencia artificial', hint: 'Conexión con Cohere y control de lo que se envía', sections: ['st-ia', 'st-ia-log', 'st-ia-aprendido', 'st-ia-privacidad'] },
     { id: 'datos', label: 'Datos', hint: 'Fuentes, equivalencias y almacenamiento', sections: ['st-fuentes', 'st-equivalencias', 'st-almacenamiento'] },
-    { id: 'herramienta', label: 'Herramienta', hint: 'Estado, modo de uso y otras preferencias', sections: ['st-estado', 'st-modo', 'st-otras'] },
+    { id: 'herramienta', label: 'Herramienta', hint: 'Estado, modo de uso y otras preferencias', sections: ['st-estado', 'st-modo', 'st-margen', 'st-otras'] },
     { id: 'negocio', label: 'Negocio', hint: 'Contexto del negocio (Business Setup)', sections: ['st-negocio'] }
   ];
   const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
@@ -35,6 +35,7 @@
       case 'st-estado': { const st = state.selfTest; return `Año ${state.year} · motor ${!st ? (state.selfTestError ? 'no se pudo ejecutar' : 'sin ejecutar') : st.passed === st.total ? 'operativo' : 'con fallas'}`; }
       case 'st-modo': { const m = (FP.guidanceConfig.MODES || []).find((x) => x[0] === state.ux.mode); return m ? esc(m[1]) : ''; }
       case 'st-nube': { const c = state.cloud || {}; return c.last ? `Última copia: ${c.last.keys} bloques${c.last.verified ? ' · verificada' : ''}` : (c.session ? `Equipo ${esc(c.session.teamName || '')} · ${esc(c.session.email || '')}` : 'Sin sesión'); }
+      case 'st-margen': { const a = FP.economics.availability(state.settings.economics); return a.status === 'disponible' ? `Margen ${a.marginPct} % · contribución bruta estimada activa` : a.status === 'desactivado' ? `Margen ${a.marginPct} % guardado · desactivado` : 'Sin configurar (opcional)'; }
       case 'st-otras': return plural(ELSEWHERE.length, 'preferencia', 'preferencias');
       case 'st-fuentes': { const b = FP.dataSources.build(state); return `${b.summary.activeSources} de ${b.summary.liveSources} fuentes con datos`; }
       case 'st-equivalencias': return plural(FP.aliases.rules().length, 'equivalencia', 'equivalencias');
@@ -117,6 +118,22 @@
         <textarea id="pii-text" class="alias-text" rows="4" spellcheck="false">${esc(piiList)}</textarea></div>
         <div class="btn-row"><button type="button" class="btn btn--primary" data-action="pii-save">Guardar columnas protegidas</button></div></div>${accEnd()}`;
     return logPanel + learnPanel + piiPanel;
+  }
+
+  /** Margen bruto promedio general (OPCIONAL): activa una segunda lectura, «contribución bruta estimada». Sin margen todo el análisis de ventas funciona igual. */
+  function marginPanel(state) {
+    const esc = FP.ui.helpers.esc, E = FP.economics, set = E.normalizeSetting(state.settings.economics), a = E.availability(state.settings.economics);
+    const when = a.updatedAt ? ` Actualizado ${esc(String(a.updatedAt).slice(0, 10))}${a.source ? ` · origen: ${esc(a.source === 'manual' ? 'captura manual' : a.source)}` : ''}.` : '';
+    return `${accStart(state, 'st-margen', 'Margen comercial (opcional)', 'Si lo capturas, la herramienta agrega la contribución bruta estimada junto al impacto en ventas. No es necesario para usar RevNavigator.')}
+      <div class="panel__body stack">
+        <p class="field__hint" id="margin-help">${esc(E.MARGIN_HELP)}</p>
+        <div class="field"><label for="margin-pct" class="field__hint">Margen bruto promedio sobre venta (%)</label>
+          <input id="margin-pct" type="text" inputmode="decimal" autocomplete="off" aria-describedby="margin-help" placeholder="Ej. 25" value="${set.grossMarginPct === null ? '' : esc(String(set.grossMarginPct))}"></div>
+        <div class="field"><label class="field__hint"><input type="checkbox" data-action="margin-toggle" ${set.marginEnabled ? 'checked' : ''}> Usar el margen para estimar la contribución bruta</label></div>
+        <p class="note ${a.status === 'disponible' ? 'note--ok' : ''}" id="margin-status" role="status" data-margin-status="${esc(a.status)}">${esc(a.message)}${when} Es una estimación con un margen promedio general, no el margen real de cada producto.</p>
+        <div class="btn-row"><button type="button" class="btn btn--primary" data-action="margin-save">Guardar margen</button>
+          <button type="button" class="btn" data-action="margin-clear" ${set.grossMarginPct === null ? 'disabled' : ''}>Quitar margen</button></div>
+      </div>${accEnd()}`;
   }
 
   /** Equivalencias de nombres: tabla editable + lo que la app no reconoció o ve duplicado (solo sugiere; el usuario decide). */
@@ -254,6 +271,7 @@
       ${accStart(state, 'st-modo', 'Modo de uso', 'Cuánto detalle y ayuda se muestra en cada vista. Aprendiz explica más y te guía paso a paso; Analista muestra el detalle completo.')}
         <div class="panel__body">${H().segmented('ux-mode', FP.guidanceConfig.MODES, state.ux.mode)}</div>
       ${accEnd()}
+      ${marginPanel(state)}
       ${accStart(state, 'st-otras', 'Otras preferencias, en su vista', 'Siguen donde se usan: cambian el resultado de esa vista.')}
         <div class="panel__body panel__body--flush"><div class="table-wrap"><table class="table ds-table">
           <thead><tr><th scope="col">Qué</th><th scope="col">Para qué sirve</th><th scope="col">Dónde está</th></tr></thead>
@@ -265,7 +283,7 @@
     if (bEl) bEl.innerHTML = `
       <div class="st-pane" id="stp-cuenta" data-pane="cuenta" role="tabpanel" aria-labelledby="sttab-cuenta">${cloudPanel(state)}${usePanel()}</div>
       <div class="st-pane" id="stp-ia" data-pane="ia" role="tabpanel" aria-labelledby="sttab-ia">
-      ${accStart(state, 'st-ia', 'Conexión con Cohere (análisis con IA)', 'La usan Diagnóstico, Recovery Center, Narrativa y el mapeo semántico de importaciones. Todas comparten esta misma conexión de Cohere; no se crea otra API key. Cohere no calcula ni cambia cifras.')}
+      ${accStart(state, 'st-ia', 'Conexión con Cohere (análisis con IA)', 'La usan Diagnóstico, Recovery Center, Narrativa y el mapeo semántico de importaciones. Todas comparten esta misma conexión de Cohere, que pasa por el servidor del equipo; en el navegador no hay ninguna API key. Cohere no calcula ni cambia cifras.')}
         <div class="panel__body stack">
           ${FP.cohereProxy && FP.cohereProxy.available()
             ? `<div class="note note--ok" data-ai-server><strong>La IA usa el servidor de tu equipo.</strong> Con tu sesión, Cohere se llama desde tu Supabase y la API key vive allá, no en este navegador. No hay ninguna key que pegar.</div>

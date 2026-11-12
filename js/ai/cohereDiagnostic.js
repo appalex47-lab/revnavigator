@@ -8,7 +8,7 @@
  * relatedSignals que existan en el payload (las inventadas se descartan). Si algo falla, el
  * diagnóstico matemático y las hipótesis por reglas siguen funcionando ("Análisis con IA no disponible").
  *
- * La API key la escribe el usuario; se guarda en este navegador solo si él lo pide. Nunca se exporta.
+ * Cohere se llama SIEMPRE por el servidor del equipo (cohereClient → cohereProxy); el navegador no tiene ni guarda ninguna API key.
  */
 (function (root) {
   'use strict';

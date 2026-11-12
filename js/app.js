@@ -182,7 +182,8 @@
       replaceRowsDropPct: 20, replaceRevenuePct: 5,   // reemplazo de archivos: umbrales (%) de la confirmación extra
       sumSameKey: true,   // archivo de productos transaccional: filas con la misma llave completa se suman
       enableAI: C.import.enableAI !== false,
-      customAIPrompt: C.import.customAIPrompt || ''
+      customAIPrompt: C.import.customAIPrompt || '',
+      economics: { ...FP.economics.DEFAULT_SETTING }   // margen bruto promedio OPCIONAL (Fase 2 · punto B): sin margen la herramienta funciona igual
     };
   }
 
@@ -3312,6 +3313,22 @@
     },
     'learn-clear'() { IMP.setLearnedMappings({}); state.settings.aiHeaderAliases = {}; saveSettings(); render(); FP.ui.toast('Se borró todo lo aprendido por la IA.'); },
     /** Columnas marcadas como datos personales: viajan a Cohere sin ejemplos aunque su nombre y contenido no lo parezcan. */
+    /** Margen bruto promedio general (opcional). Persiste en state.settings.economics con el mecanismo de ajustes existente; no reprocesa datos ni toca ningún motor de ventas. */
+    'margin-save'() {
+      const el = document.getElementById('margin-pct');
+      const r = FP.economics.buildSetting(state.settings.economics, { enabled: true, marginPct: el ? el.value : null, source: 'manual' });
+      if (!r.ok) { FP.ui.toast(r.error.message); render(); return; }
+      state.settings.economics = r.setting; saveSettings(); render();
+      FP.ui.toast(`Margen guardado: ${r.setting.grossMarginPct} % sobre venta. Se usará solo para estimar la contribución bruta.`);
+    },
+    'margin-toggle'(el) {
+      const cur = FP.economics.normalizeSetting(state.settings.economics);
+      if (el.checked && cur.grossMarginPct === null) { FP.ui.toast('Primero captura el margen y guárdalo.'); render(); return; }
+      const r = FP.economics.buildSetting(state.settings.economics, { enabled: el.checked, source: cur.source || 'manual' });
+      state.settings.economics = r.ok === false ? cur : (r.setting || r); saveSettings(); render();
+      FP.ui.toast(el.checked ? 'Contribución bruta estimada activada.' : 'Contribución bruta estimada desactivada: se muestra solo el impacto en ventas.');
+    },
+    'margin-clear'() { state.settings.economics = { ...FP.economics.DEFAULT_SETTING }; saveSettings(); render(); FP.ui.toast('Se quitó el margen: la herramienta muestra solo impacto en ventas.'); },
     'pii-save'() {
       const el = document.getElementById('pii-text');
       const list = [...new Set(String(el ? el.value : '').split(/\r?\n/).map((x) => x.trim().slice(0, 120)).filter(Boolean))].slice(0, 200);

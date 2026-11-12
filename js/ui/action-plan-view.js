@@ -104,7 +104,7 @@
     const ai = rc.ai;
     rc._catalogItems = catalog;   // el panel «Ampliar con IA» y la acción leen el mismo catálogo filtrado que se ve
     const cohereOk = Boolean(FP.cohereConnection && FP.cohereConnection.isConfigured());
-    const expandOff = !selSc ? 'Primero guarda y elige un escenario' : !cohereOk ? 'Para usar la IA inicia sesión con tu equipo o pega tu API key de Cohere en Configuración' : (rc.expand && rc.expand.status === 'busy') ? 'Consultando…' : '';
+    const expandOff = !selSc ? 'Primero guarda y elige un escenario' : !cohereOk ? 'Para usar la IA inicia sesión con tu equipo (Cohere se llama desde el servidor del equipo)' : (rc.expand && rc.expand.status === 'busy') ? 'Consultando…' : '';
     $('rc-library').innerHTML = `
       <div class="subhead"><h3 class="panel__title">Catálogo de acciones posibles</h3>
         <span class="field__hint">Catálogo configurable; no son recomendaciones y nada se ejecuta automáticamente.</span></div>

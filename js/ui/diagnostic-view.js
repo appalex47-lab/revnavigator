@@ -239,7 +239,7 @@
   function aiControl(state, d) {
     const esc = H().esc, ai = state.dx;
     const pill = FP.cohereProxy && FP.cohereProxy.available() ? H().pill('ok', 'IA por el servidor del equipo') : H().pill('na', 'Requiere sesión');
-    const tip = 'Hipótesis con Cohere (opcional). La API key, el modelo y si se recuerda en este navegador se configuran en Configuración de RevNavigator. Cohere solo recibe los datos ya calculados (brecha, drivers, señales, calidad) y reglas estrictas: no calcula ni cambia cifras, no inventa dimensiones y debe citar señales existentes. Su respuesta se valida; si falla, todo lo demás sigue funcionando.';
+    const tip = 'Hipótesis con Cohere (opcional). Funciona con la sesión de tu equipo: Cohere se llama desde el servidor del equipo (la API key vive allá, no en este navegador) y el modelo se elige en Configuración de RevNavigator. Cohere solo recibe los datos ya calculados (brecha, drivers, señales, calidad) y reglas estrictas: no calcula ni cambia cifras, no inventa dimensiones y debe citar señales existentes. Su respuesta se valida; si falla, todo lo demás sigue funcionando.';
     return `<div class="dx-ai-ctl">${pill}
       <button type="button" class="btn btn--primary btn--small" data-action="dx-ai" ${d.status === 'ok' && ai.ai.status !== 'busy' ? '' : 'disabled'}>Generar hipótesis con Cohere</button>
       <span class="help-dot" tabindex="0" role="note" title="${esc(tip)}" aria-label="${esc(tip)}">?</span></div>`;

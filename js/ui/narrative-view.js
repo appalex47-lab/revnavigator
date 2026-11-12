@@ -118,7 +118,7 @@
             <button type="button" class="btn btn--small" data-action="nx-export" ${n ? '' : 'disabled'}>Exportar narrative_export.json</button>
           </div>
         </div>
-        <p class="field__hint">Cohere usa la API key configurada en Configuración de RevNavigator. Solo redacta: no calcula, no agrega cifras nuevas y se valida antes de mostrarse.</p>
+        <p class="field__hint">Cohere se llama desde el servidor de tu equipo (requiere iniciar sesión; la API key no está en este navegador). Solo redacta: no calcula, no agrega cifras nuevas y se valida antes de mostrarse.</p>
       </div>`;
   }
 

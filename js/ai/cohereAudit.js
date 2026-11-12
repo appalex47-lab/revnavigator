@@ -2,7 +2,7 @@
  * cohereAudit.js — Fase H1 · registro de transparencia de las consultas a Cohere (solo en esta sesión, solo en memoria).
  * Cada consulta que SALE del navegador deja una línea: para qué, qué modelo, cuántas columnas y ejemplos se enviaron, cuáles se protegieron y cómo terminó.
  * NUNCA guarda valores de ejemplo ni la respuesta: solo nombres de columnas, conteos, tamaños y estado. No se persiste ni se exporta.
- * Una consulta que no salió (sin API key o sin red disponible en el navegador) no se registra: no hubo nada que transparentar.
+ * Una consulta que no salió (sin sesión de equipo o sin red disponible en el navegador) no se registra: no hubo nada que transparentar.
  */
 (function (root) {
   'use strict';

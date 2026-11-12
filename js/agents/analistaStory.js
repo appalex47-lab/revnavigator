@@ -50,7 +50,7 @@
     const views = v('views'), orders = v('orders'), rev = v('revenue');
     let eff = null;
     if (views && orders && rev && views.baseline > 0 && trafficEng) {
-      try { const e = trafficEng.effects({ t: views.baseline, o: orders.baseline, r: rev.baseline }, { t: views.current, o: orders.current, r: rev.current }); eff = { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta }; } catch (e) { eff = null; }
+      try { const e = trafficEng.effects({ t: views.baseline, o: orders.baseline, r: rev.baseline }, { t: views.current, o: orders.current, r: rev.current }); eff = e.attributed ? { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta } : null; } catch (e) { eff = null; }
     }
     return { eff, viewsPct: views ? views.deltaPct : null, crDelta: d.conversionRate && fin(d.conversionRate.delta) ? d.conversionRate.delta : null, aovPct: d.aov ? d.aov.deltaPct : null,
       ordersPct: orders ? orders.deltaPct : null };

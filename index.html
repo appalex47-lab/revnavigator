@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Política de seguridad de contenido (Fase 1 · Command Center): solo código propio; el único script en línea (arranque) va fijado por su huella SHA-256 (si se edita, la prueba batch_fase1_csp.py avisa y hay que recalcularla); Turnstile (CAPTCHA) y el proyecto Supabase son los únicos hosts externos permitidos. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-veuneERrkpTi4hJ8iwRM/53ItZCyABGu34cHc26qU6w=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://odsaouldxxjurniizefc.supabase.co; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>RevNavigator</title>
   <meta name="description" content="Planeación, pacing y reforecast de ventas digitales">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230E5E6F'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -789,6 +791,7 @@
   <script src="js/export/analysisExport.js?v=20261102-1313"></script>
   <script src="js/scenarios/scenarioValidation.js?v=20261102-1313"></script>
   <script src="js/scenarios/scenarioEngine.js?v=20261102-1313"></script>
+  <script src="js/economics/impactModel.js?v=20261102-1313"></script>
   <script src="js/impact/impactCalculator.js?v=20261102-1313"></script>
   <script src="js/impact/impactMeasurement.js?v=20261102-1313"></script>
   <script src="js/scenarios/recoveryEngine.js?v=20261102-1313"></script>

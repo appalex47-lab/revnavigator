@@ -13,7 +13,7 @@
 
   /** Cascada Δ venta: tráfico → conversión → ticket → total (columnas con barras flotantes). */
   function waterfall(dec, { esc, money }) {
-    const t = dec.total, steps = [['Tráfico', 0, t.traffic], ['Conversión', t.traffic, t.traffic + t.cr], ['Ticket', t.traffic + t.cr, t.traffic + t.cr + t.aov], ['Total', 0, t.delta]];
+    const t = dec.total, steps = [['Tráfico', 0, t.traffic], ['Conversión', t.traffic, t.traffic + t.cr], ['Ticket', t.traffic + t.cr, t.traffic + t.cr + t.aov], ...(Math.abs(t.unattributed || 0) >= 0.5 ? [['Sin base comparable', t.traffic + t.cr + t.aov, t.traffic + t.cr + t.aov + t.unattributed]] : []), ['Total', 0, t.delta]];
     const vals = steps.flatMap((s) => [s[1], s[2]]).concat(0), hi = Math.max(...vals), lo = Math.min(...vals), span = hi - lo || 1;
     const pos = (v) => ((hi - v) / span) * 100;
     const zero = pos(0).toFixed(2);
@@ -84,7 +84,7 @@
       const v = x[k], extra = k === 'cr' && v !== 0 && x.crTest.significant === false ? '<span class="cell-sub">no concluyente</span>' : (k === 'cr' && x.crTest.significant === true ? '<span class="cell-sub">distinguible del azar</span>' : '');
       return `<td class="num ${x.dominant === k ? 'sgd-dom' : ''}"><span class="${cls(v)}">${esc(fin2(v))}</span>${bar(v, maxAbs)}${extra}</td>`;
     };
-    const kindNote = { new: 'nuevo en este periodo', gone: 'ya no aparece', noBaseOrders: 'sin pedidos en la base: el cambio se atribuye a conversión', newTraffic: 'sin sesiones en la base' };
+    const kindNote = { new: 'nuevo en este periodo', gone: 'ya no aparece', noBaseOrders: 'recuperación desde cero: la base no tenía pedidos, el cambio no se reparte entre conversión y ticket', newTraffic: 'sin sesiones en la base: no hay base comparable' };
     const rows = dec.items.map((x) => {
       const sub = x.base && x.cur ? `${F.integer(x.base.t)} → ${F.integer(x.cur.t)} sesiones${x.crPpDelta !== null && x.cur.o >= 0 ? ` · CR ${pct(x.base.o / x.base.t, 2)} → ${pct(x.cur.o / x.cur.t, 2)}` : ''}` : '';
       return `<tr><th scope="row">${esc(x.label)}${sub ? `<span class="cell-sub">${esc(sub)}</span>` : ''}${kindNote[x.kind] && x.kind !== 'both' ? `<span class="cell-sub">${esc(kindNote[x.kind])}</span>` : ''}</th>
@@ -92,7 +92,7 @@
     }).join('');
     return `<div class="sgd"><div class="sgd-head">
         <p class="sgd-head__lead">La venta ${dirWord} <strong class="${cls(t.delta)}">${esc(fin2(t.delta))}</strong>${fin(t.deltaPct) ? ` (${t.deltaPct >= 0 ? '+' : '−'}${Math.abs(t.deltaPct * 100).toFixed(1)} %)` : ''}: ${esc(money(t.base))} → ${esc(money(t.current))}.</p>
-        <p class="field__hint">${esc(sentence)} Cada efecto mueve un factor a la vez (tráfico → conversión → ticket) y los tres suman exactamente el cambio${t.reconciles ? '' : ' (¡no cuadra: revisa los datos!)'}.</p>
+        <p class="field__hint">${esc(sentence)} Cada efecto mueve un factor a la vez (tráfico → conversión → ticket) y los tres suman exactamente el cambio${Math.abs(t.unattributed || 0) >= 0.5 ? ' (menos ' + fin2(t.unattributed) + ' de segmentos sin base comparable: nuevos, desaparecidos o sin pedidos en la base, que no se reparten entre factores)' : ''}${t.reconciles ? '' : ' (¡no cuadra: revisa los datos!)'}.</p>
       </div>
       <div class="sgd-grid">
         <div>${waterfall(dec, ctx)}</div>
@@ -164,7 +164,7 @@
     const { esc, money, pct, F, signedPp } = ctx, fin2 = (v) => sign(money, v), t = all.total;
     const dirWord = t.delta < 0 ? 'bajó' : t.delta > 0 ? 'subió' : 'no cambió';
     const finds = FP.trafficConversionEngine.findingsAll(all, { money: fin2, pct: (v, d = 1) => `${(v * 100).toFixed(d)} %` });
-    const sentence = `Cascada del total: tráfico ${fin2(t.traffic)}, conversión ${fin2(t.cr)}, ticket ${fin2(t.aov)}. Cada efecto mueve un factor a la vez y los tres suman exactamente el cambio${t.reconciles ? '' : ' (¡no cuadra: revisa los datos!)'}. El total no depende de la dimensión.`;
+    const sentence = `Cascada del total: tráfico ${fin2(t.traffic)}, conversión ${fin2(t.cr)}, ticket ${fin2(t.aov)}. Cada efecto mueve un factor a la vez y los tres suman exactamente el cambio${Math.abs(t.unattributed || 0) >= 0.5 ? ' (menos ' + fin2(t.unattributed) + ' de segmentos sin base comparable: nuevos, desaparecidos o sin pedidos en la base, que no se reparten entre factores)' : ''}${t.reconciles ? '' : ' (¡no cuadra: revisa los datos!)'}. El total no depende de la dimensión.`;
     const qual = all.quality.length ? qualityBlock({ quality: all.quality.map((q) => ({ ...q, label: `${q.dimLabel}: ${q.label}` })) }, ctx) : '';
     const oth = all.others.map((o) => othersBlock({ others: o.o, minSessions: o.minSessions }, ctx).replace('«Otros» reúne', `En ${esc(o.dimLabel)}, «Otros» reúne`)).join('');
     return `<div class="sgd" data-all="1"><div class="sgd-head">

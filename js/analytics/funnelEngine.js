@@ -54,7 +54,7 @@
     const E = FP.trafficConversionEngine;
     if (!E || !cur || !base || !fin(cur.revenue) || !fin(base.revenue)) return null;
     const e = E.effects({ t: base.views, o: base.purchase, r: base.revenue }, { t: cur.views, o: cur.purchase, r: cur.revenue });
-    return { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta, kind: e.kind, ok: Math.abs(e.traffic + e.cr + e.aov - e.delta) < 0.5 };
+    return { traffic: e.traffic, cr: e.cr, aov: e.aov, unattributed: e.unattributed, attributed: e.attributed, status: e.status, delta: e.delta, kind: e.kind, ok: Math.abs(e.traffic + e.cr + e.aov + e.unattributed - e.delta) < 0.5 };
   }
   /** Frase de lectura (sin causas): qué pasó con las vistas y con la conversión. */
   function reading(cmp) {
