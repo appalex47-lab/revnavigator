@@ -1,0 +1,20 @@
+{
+ "nota": "Autorizaciones expresas del usuario que la máquina de estados del roadmap reconoce.",
+ "ejecucion_continua": {
+  "subfases": [
+   "3.3",
+   "3.4",
+   "3.5"
+  ],
+  "fuente": "Instrucción del usuario al aceptar 3.2: ejecutar todas las subfases pendientes de la Fase 3 sin pedir autorización entre subfases; no autoriza las Fases 4, 5 ni 6."
+ },
+ "aceptacion_formal_12_nov_2026": {
+  "subfases": [
+   "3.3",
+   "3.4",
+   "3.5"
+  ],
+  "condicion": "ACEPTADAS CON LIMITACIONES DOCUMENTADAS",
+  "fuente": "Autorización formal del usuario: cierre de la Fase 3 y conservación de entregables (12-nov-2026). No autoriza la Fase 4, merge, despliegue ni publicación."
+ }
+}

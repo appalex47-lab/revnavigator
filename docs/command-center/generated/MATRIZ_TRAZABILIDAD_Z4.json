@@ -1,0 +1,340 @@
+{
+ "version": 1,
+ "subfase": "3.4",
+ "nota": "Fuente de verdad de la matriz de trazabilidad de Z4. Se verifica contra la aplicación real (tools/regression/batch_fase3_3_3_4_zonas.py) y contra el documento y el wireframe (verificadores de consistencia). Las filas M-xx remiten a docs/command-center/generated/MATRIZ_UX_MOTORES.json (3.1).",
+ "estados": {
+  "Disponible": "El motor existe y entrega lo necesario; solo falta presentarlo según este diseño.",
+  "Parcial": "El motor o parte de él existe, pero falta una pieza (regla, etiqueta, clasificación, conexión al Home) para cumplir este diseño.",
+  "Por desarrollar": "No existe en js/. Es solo diseño propuesto o especificación; su implementación es una dependencia futura."
+ },
+ "categoriasDependencia": {
+  "contratos_existentes": "Resoluble con contratos y motores existentes: solo falta conectar y presentar.",
+  "completar_motores": "Requiere completar o ampliar un motor (Fase 4) antes de poder mostrarse.",
+  "requiere_ia": "Requiere inteligencia artificial (Fase 5) para su versión final; existe una versión determinista de respaldo.",
+  "validacion_produccion": "Requiere validación con datos y usuarios de producción (umbrales y supuestos de la especificación)."
+ },
+ "filas": [
+  {
+   "id": "Z4-01",
+   "elemento": "Hasta tres acciones destacadas («3 de M»)",
+   "requisito": "Destacar hasta tres acciones sin limitar el universo",
+   "decision": "D-03",
+   "componente": "Fila de acciones destacadas",
+   "fuente": "actionPriorityEngine y attentionEngine",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.actionPriorityEngine",
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M19",
+    "M30"
+   ],
+   "wireframe": "z4-lista",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Criterio definitivo de priorización de acciones"
+    }
+   ]
+  },
+  {
+   "id": "Z4-02",
+   "elemento": "«Ver todas (M)» y filtros por tipo de acción",
+   "requisito": "Acceso al universo completo de acciones",
+   "decision": "D-03",
+   "componente": "Desplegable y filtros",
+   "fuente": "actionPriorityEngine",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.actionPriorityEngine"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M30"
+   ],
+   "wireframe": "z4-ver-todas",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.4",
+     "detalle": "El motor ya devuelve el universo ordenado"
+    }
+   ]
+  },
+  {
+   "id": "Z4-03",
+   "elemento": "Cada acción cita el elemento de Z3 que la motiva",
+   "requisito": "Sin recomendaciones genéricas; trazabilidad entre Z3 y Z4",
+   "decision": "3.1 §7.4",
+   "componente": "Bloque «Motivada por»",
+   "fuente": "Contrato de acción propuesto (especificación)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M19"
+   ],
+   "wireframe": "z4-motivo",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Definir el contrato de acción con vínculo al hallazgo (hoy el motor no lo trae)"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-04",
+   "elemento": "Acciones de datos (completar o corregir)",
+   "requisito": "Primero los datos cuando condicionan todo",
+   "decision": "Aclaración B",
+   "componente": "Tarjeta de tipo «datos»",
+   "fuente": "attentionEngine.next y guide.nextStep",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate",
+    "FP.guide.nextStep"
+   ],
+   "estado": "Disponible",
+   "depende": [
+    "M19"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z4-05",
+   "elemento": "Tipo de acción derivado de los pasos de los motores",
+   "requisito": "Distinguir revisar, comprobar y evaluar alternativas",
+   "decision": "3.1 §7.4",
+   "componente": "Etiqueta del tipo",
+   "fuente": "Pasos step de attentionEngine (complete_data, review_gap, investigate_*)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M19"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Unificar el vocabulario de pasos entre motores"
+    }
+   ]
+  },
+  {
+   "id": "Z4-06",
+   "elemento": "Condición de la lectura: qué se recomienda según la confiabilidad",
+   "requisito": "Con Baja datos y revisión; con Insuficiente solo datos",
+   "decision": "Aclaración B",
+   "componente": "Aviso y nota de retenidas",
+   "fuente": "Especificación de confiabilidad (3.2)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "wireframe": "z4-retenidas",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Regla de confiabilidad en el motor de diagnósticos"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-07",
+   "elemento": "Validador de textos de acción (A1–A7)",
+   "requisito": "Sin genéricas, sin causas, sin importes, sin términos financieros, sin tareas",
+   "decision": "Principio 5.2",
+   "componente": "Texto de la tarjeta",
+   "fuente": "checkActionText (especificación)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M19"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Validador en el motor"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.4",
+     "detalle": "Aplicar las mismas reglas a recomendaciones generadas con IA"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-08",
+   "elemento": "Comprobar vs decidir según la certeza del elemento",
+   "requisito": "Una señal o hipótesis solo se comprueba; no se decide sobre ella",
+   "decision": "Principio 5.3",
+   "componente": "Etiqueta «Comprobar» y aviso",
+   "fuente": "Escalera de certeza de Fase 2",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M16",
+    "M19"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Regla en el motor"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.4",
+     "detalle": "Validar con usuarios que la distinción se entiende"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-09",
+   "elemento": "Importe del elemento citado, sin importe propio de la acción",
+   "requisito": "Evitar doble conteo entre Z3 y Z4",
+   "decision": "3.1 §3.7",
+   "componente": "Bloque «Motivada por»",
+   "fuente": "FP.economics (impacto del elemento)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.economics.fromRecovery",
+    "FP.economics.fromGap"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M14"
+   ],
+   "wireframe": "z4-motivo",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.5",
+     "detalle": "Impacto por hallazgo conectado"
+    }
+   ]
+  },
+  {
+   "id": "Z4-10",
+   "elemento": "Deduplicación de acciones propuestas por varios motores",
+   "requisito": "La misma acción de dos motores es una sola",
+   "decision": "3.1 §7.4",
+   "componente": "Tarjeta única",
+   "fuente": "Especificación (misma llave: tipo, destino y motivos)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M30"
+   ],
+   "wireframe": "z4-lista",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Deduplicar en el motor de prioridades"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-11",
+   "elemento": "Sin gestión de tareas (responsables, fechas, estatus)",
+   "requisito": "Mantener RGT Execution OS fuera de alcance",
+   "decision": "Alcance del proyecto",
+   "componente": "Ausencia de esos campos",
+   "fuente": "Especificación (campos descartados)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M19"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-4-z4.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Impedir esos campos en el contrato de acción"
+    }
+   ],
+   "especificacion": "tools/audit/z4-acciones.js · build"
+  },
+  {
+   "id": "Z4-12",
+   "elemento": "«Qué dato falta» cuando no hay acciones",
+   "requisito": "No inventar una recomendación sin base",
+   "decision": "3.1 §7.4",
+   "componente": "Bloque de reemplazo",
+   "fuente": "contextEngine.requirements",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.contextEngine.requirements"
+   ],
+   "estado": "Disponible",
+   "depende": [
+    "M18"
+   ],
+   "wireframe": "z4-vacio",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z4-13",
+   "elemento": "Alternativas de recuperación como acciones a evaluar",
+   "requisito": "Comparar alternativas estimadas; la decisión es del responsable",
+   "decision": "3.1 §7.1",
+   "componente": "Tarjeta de tipo «evaluar»",
+   "fuente": "recoveryEngine.recoveryOptions",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.recoveryEngine.recoveryOptions"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M13"
+   ],
+   "wireframe": "z4-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Traducir cada alternativa a una acción con su elemento"
+    }
+   ]
+  }
+ ]
+}

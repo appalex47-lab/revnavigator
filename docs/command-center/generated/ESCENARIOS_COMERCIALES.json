@@ -1,0 +1,399 @@
+[
+ {
+  "id": "E01",
+  "familia": "ventas > 0 y pedidos = 0",
+  "datos": "Venta real a la fecha $2.4 M; pedidos = 0 (conversión 0).",
+  "interpreta": "Dato incoherente (hay venta sin pedidos): no se concluye sobre conversión ni ticket; la venta se muestra tal cual.",
+  "confiabilidad": "Media",
+  "mensaje": "Con avisos: la venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Conclusión con reservas.",
+  "z3": "3 de 4",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar la combinación de sesiones, pedidos y venta",
+   "Ver el diagnóstico de la brecha"
+  ],
+  "evita": [
+   "“la conversión es 0 %”",
+   "“el ticket es indefinido/infinito”",
+   "una causa"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "no hay conversión 0 % como conclusión",
+   "la capa de datos lo señala o la confiabilidad no es Alta sin explicación"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E02",
+  "familia": "pedidos > 0 y ventas = 0",
+  "datos": "Pedidos 6,200; venta real a la fecha $0.",
+  "interpreta": "Venta real 0 con pedidos: inconsistente; no se afirma “sin ventas” como hecho comercial sin verificar.",
+  "confiabilidad": "Media",
+  "mensaje": "Con avisos: la venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Conclusión con reservas.",
+  "z3": "3 de 4",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar la combinación de sesiones, pedidos y venta",
+   "Ver el diagnóstico de la brecha"
+  ],
+  "evita": [
+   "“no hubo ventas”",
+   "una brecha del 100 % como hecho"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "Z1 no emite el veredicto de brecha como definitivo",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E03",
+  "familia": "sesiones = 0",
+  "datos": "Sesiones 0 (verificado) con pedidos 5,800 y venta $9.3 M.",
+  "interpreta": "Sesiones 0 con pedidos es incoherente: no se calcula conversión (÷0).",
+  "confiabilidad": "Media",
+  "mensaje": "Con avisos: la venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Conclusión con reservas.",
+  "z3": "3 de 4",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar la combinación de sesiones, pedidos y venta",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "conversión infinita",
+   "“el tráfico cayó a cero”"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "sin conversión calculada ni afirmada",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E04",
+  "familia": "sesiones faltantes",
+  "datos": "Sesiones sin dato (null); pedidos y venta presentes.",
+  "interpreta": "Falta el dato de sesiones: el embudo no se evalúa; se pide el dato. Faltante ≠ 0.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Lectura calculable; la información disponible está incompleta.",
+  "z3": "3 de 4",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar la combinación de sesiones, pedidos y venta",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "“0 sesiones”",
+   "conversión"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "no se presenta 0 sesiones",
+   "existe un elemento de datos que pide completar"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E05",
+  "familia": "conversiones no verificables",
+  "datos": "Conversión verificada como no verificable (comparabilidad con cambio de definición).",
+  "interpreta": "El periodo de comparación cambió de composición: el cambio vs periodo anterior no se afirma.",
+  "confiabilidad": "Media",
+  "mensaje": "Con avisos: la venta acumulada está por debajo de la meta acumulada; la composición cambió frente al comparable, por lo que no se interpreta la evolución. Conclusión con reservas.",
+  "z3": "3 de 5",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar el pronóstico de cierre",
+   "Evaluar las alternativas de recuperación"
+  ],
+  "evita": [
+   "“creció X % vs el periodo anterior”"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "no afirma crecimiento comparable",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E06",
+  "familia": "CR / AOV no disponible",
+  "datos": "Sin actividad (sesiones, pedidos) en el periodo: no hay CR ni ticket.",
+  "interpreta": "Sin dato de actividad: no se evalúa conversión ni ticket; la venta vs plan sí.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. No es posible confirmar que la información esté completa.",
+  "z3": "3 de 4",
+  "z4": "3 de 4",
+  "recomendacion": [
+   "Revisar la combinación de sesiones, pedidos y venta",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "CR 0 %",
+   "ticket 0"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "Z3 lo dice (actividad no disponible)",
+   "no hay números de CR/ticket inventados"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E07",
+  "familia": "datos incompletos",
+  "datos": "Cobertura 40 % de los días comparados; apoyo bajo.",
+  "interpreta": "Cobertura insuficiente: la lectura es preliminar y baja de confiabilidad.",
+  "confiabilidad": "Insuficiente · cobertura",
+  "mensaje": "Hay venta registrada, pero los datos no alcanzan para valorar el cumplimiento ni emitir una lectura del negocio.",
+  "z3": "1 de 1",
+  "z4": "1 de 1",
+  "recomendacion": [
+   "Cargar los días de venta que faltan"
+  ],
+  "evita": [
+   "presentar la brecha como definitiva",
+   "proyectar el cierre sin salvedad"
+  ],
+  "pendiente": "Umbral mínimo de cobertura para «Alta/Media/Baja» (hoy: regla vigente de Z1; no se cambia).",
+  "comprobaciones": [
+   "confiabilidad no es Alta",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E08",
+  "familia": "diferencias entre fuentes",
+  "datos": "Dos fuentes difieren: la suma por canal no coincide con el total.",
+  "interpreta": "Dato inconsistente ≠ inválido: se declara la diferencia y se pide conciliar; no se aplica una tolerancia inventada (conciliación pendiente).",
+  "confiabilidad": "Media",
+  "mensaje": "Con avisos: la venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Conclusión con reservas.",
+  "z3": "3 de 7",
+  "z4": "3 de 6",
+  "recomendacion": [
+   "Revisar los avisos de calidad de la carga",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "elegir una fuente como “la verdadera”",
+   "una tolerancia del 1 %"
+  ],
+  "pendiente": "Regla de conciliación entre fuentes: qué fuente manda y qué tolerancia es aceptable (C2 de 3.2: abierta).",
+  "comprobaciones": [
+   "no declara una fuente ganadora",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E09",
+  "familia": "actividad sin productor",
+  "datos": "Hay pedidos/venta pero ningún canal/productor los explica (sin desglose).",
+  "interpreta": "Sin desglose no se atribuye nada a un canal ni productor; Z3 no inventa una causa.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Revisar el pronóstico de cierre",
+   "Evaluar las alternativas de recuperación"
+  ],
+  "evita": [
+   "“el canal X explica la brecha”"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "no hay hallazgo de canal cuando no hay base para atribuirlo",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E10",
+  "familia": "ausencia de actividad (cero verificado)",
+  "datos": "Sesiones 0, pedidos 0, venta 0 verificados en el periodo.",
+  "interpreta": "Cero verificado: es un hecho (sin actividad), distinto de «sin dato».",
+  "confiabilidad": "Insuficiente · sin_actividad",
+  "mensaje": "No hay actividad observable en el periodo: no es posible emitir una lectura del negocio.",
+  "z3": "1 de 1",
+  "z4": "1 de 1",
+  "recomendacion": [
+   "Verificar la carga de sesiones, pedidos y venta"
+  ],
+  "evita": [
+   "confundirlo con “sin dato”",
+   "recomendar acciones comerciales de optimización"
+  ],
+  "pendiente": "Umbral mínimo de actividad para considerar que hay base de comparación (hoy: solo cero/no cero).",
+  "comprobaciones": [
+   "Z1 declara sin actividad verificada o lectura limitada",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E11",
+  "familia": "margen no configurado",
+  "datos": "Margen bruto sin configurar.",
+  "interpreta": "El impacto se muestra en ventas; la contribución bruta no se estima (null, no 0).",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Revisar el pronóstico de cierre",
+   "Evaluar las alternativas de recuperación"
+  ],
+  "evita": [
+   "“contribución $0”",
+   "estimar un margen por defecto"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "Z1 no muestra contribución",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E12",
+  "familia": "margen = 0 %",
+  "datos": "Margen configurado explícitamente en 0 %.",
+  "interpreta": "Un 0 % explícito es una configuración, no ausencia: no se confunde con “no configurado”.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Revisar el pronóstico de cierre",
+   "Evaluar las alternativas de recuperación"
+  ],
+  "evita": [
+   "tratarlo como no configurado sin decirlo",
+   "mostrar una contribución positiva"
+  ],
+  "pendiente": "Si 0 % es un margen válido o debe tratarse como no configurado (C5 de 3.2: validez según el motor; confirmar con Finanzas).",
+  "comprobaciones": [
+   "no hay contribución positiva",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E13",
+  "familia": "margen negativo",
+  "datos": "Margen configurado −5 %.",
+  "interpreta": "Fuera del rango del motor (≥ 0): no es válido para estimar contribución; se muestra solo ventas.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta cae contra agosto 2026 y está por debajo de la meta acumulada; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Revisar el pronóstico de cierre",
+   "Evaluar las alternativas de recuperación"
+  ],
+  "evita": [
+   "calcular una contribución negativa",
+   "corregir el signo en silencio"
+  ],
+  "pendiente": "Margen negativo: ¿es válido (venta por debajo del costo) o error de captura? Decisión de negocio/Finanzas; hoy el motor lo rechaza.",
+  "comprobaciones": [
+   "no muestra contribución con margen negativo",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E14",
+  "familia": "impactos positivos, negativos y superpuestos",
+  "datos": "Brecha −$0.7 M; canal que la concentra (mismo dinero); alternativas de recuperación; riesgo de cierre.",
+  "interpreta": "Z3 no suma entre clases, no totaliza líneas superpuestas y muestra alternativas como rango (el hallazgo de combineImpacts se documenta aparte).",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta acumulada está por debajo de la meta; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Evaluar las alternativas de recuperación",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "sumar brecha + canal",
+   "sumar alternativas de recuperación",
+   "mezclar observado con proyectado"
+  ],
+  "pendiente": "Cómo agregar riesgos y oportunidades en un total (netear o no) — ver DIAGNOSTICO_COMBINEIMPACTS.md.",
+  "comprobaciones": [
+   "Z3 no presenta total de líneas superpuestas",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E15",
+  "familia": "señales sin evidencia / hipótesis sin confirmación",
+  "datos": "Un driver es solo una hipótesis (sin confirmar).",
+  "interpreta": "La hipótesis se presenta aparte, con su cómo validarla; nunca como causa ni dentro del total.",
+  "confiabilidad": "Alta",
+  "mensaje": "La venta acumulada está por debajo de la meta; el cierre proyectado no la alcanzaría. Lectura sustentada en datos completos.",
+  "z3": "3 de 6",
+  "z4": "3 de 5",
+  "recomendacion": [
+   "Evaluar las alternativas de recuperación",
+   "Revisar el pronóstico de cierre"
+  ],
+  "evita": [
+   "“la causa es …”",
+   "incluir la hipótesis en el total"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "no hay lenguaje causal sobre hipótesis",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ },
+ {
+  "id": "E16",
+  "familia": "recomendaciones no ejecutables y oportunidades sin impacto cuantificable",
+  "datos": "Se requiere un dato que falta (p. ej. margen o plan) para ejecutar una acción; la oportunidad no tiene importe.",
+  "interpreta": "La acción que requiere un dato faltante no se ofrece como ejecutable: se retiene (Z4 «datos primero»); la oportunidad sin importe se dice «no cuantificable», no $0.",
+  "confiabilidad": "Insuficiente · sin_plan",
+  "mensaje": "Hay venta registrada, pero sin plan del periodo no es posible valorar el cumplimiento.",
+  "z3": "1 de 1",
+  "z4": "1 de 1",
+  "recomendacion": [
+   "Revisar los avisos de calidad de la carga"
+  ],
+  "evita": [
+   "ofrecer una acción que no puede ejecutarse",
+   "poner $0 como impacto"
+  ],
+  "pendiente": null,
+  "comprobaciones": [
+   "Z4 ofrece primero el dato y no acciones de negocio sin respaldo",
+   "sin contradicción entre capas"
+  ],
+  "fallas": [],
+  "contradicciones": []
+ }
+]

@@ -1,0 +1,41 @@
+{
+ "nota": "Modificaciones autorizadas por el usuario a archivos protegidos. Un cambio distinto del registrado se sigue detectando.",
+ "archivos": {
+  "FASE_3_1_ARQUITECTURA_INFORMACION.md": {
+   "hash_base": "330a1c8ad9c13fe561e8df5e0840041269ff37d793d72de45958b796ffff847c",
+   "hash_nuevo": "d929a6fec87fd62648d167075b1fa994897ddd75c23462812b0a4eb20946ce1f",
+   "autorizacion": "H-01 (12-nov-2026): aclarar la regla «una pieza vive en una sola capa y zona» (una zona propietaria y una fuente de verdad; las demás zonas referencian); solo ese apartado",
+   "registro": "docs/command-center/ACLARACION_H01_H02_PROPIEDAD_Z5.md"
+  },
+  "FASE_3_2_RESUMEN_EJECUTIVO.md": {
+   "hash_base": "4c1ae33a3b1f78e62415dc7b0082f18a5f01e257c58004e90100674f39727bae",
+   "hash_nuevo": "d13cd0dfb83e417b674fed822a37256be6a7cdb4c0dcfef3b5301d3baac3edd4",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "FASE_3_2_ESCENARIOS_Z1.md": {
+   "hash_base": "8542781537e5241dc8ff171e1c56782c0fb13c1c18b7d0845ed8749dccd77558",
+   "hash_nuevo": "f49d60fa97207b3196519336a1804c9efbb81150ff8ef23a0242d51ff812b2e6",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "generated/ESCENARIOS_Z1.json": {
+   "hash_base": "96f0d7b1427b36723a3dd92c27b29f9affde4973bf2b1ea767764dc307c6785b",
+   "hash_nuevo": "b7f7c30852bef74f2a2373c63984afd50ff306f33260536de934d2cf225b03ef",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "wireframes/z1_3_2_wireframe.html": {
+   "hash_base": "0e9bd2b105cf666077a97e25d15d78e63c84ddeb204463f5428ef6f44283efe8",
+   "hash_nuevo": "3820ab88342bc4d652c381d6643b05ff919ed12fedcd1afbccf49dc10c0dc783",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "tools/audit/z1-lectura-ejecutiva.js": {
+   "hash_base": "09f1059ee0582a62308476c152580fde6f637cdd863ce42c3caf9d8b3b5d04c4",
+   "hash_nuevo": "5ae008c095d467101d420a997bb2eaaa4e4b1f75eea57121e3e5ac4461a673c6",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  }
+ }
+}

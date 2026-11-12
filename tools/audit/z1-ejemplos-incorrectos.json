@@ -1,0 +1,135 @@
+[
+  {
+    "id": "E1",
+    "escenario": 5,
+    "texto": "La venta cae por debajo de la meta: el negocio está en riesgo de incumplir el plan.",
+    "reglas": [
+      "R1",
+      "R8"
+    ]
+  },
+  {
+    "id": "E2",
+    "escenario": 8,
+    "texto": "La venta crece 5.0 % contra el periodo anterior y el negocio está saludable.",
+    "reglas": [
+      "R2"
+    ]
+  },
+  {
+    "id": "E3",
+    "escenario": 2,
+    "texto": "La venta va 4.5 % por encima de la meta acumulada (−$723 mil).",
+    "reglas": [
+      "R3",
+      "R4",
+      "R10"
+    ]
+  },
+  {
+    "id": "E4",
+    "escenario": 12,
+    "texto": "Estás en deterioro: la venta cae 12 % y cerrarías muy por debajo de la meta.",
+    "reglas": [
+      "R1",
+      "R2",
+      "R8",
+      "R13"
+    ]
+  },
+  {
+    "id": "E5",
+    "escenario": 13,
+    "texto": "Estás creciendo 5.0 % y la contribución es de $0 de utilidad neta.",
+    "reglas": [
+      "R4",
+      "R5",
+      "R9",
+      "R10"
+    ]
+  },
+  {
+    "id": "E6",
+    "escenario": 10,
+    "texto": "La venta cae porque el checkout falló, y el ROI de la campaña es negativo.",
+    "reglas": [
+      "R5",
+      "R7"
+    ]
+  },
+  {
+    "id": "E7",
+    "escenario": 2,
+    "texto": "La venta va 4.5 % por debajo de la meta acumulada y, además, el cierre proyectado queda por debajo de la meta, lo que sumado a la concentración de la brecha en un canal y al comportamiento de los últimos días sugiere revisar con urgencia todas las áreas del negocio.",
+    "reglas": [
+      "R6"
+    ]
+  },
+  {
+    "id": "E8",
+    "escenario": 2,
+    "texto": "La venta va 4.5 % por debajo de la meta acumulada; al ritmo actual cerrarías en $21.1 M.",
+    "reglas": [
+      "R4",
+      "R10"
+    ]
+  },
+  {
+    "id": "E9",
+    "escenario": 2,
+    "texto": "Mal resultado: la venta acumulada está por debajo de la meta.",
+    "reglas": [
+      "R11"
+    ]
+  },
+  {
+    "id": "E10",
+    "escenario": 7,
+    "texto": "Sin actividad: el negocio se mantiene estable, sin cambios en la conversión.",
+    "reglas": [
+      "R12"
+    ]
+  },
+  {
+    "id": "E11",
+    "escenario": 6,
+    "texto": "Hay venta registrada y queda en línea con la meta.",
+    "reglas": [
+      "R13"
+    ]
+  },
+  {
+    "id": "E12",
+    "escenario": 11,
+    "texto": "La venta acumulada está por debajo de la meta acumulada; la composición mejora la eficiencia.",
+    "reglas": [
+      "R14"
+    ]
+  },
+  {
+    "id": "E13",
+    "escenario": 10,
+    "texto": "No hubo pedidos, probablemente por tráfico de baja calidad.",
+    "reglas": [
+      "R7"
+    ]
+  },
+  {
+    "id": "E14",
+    "escenario": "A6",
+    "texto": "Sin datos de actividad: el negocio se mantiene estable.",
+    "reglas": [
+      "R12"
+    ]
+  },
+  {
+    "id": "E15",
+    "escenario": "A6",
+    "texto": "La venta es de $0 porque no hubo actividad.",
+    "reglas": [
+      "R1",
+      "R4",
+      "R7"
+    ]
+  }
+]

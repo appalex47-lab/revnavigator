@@ -1,0 +1,9 @@
+[
+  { "id": "X1", "familia": "pacing_gap", "titulo": "La utilidad del periodo cae contra el plan", "descripcion": "La venta acumulada queda por debajo del plan.", "reglas": ["T1"] },
+  { "id": "X2", "familia": "forecast_close", "titulo": "El cierre no alcanzaría la meta", "descripcion": "El cierre proyectado queda por debajo debido a que la campaña falló.", "reglas": ["T2"] },
+  { "id": "X3", "familia": "recovery_cr", "titulo": "Se recuperó la brecha con la conversión", "descripcion": "La conversión generó la venta que faltaba.", "reglas": ["T3"] },
+  { "id": "X4", "familia": "forecast_close", "titulo": "No se alcanzó la meta del periodo", "descripcion": "El periodo ya se incumplió.", "reglas": ["T4"] },
+  { "id": "X5", "familia": "pacing_gap", "titulo": "La venta va $722 mil por debajo del plan", "descripcion": "La venta acumulada queda por debajo del plan de los mismos días.", "reglas": ["T5"] },
+  { "id": "X6", "familia": "pacing_gap", "titulo": "La venta acumulada del periodo analizado se encuentra en este momento claramente por debajo del plan que se definió", "descripcion": "La venta acumulada queda por debajo del plan.", "reglas": ["T6"] },
+  { "id": "X7", "familia": "recovery_traffic", "titulo": "El ROAS permitiría recuperar $760 mil", "descripcion": "Se logró la venta porque subieron las sesiones.", "reglas": ["T1", "T2", "T3", "T5"] }
+]
