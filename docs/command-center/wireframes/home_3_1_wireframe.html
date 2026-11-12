@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wireframe estructural del Home · Subfase 3.1 (v2)</title>
+<style>
+/* Wireframe de BAJA fidelidad: estructura, jerarquía y estados. No define estilo visual, colores de marca, tipografía final ni copy definitivo (eso es 3.2 a 3.5). */
+:root{--ink:#222;--mu:#666;--line:#bbb;--fill:#f2f2f2;--fill2:#e4e4e4;--mark:#333;--w:#fff}
+*{box-sizing:border-box}body{margin:0;padding:24px;background:#d9d9d9;font:13px/1.45 system-ui,Segoe UI,Arial,sans-serif;color:var(--ink)}
+h1{font-size:18px;margin:0 0 4px}.lede{color:var(--mu);margin:0 0 14px;max-width:1040px}
+.sheet{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;align-items:start}
+@media(max-width:1180px){.sheet{grid-template-columns:1fr}}
+.frame{background:var(--w);border:2px solid var(--mark);padding:14px}
+.cap{font-weight:700;margin:0 0 8px;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.layers{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px}
+.nav{border:1.5px dashed var(--mark);background:repeating-linear-gradient(0deg,#f7f7f7,#f7f7f7 14px,#ececec 14px,#ececec 15px);padding:6px;font-size:10px;color:var(--mu)}
+.nav b{display:block;color:var(--ink);margin-bottom:4px}
+.zone{border:1.5px solid var(--line);background:var(--w);padding:10px;margin:0 0 12px;position:relative}
+.zone>.zt{position:absolute;top:-9px;left:8px;background:var(--mark);color:#fff;font-size:10px;padding:1px 6px;letter-spacing:.05em}
+.zone--bc{border-style:dashed;background:#fafafa}.zone--bc>.zt{background:#777}
+.zone--hero{border:2px solid var(--mark)}
+.row{display:grid;gap:10px}.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:1.5fr 1fr 1fr 1fr}.c5{grid-template-columns:repeat(5,1fr)}
+.box{border:1px dashed var(--line);background:var(--fill);padding:8px;min-height:34px}
+.box--big{min-height:74px}.box--chart{min-height:84px;background:repeating-linear-gradient(135deg,var(--fill),var(--fill) 8px,var(--fill2) 8px,var(--fill2) 16px)}
+.tag{display:inline-block;border:1px solid var(--mark);padding:0 6px;font-size:10px;border-radius:9px;margin-right:4px;background:#fff}
+.tag--cert{background:var(--mark);color:#fff}.tag--sev{border-style:dashed}
+.ty{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;margin-right:4px;border:1.5px solid var(--mark)}
+.ty--h{border-radius:0}.ty--r{border-radius:0;border-width:2px 2px 4px 2px}.ty--o{border-radius:10px}
+.big{font-size:20px;font-weight:700}.mid{font-size:15px;font-weight:700}.sm{font-size:11px;color:var(--mu)}
+.fold{border:1px solid var(--line);padding:6px 8px;margin:4px 0;background:#fafafa}.fold b::before{content:"▸ "}
+.note{font-size:11px;color:var(--mu);border-left:3px solid var(--mark);padding-left:8px;margin:6px 0}
+.anno{background:#fff;border:1.5px solid var(--mark);padding:12px;font-size:12px}
+.anno h3{margin:0 0 6px;font-size:13px}.anno ol{margin:0;padding-left:18px}.anno li{margin:0 0 5px}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px}
+.st{border:1.5px solid var(--line);background:#fff;padding:8px;font-size:11px}.st b{display:block;margin-bottom:3px}
+.mob{width:300px;margin:0 auto}.mob .zone{padding:8px}.mob .c2,.mob .c3,.mob .c4,.mob .c5{grid-template-columns:1fr}
+.legend span{margin-right:10px}
+.rel{display:inline-block;border:1.5px solid var(--mark);padding:0 6px;font-size:10px;font-weight:700}
+</style></head><body>
+<h1>Home inteligente — wireframe estructural (Subfase 3.1, versión 2)</h1>
+<p class="lede">Muestra <b>qué va dónde, en qué orden y con qué jerarquía</b>. Tres capas distintas: <b>NAV</b> (navegación de la aplicación, fuera del Home), <b>BC</b> (barra de contexto: parte del Home, sin contenido narrativo) y <b>Z1–Z5</b> (contenido principal). Las cajas rayadas son gráficos; las grises, contenido. No es diseño visual ni prototipo: 3.2 a 3.5 definen resumen, hallazgos, prioridades y prototipo. Incorpora las decisiones aprobadas D-01 a D-04 y las aclaraciones A y B (ver <code>FASE_3_1_ARQUITECTURA_INFORMACION.md</code>).</p>
+<p class="legend sm"><span><span class="tag tag--cert">Certeza</span> hecho · cálculo · driver · señal · estimación · hipótesis</span><span><span class="tag tag--sev">Severidad</span> seguimiento · importante · crítica</span><span><span class="ty ty--h">◆ Hallazgo</span><span class="ty ty--r">▲ Riesgo</span><span class="ty ty--o">● Oportunidad</span> forma + texto, no solo color</span><span><span class="tag">$</span> impacto en ventas (siempre) · contribución solo con margen</span></p>
+
+<div class="sheet">
+<section class="frame" aria-label="Escritorio" data-wf="desktop">
+  <p class="cap">Escritorio · 1280 px</p>
+  <div class="layers">
+    <div class="nav" data-wf="nav"><b>NAV</b>Menú lateral existente (Inicio y 7 grupos). Fuera del Home. Sin cambios.</div>
+    <div>
+      <div class="zone zone--bc" data-wf="bc"><span class="zt">BC · BARRA DE CONTEXTO (no es navegación ni contenido)</span>
+        <div class="row c4"><div class="box">Canal ▾ · Periodo ▾</div><div class="box">Datos al 22 sep</div><div class="box" data-wf="bc-confiabilidad"><b>Confiabilidad: ● media</b> — siempre visible, con el motivo en una línea</div><div class="box">Cómo leer esta página ▸</div></div>
+        <p class="note">Una sola línea, fija al desplazar. Fija el contexto y la confiabilidad de todo lo que sigue. Sustituye el bloque de filtros + chips plegados + banner (algo más de 300 px hoy).</p></div>
+
+      <div class="zone zone--hero" data-wf="z1"><span class="zt">Z1 · LECTURA EJECUTIVA — lo primero que se ve</span>
+        <div class="row c4">
+          <div class="box box--big"><span class="tag tag--cert">Cálculo</span> <span class="mid">ESTADO: riesgo de cumplimiento</span><br><span class="sm" data-wf="z1-narrativa">Conclusión en 1–2 frases. <b>Ver contexto ▸</b> (versión corta ↔ larga, en el sitio).</span></div>
+          <div class="box box--big"><span class="sm">Brecha (protagonista)</span><br><span class="big">−$ 722 mil</span><br><span class="sm">vs plan a la fecha</span></div>
+          <div class="box box--big"><span class="sm">Cierre proyectado</span><br><span class="mid">$ 21.1 M</span><br><span class="sm">−3.3 % vs meta · <span class="tag">estimación</span></span></div>
+          <div class="box box--big"><span class="sm">Evolución vs comparable</span><br><span class="mid">+x % / «Sin comparable»</span><br><span class="sm">solo si existe base</span></div>
+        </div>
+        <div class="box" data-wf="z1-condicion" style="margin-top:8px"><span class="rel">LECTURA CONDICIONADA</span> <span class="sm">Con confiabilidad media: «con avisos» + motivos visibles aquí (no plegados). Con baja o insuficiente: «lectura preliminar», sin estado definitivo.</span></div>
+        <p class="note">La conclusión nunca es más contundente que su sustento (regla de contundencia, §6 del documento). El «Resumen en texto» ya no es un bloque: su capacidad narrativa vive aquí.</p></div>
+
+      <div class="zone" data-wf="z2"><span class="zt">Z2 · QUÉ OCURRIÓ Y POR QUÉ — explicación integrada (D-01)</span>
+        <div class="row c3">
+          <div data-wf="z2-ocurrio"><p class="mid">1 · Qué ocurrió</p><div class="box">Variación observada: brecha y evolución. <span class="tag tag--cert">Hecho / cálculo</span></div></div>
+          <div data-wf="z2-porque"><p class="mid">2 · Por qué (cómo se descompone)</p><div class="box box--chart">Puente: sesiones → conversión → ticket → brecha</div><span class="sm"><span class="tag tag--cert">Driver</span> estado de atribución visible</span></div>
+          <div data-wf="z2-donde"><p class="mid">3 · Dónde se concentra</p><div class="box box--chart">Cumplimiento por canal</div><span class="sm"><span class="tag tag--cert">Cálculo</span></span></div>
+        </div>
+        <div class="fold" data-wf="z2-detalle-atribucion"><b>Detalle metodológico y de atribución</b> — método (secuencial), orden, contribución de cada factor, estado, «contribución matemática, no causa»</div>
+        <div class="fold" data-wf="z2-hipotesis"><b>Hipótesis a validar</b> <span class="tag">hipótesis</span> (separada, plegada; nunca sostiene la conclusión)</div>
+        <p class="note">Una sola narrativa: qué pasó → por qué → dónde. El método y la atribución se conservan completos en el plegable; no se pierde ninguna información.</p></div>
+
+      <div class="zone" data-wf="z3"><span class="zt">Z3 · QUÉ MERECE ATENCIÓN — experiencia única, tres clases (D-02, D-03)</span>
+        <p class="sm" data-wf="z3-seleccion">Mostrando <b>3 de N</b> · orden por <b>impacto, urgencia y confiabilidad</b> · <b>Ver todos (N)</b> ▸ con filtro: Todos · Hallazgos · Riesgos · Oportunidades</p>
+        <div data-wf="z3-lista">
+          <div class="box"><span class="ty ty--r">▲ Riesgo</span><span class="tag tag--sev">crítica</span><span class="tag tag--cert">cálculo</span> Título<br><span class="sm">Impacto en riesgo: −$ … en ventas · [contribución solo con margen] · Evidencia ▸ · Ver detalle →</span></div>
+          <div class="box"><span class="ty ty--h">◆ Hallazgo</span><span class="tag tag--sev">importante</span><span class="tag tag--cert">cálculo</span> Título<br><span class="sm">Desviación o hecho observado; sin juicio de valor ni importe obligatorio · Evidencia ▸</span></div>
+          <div class="box"><span class="ty ty--o">● Oportunidad</span><span class="tag tag--sev">seguimiento</span><span class="tag tag--cert">estimación</span> Título<br><span class="sm">Venta recuperable (alternativas excluyentes: rango, no suma) · restricciones declaradas</span></div>
+        </div>
+        <div class="row c3" data-wf="z3-clases" style="margin-top:6px">
+          <div class="box sm"><span class="ty ty--h">◆ Hallazgo</span> lo que se observa o se calculó. Se describe y se evidencia.</div>
+          <div class="box sm"><span class="ty ty--r">▲ Riesgo</span> resultado esperado por debajo del plan con consecuencia. Lleva severidad e impacto en riesgo.</div>
+          <div class="box sm"><span class="ty ty--o">● Oportunidad</span> potencial o venta recuperable con palancas controlables. Lleva estimación y supuestos.</div>
+        </div>
+        <p class="note">Una experiencia, tres significados: cada tarjeta conserva su clasificación y su tratamiento; nunca se mezclan en un mismo importe. La portada destaca hasta 3, pero el universo completo sigue accesible. Un hallazgo con baja confiabilidad puede aparecer, rotulado, pero no desplaza a uno mejor sustentado de impacto similar.</p></div>
+
+      <div class="zone" data-wf="z4"><span class="zt">Z4 · QUÉ HAGO — hasta 3 acciones destacadas (D-03)</span>
+        <div class="row c3"><div class="box">1 · Acción → vista</div><div class="box">2 · …</div><div class="box">3 · …</div></div>
+        <p class="sm" data-wf="z4-ver-todas">Mostrando <b>3 de M</b> · <b>Ver todas (M)</b> ▸</p>
+        <p class="note">Cada acción cita el hallazgo, riesgo u oportunidad que la motiva. Si no hay base suficiente, aquí aparece «qué dato falta», no una recomendación genérica.</p></div>
+
+      <div class="zone" data-wf="z5"><span class="zt">Z5 · EVIDENCIA Y DETALLE — bajo demanda, todo plegado</span>
+        <div class="fold"><b>Cifras del periodo</b> (tabla completa de cumplimiento, forecast, gap)</div>
+        <div class="fold"><b>Canales</b> (tabla completa)</div>
+        <div class="fold"><b>Confiabilidad y cobertura</b> (días comparados, calidad, archivos, preparación de datos)</div>
+        <div class="fold"><b>Qué falta para concluir</b> (datos)</div>
+        <div class="fold"><b>Método y definiciones</b></div>
+        <p class="note" data-wf="z5-sin-recorrido">El «Recorrido del sistema» ya no está en el Home principal (D-04): se conserva sin cambios en la vista de ayuda existente.</p></div>
+    </div>
+  </div>
+</section>
+
+<aside>
+  <section class="frame" aria-label="Móvil" data-wf="mobile"><p class="cap">Móvil · 390 px · mismo orden, una columna</p>
+    <div class="mob">
+      <div class="nav" style="margin-bottom:8px"><b>NAV</b>menú de la aplicación (☰)</div>
+      <div class="zone zone--bc"><span class="zt">BC</span><div class="box">Canal ▾ Periodo ▾ · Datos al 22 sep · ● media</div></div>
+      <div class="zone zone--hero"><span class="zt">Z1</span><div class="box"><span class="tag tag--cert">Cálculo</span> ESTADO + conclusión (condicionada)</div><div class="box"><span class="big">−$ 722 mil</span> brecha</div><div class="row c2" style="grid-template-columns:1fr 1fr"><div class="box sm">Cierre</div><div class="box sm">Evolución</div></div></div>
+      <div class="zone"><span class="zt">Z2</span><div class="box">1 · Qué ocurrió</div><div class="box box--chart">2 · Por qué: puente</div><div class="box box--chart">3 · Dónde: canales</div><div class="fold"><b>Detalle de atribución</b></div></div>
+      <div class="zone"><span class="zt">Z3</span><div class="box"><span class="ty ty--r">▲ Riesgo</span> …</div><div class="box"><span class="ty ty--h">◆ Hallazgo</span> …</div><div class="box"><span class="ty ty--o">● Oportunidad</span> …</div><div class="box sm">3 de N · Ver todos</div></div>
+      <div class="zone"><span class="zt">Z4</span><div class="box">1 · Acción → vista</div><div class="box sm">+2 · Ver todas (M)</div></div>
+      <div class="zone"><span class="zt">Z5</span><div class="fold"><b>Evidencia y detalle</b></div></div>
+    </div>
+  </section>
+  <div class="anno" style="margin-top:14px" data-wf="como-se-lee"><h3>Cómo se lee</h3><ol>
+    <li><b>NAV</b> no es del Home; <b>BC</b> sitúa y califica la lectura; <b>Z1–Z5</b> son el contenido, en el orden de las preguntas.</li>
+    <li>La <b>brecha en pesos</b> es el único número grande.</li>
+    <li>La <b>confiabilidad condiciona</b> cuán contundente es la lectura.</li>
+    <li>Hallazgo, riesgo y oportunidad comparten experiencia pero <b>no significado</b>.</li>
+    <li>Destacados: 3 y 3; el resto, a un clic.</li></ol></div>
+</aside>
+</div>
+
+<h2 style="font-size:15px;margin:22px 0 4px">Variantes de estado (misma estructura, contenido distinto)</h2>
+<div class="states" data-wf="variantes">
+  <div class="st" data-wf="var-confiabilidad-media"><b>Confiabilidad media</b>BC en ámbar con el motivo. Z1 conserva la conclusión pero la rotula «con avisos» y muestra aquí los motivos (cobertura, avisos de calidad). Z3 marca la certeza de cada tarjeta.</div>
+  <div class="st" data-wf="var-confiabilidad-baja"><b>Confiabilidad baja o insuficiente</b>Z1 pasa a «Lectura preliminar»: sin etiqueta de estado definitiva, sin verbos de certeza («Vas…»), con lo que falta. Z2 no presenta explicación definitiva: «Diagnóstico no concluyente». Z3 solo muestra hallazgos y lo que falta; nada se presenta como conclusión.</div>
+  <div class="st"><b>Vacío (sin datos)</b>Z1 pasa a «Falta información»: qué dato, por qué importa, un botón. Z2–Z4 no se muestran; Z5 muestra la preparación de datos.</div>
+  <div class="st"><b>Solo plan (sin venta real)</b>Z1: meta del periodo y qué falta para medir cumplimiento. Sin brecha, sin estado.</div>
+  <div class="st"><b>Dato insuficiente en un bloque</b>El bloque conserva su lugar con una línea: «Evolución: sin comparable — falta el periodo anterior». Nunca aparece un 0.</div>
+  <div class="st"><b>Sin base comparable (atribución)</b>El puente de Z2 se sustituye por el estado explícito («Recuperación desde cero», «Sin base comparable») + la variación observada.</div>
+  <div class="st"><b>Bloqueo por meta anual</b>Banda en BC «Análisis limitado: falta la meta anual» con el paso; Z1 y Z2 pasan a lectura preliminar.</div>
+  <div class="st"><b>Error de un bloque</b>El bloque falla de forma aislada («No se pudo calcular esto») sin tumbar la página.</div>
+  <div class="st"><b>Periodo futuro</b>Z1: «El periodo no empieza»; se muestra plan y pronóstico, sin cumplimiento.</div>
+  <div class="st"><b>Contribución sin margen</b>No se pinta importe ni 0: una línea «Margen no configurado» con enlace a Configuración.</div>
+</div>
+</body></html>

@@ -63,7 +63,7 @@ Ideas clave:
 node tools/test-*.js            # cada archivo imprime ✔/✘ y «TODO OK»; ~1000 comprobaciones
 node tools/selftest-node.js     # motor: 233/233
 python3 tools/regression/lint_design.py   # línea base: 193 hallazgos (no es 0)
-python3 tools/regression/batch_<nombre>.py <raíz del repo>   # pruebas en navegador (Playwright + Chromium)
+python3 tools/regression/run_batch.py batch_<nombre>.py <raíz del repo>   # (desde la Fase 1 del Command Center la app tiene CSP: use run_batch.py, que abre el navegador con bypass_csp)   # pruebas en navegador (Playwright + Chromium)
 # regresión completa: los 174 batch_*.py (se corrieron 5 en paralelo; ~25 min)
 ```
 Estado al cierre: pruebas de Node todas OK; selftest 233/233; lint 193 (igual que la línea base); regresión completa sin fallos (170 batches en la última corrida completa; después se agregaron los 4 batches integrales, que pasan por separado).
