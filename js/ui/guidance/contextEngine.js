@@ -55,7 +55,7 @@
         available: true, method: run.method.label, methodId: run.method.id,
         target: a.plan ? a.plan.revenue : null, planToDate: a.planToDate ? a.planToDate.revenue : null,
         actualToDate: a.actualToDate ? a.actualToDate.revenue : null, compliance: a.toDate.revenue.compliance,
-        gapToDate: a.toDate.revenue.gap, gapToDatePct: a.toDate.revenue.gapPct,
+        gapToDate: a.toDate.revenue.gap, gapToDatePct: a.toDate.revenue.gapPct, thresholds: run.settings ? run.settings.pacingThresholds : null,
         forecast: a.forecast ? a.forecast.revenue : null, forecastGap: a.forecastGap.revenue.gap, forecastGapPct: a.forecastGap.revenue.gapPct
       } : { available: false },
       reforecast: rfs ? { available: true, horizon: rfs.horizon.type, required: rfs.horizon.requiredTotal, remaining: rfs.horizon.remaining,
@@ -161,7 +161,7 @@
     const out = [];
     const f = s.forecast;
     if (!f.available) return ['Todavía no hay plan y real suficientes para comparar.'];
-    if (fin(f.gapToDatePct)) out.push(Math.abs(f.gapToDatePct) < 0.0005 ? 'Venta acumulada en línea con el plan.'
+    if (fin(f.gapToDatePct)) out.push(FP.planStatus.classify({ planToDate: f.planToDate, actualToDate: f.actualToDate, daysCounted: s.actual ? s.actual.countedDays : null, planAvailable: true }, { thresholds: f.thresholds || undefined }).state === 'on_plan' ? 'Venta acumulada en línea con el plan.'
       : `Venta acumulada ${pctText(f.gapToDatePct)} ${f.gapToDatePct < 0 ? 'por debajo' : 'por encima'} del plan.`);
     if (fin(f.forecastGapPct)) out.push(f.forecastGapPct < 0 ? `El forecast actual proyecta una brecha de ${pctText(f.forecastGapPct)} al cierre.`
       : `El forecast actual proyecta cerrar ${pctText(f.forecastGapPct)} por encima de la meta.`);

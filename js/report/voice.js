@@ -42,7 +42,7 @@
   const joinEs = (a) => (a.length < 2 ? (a[0] || '') : `${a.slice(0, -1).join(', ')} y ${a[a.length - 1]}`);
   /** Indicadores bajo el plan de un canal (de «Pacing por canal», si está en la presentación): « (ticket y conversión bajo el plan)». */
   const belowOf = (report, name) => { const cp = pageOf(report, 'channelPacing'), r = cp && (cp.rows || []).find((x) => x && x.label === name); return r && Array.isArray(r.below) && r.below.length ? r.below.filter((x) => typeof x === 'string' && x) : []; };
-  const standingDir = (g) => (Math.abs(g) < 0.005 ? `Vamos a la par del plan (${fmt('spct', g)})` : `Vamos ${fmt('pct', Math.abs(g))} ${g < 0 ? 'por debajo' : 'por encima'} del plan a la fecha`);
+  const standingDir = (g, th) => (FP.gap.pacingStatus(1 + g, th || undefined) === 'on_plan' ? `Vamos a la par del plan (${fmt('spct', g)})` : `Vamos ${fmt('pct', Math.abs(g))} ${g < 0 ? 'por debajo' : 'por encima'} del plan a la fecha`);
 
   /** Reglas: needs(report) → texto de lo que falta o null; text(p, report) → titular. Una regla por (formato, lámina). */
   const RULES = {
@@ -66,7 +66,7 @@
           const mins = m.all.filter((x) => x.value < 0).sort((a, b) => a.value - b.value).slice(0, 2).map(sub); return mins.length ? mins.join('; ') + (m.plus ? `; ${m.plus.name} suma ${money(m.plus.value)}` : '') : `${m.plus.name} suma ${money(m.plus.value)} y ningún canal resta contra el plan`; } }
     },
     directivo: {
-      pacing: { needs: (r) => pacingFacts(r).missing || null, text: (p, r) => standingDir(pacingFacts(r).gapPct) },
+      pacing: { needs: (r) => pacingFacts(r).missing || null, text: (p, r) => standingDir(pacingFacts(r).gapPct, r && r.context ? r.context.pacingThresholds : undefined) },
       movers: { needs: (r) => { const m = moversFacts(r); return m.missing || (m.minus || m.plus ? null : 'canales que sumen o resten'); },
         text: (p, r) => { const m = moversFacts(r); return [m.minus ? `${m.minus.name} resta ${money(m.minus.value)}` : null, m.plus ? `${m.plus.name} suma ${money(m.plus.value)}` : null].filter(Boolean).join('; '); } }
     }

@@ -119,7 +119,7 @@
       return mk('recuperacion_desde_cero', { delta, unattributed: delta, reason: 'La base tenía sesiones pero ningún pedido: el cambio no se reparte entre conversión y ticket.' });
     }
     // base con sesiones y pedidos
-    const cr0 = base.o / base.t, aov0 = base.r / base.o;
+    const cr0 = FP.metrics.calcConversionRate(base.o, base.t), aov0 = FP.metrics.calcAov(base.r, base.o);
     if (cur.t === 0) {
       if (cur.o > 0 || cur.r !== 0) return mk('no_calculable', { delta, unattributed: delta, reason: 'El actual trae pedidos o venta sin sesiones (dato inconsistente).' });
       return mk('sin_trafico_actual', { attributed: true, delta, traffic: -base.t * cr0 * aov0, unattributed: 0, reason: 'Sin sesiones en el periodo actual: la caída es de volumen.' });
@@ -128,7 +128,7 @@
       if (cur.r !== 0) return mk('no_calculable', { delta, unattributed: delta, reason: 'El actual trae venta sin pedidos (dato inconsistente).' });
       return mk('conversion_cero_actual', { attributed: true, delta, traffic: (cur.t - base.t) * cr0 * aov0, cr: cur.t * (0 - cr0) * aov0, aov: 0, unattributed: 0, reason: 'Sin pedidos en el periodo actual: el ticket no es observable.' });
     }
-    const a = attribute({ trafficVolume: base.t, conversionRate: cr0, aov: aov0 }, { trafficVolume: cur.t, conversionRate: cur.o / cur.t, aov: cur.r / cur.o }, { method, direct: true });
+    const a = attribute({ trafficVolume: base.t, conversionRate: cr0, aov: aov0 }, { trafficVolume: cur.t, conversionRate: FP.metrics.calcConversionRate(cur.o, cur.t), aov: FP.metrics.calcAov(cur.r, cur.o) }, { method, direct: true });
     if (a.status !== 'ok') return mk('datos_insuficientes', { delta, unattributed: delta, reason: a.note });
     return mk('ok', { attributed: true, delta, traffic: a.contributions.trafficVolume, cr: a.contributions.conversionRate, aov: a.contributions.aov, unattributed: a.residual, method: a.method, reason: null });
   }

@@ -10,8 +10,7 @@
   const FP = (root.FP = root.FP || {});
   const fin = (v) => typeof v === 'number' && isFinite(v);
 
-  /** Umbral de volumen: el mayor entre 500 sesiones y el 1 % del tráfico del periodo. */
-  const MIN_SESSIONS = 500, MIN_SHARE = 0.01;
+  /** Umbral de volumen: el mayor entre el piso y el 1 % del tráfico del periodo. Fuente ÚNICA (P-16): FP.sampleSufficiency.segmentMinSessions (FP.config.diagnostics.segmentMinVolume). */
 
   /** Intervalo de Wilson al 95 % para una proporción. */
   function wilson(k, n, z = 1.96) {
@@ -29,12 +28,12 @@
     const T = cur.reduce((s, r) => s + r.current.traffic, 0);
     const O = cur.reduce((s, r) => s + (r.current.has.orders ? r.current.orders : 0), 0);
     const V = cur.reduce((s, r) => s + (r.current.has.revenue ? r.current.revenue : 0), 0);
-    const crT = T > 0 ? O / T : null, aovT = O > 0 ? V / O : null;
+    const crT = FP.metrics.calcConversionRate(O, T), aovT = FP.metrics.calcAov(V, O);
     // totales del periodo anterior (mismos segmentos con dato en ese periodo): para comparar las tarjetas de cifras
     const bs = res.rows.filter((r) => r.baseline && r.baseline.has && r.baseline.has.traffic);
     const pT = bs.reduce((s2, r) => s2 + r.baseline.traffic, 0), pO = bs.reduce((s2, r) => s2 + (r.baseline.has.orders ? r.baseline.orders : 0), 0), pV = bs.reduce((s2, r) => s2 + (r.baseline.has.revenue ? r.baseline.revenue : 0), 0);
     const prev = bs.length ? { traffic: pT, orders: pO, revenue: pV, cr: pT > 0 ? pO / pT : null, aov: pO > 0 ? pV / pO : null } : null;
-    const threshold = Math.max(MIN_SESSIONS, Math.ceil(MIN_SHARE * T));
+    const threshold = FP.sampleSufficiency.segmentMinSessions(T);
     const relevantN = cur.filter((r) => r.current.traffic >= threshold).length;
     const avgShare = relevantN ? 1 / relevantN : 1;
     const rows = res.rows.map((r) => {
@@ -87,7 +86,7 @@
     // 5) Qué explica el cambio: Δ venta por segmento (suma exacta del cambio total) y su descomposición secuencial tráfico → CR → AOV
     const decomp = (c, p) => {
       if (!c || !p || !(p.traffic > 0) || !(p.orders > 0) || !fin(c.cr) || !fin(c.aov)) return null;
-      const cr0 = p.orders / p.traffic, aov0 = p.revenue / p.orders;
+      const cr0 = FP.metrics.calcConversionRate(p.orders, p.traffic), aov0 = FP.metrics.calcAov(p.revenue, p.orders);
       const traffic = (c.traffic - p.traffic) * cr0 * aov0, cr = c.traffic * (c.cr - cr0) * aov0, aov = c.traffic * c.cr * (c.aov - aov0);
       return { traffic, cr, aov };
     };
@@ -136,5 +135,5 @@
     low: { label: 'Poco volumen', short: 'Poco volumen' }
   };
 
-  FP.segmentInsights = { analyze, customerSplit, wilson, QUADRANT, MIN_SESSIONS, MIN_SHARE };
+  FP.segmentInsights = { analyze, customerSplit, wilson, QUADRANT };
 })(typeof window !== 'undefined' ? window : globalThis);

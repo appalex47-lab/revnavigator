@@ -14,7 +14,7 @@
   function analyze({ rows = [], plan = null, actual = null, baselineTotal = null } = {}) {
     if (!plan || !fin(plan.total) || plan.total <= 0) return { status: 'unavailable', message: (plan && plan.message) || 'No hay meta cargada para este período y canal.', rows: [] };
     if (!fin(actual) || !fin(baselineTotal) || baselineTotal <= 0) return { status: 'unavailable', message: 'No hay venta real y base comparables para construir el puente.', rows: [] };
-    const gap = actual - plan.total, observed = actual - baselineTotal, expected = plan.total - baselineTotal;
+    const gap = FP.metrics.calcGap(plan.total, actual).abs, observed = FP.metrics.calcGap(baselineTotal, actual).abs, expected = FP.metrics.calcGap(baselineTotal, plan.total).abs;
     const input = rows.filter((r) => fin(r.current) || fin(r.baseline)).map((r) => ({ entity: r.entity, current: fin(r.current) ? r.current : 0, baseline: fin(r.baseline) ? r.baseline : 0 }));
     const sumBase = input.reduce((s, r) => s + r.baseline, 0);
     const out = input.map((r) => {

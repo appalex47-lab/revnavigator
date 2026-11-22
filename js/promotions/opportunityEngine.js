@@ -128,7 +128,7 @@
 
       let size = null;
       if (types.some((t) => t.id === 'unconverted')) {
-        const aov = fin(x.aov) ? x.aov : (x.orders > 0 && fin(x.revenue) ? x.revenue / x.orders : null);
+        const aov = fin(x.aov) ? x.aov : FP.metrics.calcAov(x.revenue, x.orders);
         if (fin(aov)) size = Math.max(0, x.views * (ci.medConv - x.conv) * aov);
       }
       const offers = (offersBySku.get(x.sku) || []).concat(x.productCode && x.productCode !== x.sku ? (offersBySku.get(x.productCode) || []) : []);

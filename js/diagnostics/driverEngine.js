@@ -42,7 +42,7 @@
   }
 
   const delta = (cur, base) => ({ current: fin(cur) ? cur : null, baseline: fin(base) ? base : null,
-    delta: fin(cur) && fin(base) ? cur - base : null, deltaPct: fin(cur) && fin(base) && base !== 0 ? cur / base - 1 : null });
+    delta: M().calcGap(base, cur).abs, deltaPct: M().calcRelativeChange(cur, base) });
 
   /* ---------- Periodos y fechas de referencia ---------- */
 

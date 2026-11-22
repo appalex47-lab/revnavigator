@@ -38,6 +38,9 @@
   const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
 
   /** Respaldo de la evidencia: regla visible sobre cobertura de días comparados y calidad de datos. */
+  /** Umbral «en plan» efectivo: el de la entrada o el de la configuración (única fuente). Sin respaldos fijos (antes 0.95 en un sitio y 0.99 en otro). */
+  const onPlanFrom = (th) => (th && fin(th.onPlanFrom) ? th.onPlanFrom : FP.config.forecast.pacingThresholds.onPlanFrom);
+
   function support(input) {
     const cov = input.summary && input.summary.whyPlan && input.summary.whyPlan.coverage;
     const q = input.status && input.status.data ? input.status.data.quality : null;
@@ -168,7 +171,7 @@
     }
     // Forecast de cierre contra la meta
     const fgp = s.forecast.forecastGapPct;
-    if (fin(fgp) && fin(s.forecast.forecastGap) && s.forecast.forecastGap < 0 && 1 + fgp < (th ? th.onPlanFrom : 0.95)) {
+    if (fin(fgp) && fin(s.forecast.forecastGap) && s.forecast.forecastGap < 0 && 1 + fgp < onPlanFrom(th)) {
       const good = pace === 'on_plan' || pace === 'above';
       out.push({ id: 'forecast', kind: 'forecast', severity: 'attention', priority: good ? 1.5 : 3, amount: s.forecast.forecastGap,
         title: good ? 'Vas bien hoy, pero el cierre está en riesgo' : 'Evalúa las palancas para cerrar la brecha',
@@ -181,7 +184,7 @@
     // Canal más rezagado (solo cuando se mira el total digital)
     if (input.channel === 'total' && S && S.channels && S.channels.status === 'ok') {
       // Un canal está en problema si va por debajo del plan a la fecha O si su forecast de cierre queda corto de la meta.
-      const onPlan = th ? th.onPlanFrom : 0.99;
+      const onPlan = onPlanFrom(th);
       const troubled = S.channels.rows.filter((r) => r.state === 'ok').map((r) => {
         const behind = r.pacing === 'below' && fin(r.compliance);
         const short = fin(r.forecastGapPct) && 1 + r.forecastGapPct < onPlan;

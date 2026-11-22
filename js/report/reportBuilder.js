@@ -546,7 +546,6 @@
     return { atypical, totals: { traffic: cT, orders: cO, cr: cO / cT, aov: cO > 0 ? cV / cO : null, trafficChg: cT / bT - 1, ordersChg: bO > 0 ? cO / bO - 1 : null, crDiffPp: bO > 0 ? cO / cT - bO / bT : null, crChg: bO > 0 ? (cO / cT) / (bO / bT) - 1 : null }, mix, weekly: wk.length >= 2 ? wk : [] };
   }
   const wilson = (o, n) => { const z = 1.96, pp = o / n, d = 1 + z * z / n, c = pp + z * z / (2 * n), m = z * Math.sqrt(pp * (1 - pp) / n + z * z / (4 * n * n)); return { lo: (c - m) / d, hi: (c + m) / d }; };   // misma regla que la pantalla de segmentos
-  const SEG_MIN_SESSIONS = 500, SEG_MIN_SHARE = 0.01;
   function pageCampaigns(s) {
     const hasSeg = (x) => x && x.level2 && x.level2.some((l) => l.source !== 'core' && l.groups && l.groups.length);
     const d = hasSeg(s.diag) ? s.diag : (hasSeg(s.trafficDiag) ? s.trafficDiag : null);
@@ -555,7 +554,7 @@
     const g = dim.groups.filter((x) => x.current && isNum(x.current.trafficVolume) && x.current.trafficVolume > 0);
     const T = g.reduce((a, x) => a + x.current.trafficVolume, 0), O = g.reduce((a, x) => a + (isNum(x.current.orders) ? x.current.orders : 0), 0), V = g.reduce((a, x) => a + (isNum(x.current.revenue) ? x.current.revenue : 0), 0);
     if (!(T > 0) || !(O > 0)) return omit('campaigns', 'Campañas', 'Las campañas del período no traen tráfico y pedidos observados.');
-    const crT = O / T, aovT = V / O, thr = Math.max(SEG_MIN_SESSIONS, Math.ceil(SEG_MIN_SHARE * T)), relN = g.filter((x) => x.current.trafficVolume >= thr).length, avgSh = relN ? 1 / relN : 1;
+    const crT = FP.metrics.calcConversionRate(O, T), aovT = FP.metrics.calcAov(V, O), thr = FP.sampleSufficiency.segmentMinSessions(T), relN = g.filter((x) => x.current.trafficVolume >= thr).length, avgSh = relN ? 1 / relN : 1;
     const all = g.map((x) => { const c = x.current, sh = c.trafficVolume / T, w = wilson(c.orders, c.trafficVolume), conclusive = crT < w.lo || crT > w.hi, relevant = c.trafficVolume >= thr;
       const q = !relevant ? 'low' : (sh >= avgSh ? (c.conversionRate >= crT ? 'star' : 'conversion') : (c.conversionRate >= crT ? 'scale' : 'review'));
       return { name: x.label, quadrant: q, traffic: c.trafficVolume, share: sh, trafficChg: x.metrics && x.metrics.trafficVolume ? x.metrics.trafficVolume.deltaPct : null, orders: c.orders, cr: c.conversionRate, crChg: x.metrics && x.metrics.conversionRate ? x.metrics.conversionRate.deltaPct : null, aov: c.aov, revenue: c.revenue, revenuePerSession: isNum(c.revenue) ? c.revenue / c.trafficVolume : null, conclusive, opportunity: conclusive && relevant && c.conversionRate < crT ? c.trafficVolume * (crT - c.conversionRate) * aovT : null }; })
@@ -695,8 +694,8 @@
     const rows = pc && pc.tables[0] && (!s.channel || s.channel === 'total') ? pc.tables[0].rows.filter((r) => !r._total && isNum(r.gap)) : []; // con un canal elegido no se comparan canales entre sí
     const real = kp(pc, 'real'), plan = kp(pc, 'plan'), comp = kp(pc, 'compliance'), fc = kp(pc, 'forecast');
     const hasPlan = Boolean(pc && comp && isNum(comp.value) && plan && isNum(plan.value));
-    const gap = hasPlan ? real.value - plan.value : null;
-    out.state = !hasPlan ? null : Math.abs(comp.value - 1) < 0.005 ? 'en línea' : comp.value < 1 ? 'por debajo' : 'por encima';
+    const gap = hasPlan ? FP.metrics.calcGap(plan.value, real.value).abs : null;
+    out.state = !hasPlan ? null : ({ above: 'por encima', on_plan: 'en línea', below: 'por debajo' })[FP.gap.pacingStatus(comp.value, s.run && s.run.settings ? s.run.settings.pacingThresholds : undefined)];   // regla central (P-11)
     out.pc = pc ? { real: real && real.value, plan: plan && plan.value, compliance: comp && comp.value, gap, forecast: fc && fc.value, forecastSub: fc && fc.sub } : null;
     const cmpOk = hasPlan || Boolean(pc && pc.selection);
     out.best = (cmpOk ? rows : []).filter((r) => r.gap > 0).sort((a, b) => b.gap - a.gap)[0] || null;
@@ -938,6 +937,9 @@
 
   /* ---------------- ensamblado ---------------- */
   const ORDER = ['cover', 'summary', 'pacing', 'reliability', 'drivers', 'categories', 'trends', 'movers', 'customers', 'traffic', 'campaigns', 'recovery', 'seasonality', 'closing', 'decisions', 'annex'];
+  /** Umbrales de estado EFECTIVOS del usuario, solo si difieren de la configuración (así el reporte con la configuración por defecto no cambia de forma). */
+  function customPace(run) { const u = run && run.settings && run.settings.pacingThresholds, c = FP.config.forecast.pacingThresholds; return u && (u.aboveFrom !== c.aboveFrom || u.onPlanFrom !== c.onPlanFrom) ? { pacingThresholds: { aboveFrom: u.aboveFrom, onPlanFrom: u.onPlanFrom } } : {}; }
+
   function build(src) {
     const s = { channel: 'total', options: {}, filters: [], ...src };
     s.options = { includeAnnex: true, showTags: false, showBusinessName: false, ...(s.options || {}) };
@@ -955,7 +957,7 @@
     included.forEach((p, i) => { p.number = i + 1; });
     return {
       schema: SCHEMA, schemaVersion: SCHEMA_VERSION, generatedAt: s.generatedAt || null, app: s.app || null,
-      context: { channel: s.channel, year: s.run ? s.run.year : null, cutoff: s.run ? s.run.cutoff : null, method: s.run && s.run.method ? s.run.method.id : null },
+      context: { channel: s.channel, year: s.run ? s.run.year : null, cutoff: s.run ? s.run.cutoff : null, method: s.run && s.run.method ? s.run.method.id : null, ...customPace(s.run) },
       options: s.options, pages, included: included.map((p) => p.id), omitted: pages.filter((p) => p.status === 'omitted').map((p) => ({ id: p.id, title: p.title, reason: p.reason })),
       total: included.length
     };
