@@ -11,12 +11,13 @@
   'use strict';
   const FP = (root.FP = root.FP || {});
   const fin = (v) => typeof v === 'number' && Number.isFinite(v);
+  const M = () => FP.metrics;   // función canónica de brecha (P-13): FP.metrics.calcGap
   const T = { badVsPlan: -0.05, watchVsPlan: -0.01, goodVsPlan: 0.02, effectPp: 0.0005 };   // umbrales de la señal por canal
   const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
   const addDays = (iso, n) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const weekStart = (iso) => { const d = new Date(`${iso}T00:00:00Z`); const dow = (d.getUTCDay() + 6) % 7; return addDays(iso, -dow); };
-  const pct = (a, b) => (fin(a) && fin(b) && b !== 0 ? a / b - 1 : null);
+  const pct = (a, b) => M().calcRelativeChange(a, b);
 
   const rev = (day, k) => (day && day[k] && fin(day[k].revenue) ? day[k].revenue : null);
   const countedDay = (day) => Boolean(day && day.counted && fin(rev(day, 'actual')));
@@ -127,7 +128,7 @@
       const planClose = (S.total && closeOf(S.total, D) || {}).plan;
       const effectPp = fin(closeDelta) && fin(planClose) && planClose ? closeDelta / planClose : null;
       const vsPlan = pct(actual, plan);
-      return { id, label: label(id), actual, plan, gap: fin(actual) && fin(plan) ? actual - plan : null, vsPlan, lastWeek, vsLastWeek: pct(actual, lastWeek),
+      return { id, label: label(id), actual, plan, gap: M().calcGap(plan, actual).abs, vsPlan, lastWeek, vsLastWeek: pct(actual, lastWeek),
         close: c, closeDelta, effectPp, signal: signal(vsPlan, effectPp, Boolean(sameScope)) };
     };
     const total = rowOf('total'), channels = ids.map(rowOf);

@@ -30,7 +30,7 @@
   function statusOf(run, k) {
     const a = run.total.annual, td = a.toDate[k];
     if (!td || !fin(td.compliance)) return 'insufficient_data';
-    return a.pacingStatus && k === 'revenue' ? a.pacingStatus : FP.gap.pacingStatus(td.compliance, run.settings.pacingThresholds);
+    return FP.gap.pacingStatus(td.compliance, run.settings.pacingThresholds);   // siempre con el umbral EFECTIVO del usuario (a.pacingStatus usa el default y lo ignoraba)
   }
 
   function confidence(state, run, k) {

@@ -1,8 +1,11 @@
-const __need=['/mnt/data/analisis/Venta Productos 2026.csv', '/tmp/phase21/js/analytics/trendEngine.js'];const __miss=__need.filter(x=>!require('fs').existsSync(x));if(__miss.length){console.log('OMITIDA: requiere archivos externos que no están en este entorno: '+__miss.join(', '));process.exit(0);}
-const fs=require('fs'),vm=require('vm'),csv=fs.readFileSync('/mnt/data/analisis/Venta Productos 2026.csv','utf8');
+const __CSV=process.env.REAL_PRODUCT_CSV||'/mnt/data/analisis/Venta Productos 2026.csv',__fsx=require('fs'),__pth=require('path');
+// Motores: instantánea externa (/tmp/phase21) si existe; si no, el código ACTUAL del repositorio. El CSV se indica con REAL_PRODUCT_CSV (por defecto la ruta histórica).
+const __R=__fsx.existsSync('/tmp/phase21/js/analytics/trendEngine.js')?'/tmp/phase21':__pth.join(__dirname,'..');
+const __need=[__CSV];const __miss=__need.filter(x=>!__fsx.existsSync(x));if(__miss.length){console.log('OMITIDA: requiere archivos externos que no están en este entorno: '+__miss.join(', '));process.exit(0);}
+const fs=require('fs'),vm=require('vm'),csv=fs.readFileSync(__CSV,'utf8');
 const ctx=vm.createContext({FP:{},console});
-vm.runInContext(fs.readFileSync('/tmp/phase21/js/analytics/trendEngine.js','utf8'),ctx);
-vm.runInContext(fs.readFileSync('/tmp/phase21/js/analytics/trendForecastEngine.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync(__R+'/js/analytics/trendEngine.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync(__R+'/js/analytics/trendForecastEngine.js','utf8'),ctx);
 const lines=csv.split(/\r?\n/); const h=lines[0].replace(/^\ufeff/,'').split(','); const di=h.indexOf('fecha')>=0?h.indexOf('fecha'):0, pi=h.indexOf('producto'), vi=h.indexOf('venta');
 function parse(line){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(c===','&&!q){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
 const sums=new Map();
@@ -15,7 +18,7 @@ t('hay productos con >=6 periodos',()=>candidates.length>0);
 const [entity,series]=candidates[0];const trend=ctx.FP.trendEngine.analyzeTrend(series,{entity});const fc=ctx.FP.trendForecastEngine.forecast({...trend,series},{horizon:3,method:'ensemble',periodType:'month'});
 t('entidad real tiene historia suficiente',()=>trend.periodsAnalyzed>=6);
 t('forecast real disponible',()=>fc.status==='available'&&fc.periods.length===3);
-t('forecast real conserva patrón',()=>fc.patternStartPeriod===trend.patternStartPeriod&&fc.patternDurationPeriods===trend.patternDurationPeriods);
+t('forecast real conserva patrón',()=>fc.patternStartPeriod===(trend.patternStartPeriod||trend.startPeriod||null)&&fc.patternDurationPeriods===(trend.patternDurationPeriods||trend.consecutivePeriods||0));
 t('backtest real calculado',()=>fc.backtest.periodsTested>0&&Number.isFinite(fc.backtest.mape));
 t('periodos futuros son posteriores',()=>fc.periods.every((x,i)=>i===0||x.period>fc.periods[i-1].period));
 console.log('REAL_ENTITY',entity,'HISTORY',trend.periodsAnalyzed,'PATTERN',trend.pattern,'START',trend.patternStartPeriod,'DURATION',trend.patternDurationPeriods,'FORECAST',fc.periods.map(x=>x.period).join(','));

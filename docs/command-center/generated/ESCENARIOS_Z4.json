@@ -1,0 +1,2780 @@
+{
+ "version": 1,
+ "subfase": "3.4",
+ "nota": "Generado por tools/audit/z34-generar-artefactos.js desde la especificación ejecutable (tools/audit/z4-acciones.js) y los escenarios (tools/audit/z4-escenarios.js). No editar a mano.",
+ "reglasTexto": {
+  "A1": "Sin utilidad, ganancia, beneficio, rentabilidad, ROI, ROAS ni CAC.",
+  "A2": "Sin recomendaciones genéricas («mejorar las ventas», «tomar acciones», «dar seguimiento»).",
+  "A3": "Una recomendación no afirma causas.",
+  "A4": "Sin responsables, fechas límite ni estatus de ejecución (gestión de tareas fuera de alcance).",
+  "A5": "El texto de la acción no lleva importes.",
+  "A6": "Máximo 14 palabras.",
+  "A7": "Una acción apoyada en una señal o hipótesis se redacta como comprobación, no como decisión ni como hecho."
+ },
+ "tipos": {
+  "datos": {
+   "label": "Completar o corregir datos",
+   "meaning": "Sin este dato no se puede concluir: va antes que cualquier recomendación.",
+   "order": 0
+  },
+  "revisar": {
+   "label": "Revisar",
+   "meaning": "Abrir el detalle de algo observado o calculado.",
+   "order": 1
+  },
+  "investigar": {
+   "label": "Comprobar",
+   "meaning": "Validar una señal o una hipótesis antes de decidir.",
+   "order": 2
+  },
+  "decidir": {
+   "label": "Evaluar una alternativa",
+   "meaning": "Comparar alternativas estimadas; la decisión es del responsable del negocio.",
+   "order": 3
+  }
+ },
+ "escenarios": [
+  {
+   "n": 1,
+   "id": "completo-alta",
+   "titulo": "Acciones para las tres clases con confiabilidad alta",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:canal",
+     "a:cierre",
+     "a:driver",
+     "a:rec"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 5",
+    "featured": [
+     "a:cierre",
+     "a:rec",
+     "a:gap"
+    ],
+    "order": [
+     "a:cierre",
+     "a:rec",
+     "a:gap",
+     "a:canal",
+     "a:driver"
+    ],
+    "seeAll": true,
+    "held": 0,
+    "rejected": 0,
+    "citesOf": {
+     "a:rec": 2
+    }
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 5",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:cierre",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Revisar el pronóstico de cierre",
+      "why": "El cierre proyectado queda por debajo de la meta.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|forecast_close",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|forecast_close",
+        "symbol": "▲",
+        "claseLabel": "Riesgo",
+        "title": "El cierre proyectado queda por debajo de la meta",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta en riesgo",
+         "display": "−$723 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "pronostico",
+       "label": "Pronóstico"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "estimacion",
+       "label": "Estimación",
+       "support": "alto"
+      },
+      "tags": [
+       "El importe citado es una estimación"
+      ],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:rec",
+      "kind": "decidir",
+      "kindLabel": "Evaluar una alternativa",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Evaluar las alternativas de recuperación",
+      "why": "Hay dos alternativas estimadas que cierran la misma brecha.",
+      "cites": [
+       {
+        "id": "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+        "dedupKey": "total|total|-|conversionRate|2026-09|plan|recovery_cr",
+        "symbol": "●",
+        "claseLabel": "Oportunidad",
+        "title": "Recuperar la brecha elevando la conversión",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta recuperable",
+         "display": "$723 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       },
+       {
+        "id": "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+        "dedupKey": "total|total|-|sessions|2026-09|plan|recovery_traffic",
+        "symbol": "●",
+        "claseLabel": "Oportunidad",
+        "title": "Recuperar la brecha elevando las sesiones",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta recuperable",
+         "display": "$760 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "recuperacion",
+       "label": "Recuperación"
+      },
+      "source": "recoveryEngine · recoveryOptions",
+      "basisCertainty": {
+       "level": "estimacion",
+       "label": "Estimación",
+       "support": "alto"
+      },
+      "tags": [
+       "El importe citado es una estimación"
+      ],
+      "rank": 1,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:canal",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Abrir el detalle de Ecommerce",
+      "why": "Ecommerce queda por debajo de su plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "dedupKey": "channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Ecommerce concentra la brecha",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$650 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "segmentos",
+       "label": "Segmentos"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 4,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:driver",
+      "kind": "investigar",
+      "kindLabel": "Comprobar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Comparar el embudo de conversión por semana",
+      "why": "La conversión tiene la mayor contribución matemática a la brecha.",
+      "cites": [
+       {
+        "id": "f:total|total|-|conversionRate|2026-09|plan|driver:cr",
+        "dedupKey": "total|total|-|conversionRate|2026-09|plan|driver:cr",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La conversión explica la mayor parte de la brecha",
+        "certaintyLabel": "Contribución matemática",
+        "supportLabel": "Respaldo alto",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "embudo",
+       "label": "Embudo"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "driver",
+       "label": "Contribución matemática",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 6,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:cierre",
+     "a:rec",
+     "a:gap"
+    ],
+    "counts": {
+     "total": 5,
+     "datos": 0,
+     "revisar": 3,
+     "investigar": 1,
+     "decidir": 1
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": true,
+     "label": "Ver todas (5)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 5
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 3
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 1
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 1
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 2,
+   "id": "completo-media",
+   "titulo": "Las mismas acciones con confiabilidad media",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Media",
+    "actions": [
+     "a:gap",
+     "a:canal",
+     "a:cierre",
+     "a:driver",
+     "a:rec"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 5",
+    "featured": [
+     "a:cierre",
+     "a:rec",
+     "a:gap"
+    ],
+    "seeAll": true,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Media",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 5",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:cierre",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Revisar el pronóstico de cierre",
+      "why": "El cierre proyectado queda por debajo de la meta.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|forecast_close",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|forecast_close",
+        "symbol": "▲",
+        "claseLabel": "Riesgo",
+        "title": "El cierre proyectado queda por debajo de la meta",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta en riesgo",
+         "display": "−$723 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "pronostico",
+       "label": "Pronóstico"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "estimacion",
+       "label": "Estimación",
+       "support": "alto"
+      },
+      "tags": [
+       "El importe citado es una estimación"
+      ],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:rec",
+      "kind": "decidir",
+      "kindLabel": "Evaluar una alternativa",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Evaluar las alternativas de recuperación",
+      "why": "Hay dos alternativas estimadas que cierran la misma brecha.",
+      "cites": [
+       {
+        "id": "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+        "dedupKey": "total|total|-|conversionRate|2026-09|plan|recovery_cr",
+        "symbol": "●",
+        "claseLabel": "Oportunidad",
+        "title": "Recuperar la brecha elevando la conversión",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta recuperable",
+         "display": "$723 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       },
+       {
+        "id": "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+        "dedupKey": "total|total|-|sessions|2026-09|plan|recovery_traffic",
+        "symbol": "●",
+        "claseLabel": "Oportunidad",
+        "title": "Recuperar la brecha elevando las sesiones",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta recuperable",
+         "display": "$760 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "recuperacion",
+       "label": "Recuperación"
+      },
+      "source": "recoveryEngine · recoveryOptions",
+      "basisCertainty": {
+       "level": "estimacion",
+       "label": "Estimación",
+       "support": "alto"
+      },
+      "tags": [
+       "El importe citado es una estimación"
+      ],
+      "rank": 1,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:canal",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Abrir el detalle de Ecommerce",
+      "why": "Ecommerce queda por debajo de su plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "dedupKey": "channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Ecommerce concentra la brecha",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$650 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "segmentos",
+       "label": "Segmentos"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 4,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:driver",
+      "kind": "investigar",
+      "kindLabel": "Comprobar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Comparar el embudo de conversión por semana",
+      "why": "La conversión tiene la mayor contribución matemática a la brecha.",
+      "cites": [
+       {
+        "id": "f:total|total|-|conversionRate|2026-09|plan|driver:cr",
+        "dedupKey": "total|total|-|conversionRate|2026-09|plan|driver:cr",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La conversión explica la mayor parte de la brecha",
+        "certaintyLabel": "Contribución matemática",
+        "supportLabel": "Respaldo alto",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "embudo",
+       "label": "Embudo"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "driver",
+       "label": "Contribución matemática",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 6,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:cierre",
+     "a:rec",
+     "a:gap"
+    ],
+    "counts": {
+     "total": 5,
+     "datos": 0,
+     "revisar": 3,
+     "investigar": 1,
+     "decidir": 1
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": true,
+     "label": "Ver todas (5)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 5
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 3
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 1
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 1
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Media",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 3,
+   "id": "baja-datos-primero",
+   "titulo": "Confiabilidad baja: primero los datos",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Baja",
+    "actions": [
+     "a:gap",
+     "a:canal",
+     "a:cierre",
+     "a:driver",
+     "a:rec",
+     "a:filas"
+    ]
+   },
+   "expect": {
+    "mode": "datos_primero",
+    "status": "con_acciones",
+    "header": "3 de 3",
+    "order": [
+     "a:filas",
+     "a:gap",
+     "a:canal"
+    ],
+    "kinds": [
+     "datos",
+     "revisar",
+     "revisar"
+    ],
+    "seeAll": false,
+    "held": 3,
+    "notice": true,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Baja",
+    "mode": "datos_primero",
+    "status": "con_acciones",
+    "header": "3 de 3",
+    "notice": "Lectura preliminar: primero los datos; las recomendaciones del negocio se retienen hasta corregirlos.",
+    "cards": [
+     {
+      "id": "a:filas",
+      "kind": "datos",
+      "kindLabel": "Completar o corregir datos",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Corregir las filas rechazadas de la carga",
+      "why": "Las filas rechazadas impiden una lectura concluyente.",
+      "cites": [],
+      "requires": [
+       "Corregir las filas rechazadas de la carga"
+      ],
+      "destination": {
+       "view": "calidad",
+       "label": "Calidad"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "hecho",
+       "label": "Hecho",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": -1,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:canal",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Abrir el detalle de Ecommerce",
+      "why": "Ecommerce queda por debajo de su plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "dedupKey": "channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Ecommerce concentra la brecha",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$650 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "segmentos",
+       "label": "Segmentos"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 1,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:filas",
+     "a:gap",
+     "a:canal"
+    ],
+    "counts": {
+     "total": 3,
+     "datos": 1,
+     "revisar": 2,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (3)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 3
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 1
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 2
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 3,
+     "items": [
+      {
+       "id": "a:cierre",
+       "reason": "El elemento que la motiva no se presenta con la confiabilidad actual."
+      },
+      {
+       "id": "a:rec",
+       "reason": "El elemento que la motiva no se presenta con la confiabilidad actual."
+      },
+      {
+       "id": "a:driver",
+       "reason": "La confiabilidad de la lectura no permite esta recomendación: primero los datos."
+      }
+     ],
+     "note": "3 recomendaciones no se presentan porque la confiabilidad de la lectura no las sustenta."
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov"
+   ],
+   "z3Nivel": "Baja",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 4,
+   "id": "insuficiente-solo-datos",
+   "titulo": "Confiabilidad insuficiente: solo acciones de datos",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial",
+     "x:meta",
+     "x:calidad"
+    ],
+    "reliability": "Insuficiente",
+    "actions": [
+     "a:gap",
+     "a:cierre",
+     "a:meta",
+     "a:calidad"
+    ]
+   },
+   "expect": {
+    "mode": "solo_datos",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "order": [
+     "a:meta",
+     "a:calidad"
+    ],
+    "kinds": [
+     "datos",
+     "datos"
+    ],
+    "seeAll": false,
+    "held": 2,
+    "notice": true,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Insuficiente",
+    "mode": "solo_datos",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "notice": "Con la información disponible solo se recomiendan acciones sobre los datos.",
+    "cards": [
+     {
+      "id": "a:meta",
+      "kind": "datos",
+      "kindLabel": "Completar o corregir datos",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Definir la meta anual",
+      "why": "Sin la meta anual no se puede valorar el cumplimiento del año.",
+      "cites": [
+       {
+        "id": "f:total|total|-|target|2026-09|plan|data:meta",
+        "dedupKey": "total|total|-|target|2026-09|plan|data:meta",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Falta la meta anual definida",
+        "certaintyLabel": "Hecho",
+        "supportLabel": "Respaldo alto",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "metas",
+       "label": "Metas"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "hecho",
+       "label": "Hecho",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:calidad",
+      "kind": "datos",
+      "kindLabel": "Completar o corregir datos",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Revisar los avisos de calidad de la carga",
+      "why": "Hay registros con avisos que no se excluyeron.",
+      "cites": [
+       {
+        "id": "f:total|total|-|dataQuality|2026-09|plan|data:calidad",
+        "dedupKey": "total|total|-|dataQuality|2026-09|plan|data:calidad",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Los datos traen avisos de calidad",
+        "certaintyLabel": "Hecho",
+        "supportLabel": "Respaldo alto",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "calidad",
+       "label": "Calidad"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "hecho",
+       "label": "Hecho",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 1,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:meta",
+     "a:calidad"
+    ],
+    "counts": {
+     "total": 2,
+     "datos": 2,
+     "revisar": 0,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (2)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 2
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 2
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 0
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 2,
+     "items": [
+      {
+       "id": "a:gap",
+       "reason": "El elemento que la motiva no se presenta con la confiabilidad actual."
+      },
+      {
+       "id": "a:cierre",
+       "reason": "El elemento que la motiva no se presenta con la confiabilidad actual."
+      }
+     ],
+     "note": "2 recomendaciones no se presentan porque la confiabilidad de la lectura no las sustenta."
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|target|2026-09|plan|data:meta",
+    "f:total|total|-|dataQuality|2026-09|plan|data:calidad"
+   ],
+   "z3Retenidos": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Nivel": "Insuficiente",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 5,
+   "id": "vacio",
+   "titulo": "Sin elementos y sin acciones",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [],
+    "reliability": "Alta",
+    "actions": []
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "vacio",
+    "header": null,
+    "fallback": "vacio",
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "vacio",
+    "header": null,
+    "notice": null,
+    "cards": [],
+    "featured": [],
+    "counts": {
+     "total": 0,
+     "datos": 0,
+     "revisar": 0,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": {
+     "type": "vacio",
+     "title": "No hay acciones que destacar en este periodo",
+     "items": []
+    },
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (0)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 0
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 0
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 6,
+   "id": "sin-acciones-falta-dato",
+   "titulo": "Sin acciones: se dice qué dato falta",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap"
+    ],
+    "reliability": "Insuficiente",
+    "actions": []
+   },
+   "expect": {
+    "mode": "solo_datos",
+    "status": "que_falta",
+    "header": null,
+    "fallback": "que_falta",
+    "fallbackItems": 1,
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Insuficiente",
+    "mode": "solo_datos",
+    "status": "que_falta",
+    "header": null,
+    "notice": "Con la información disponible solo se recomiendan acciones sobre los datos.",
+    "cards": [],
+    "featured": [],
+    "counts": {
+     "total": 0,
+     "datos": 0,
+     "revisar": 0,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": {
+     "type": "que_falta",
+     "title": "Qué dato falta",
+     "items": [
+      {
+       "label": "Definir la meta anual",
+       "view": "metas"
+      }
+     ]
+    },
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (0)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 0
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 0
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [],
+   "z3Retenidos": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap"
+   ],
+   "z3Nivel": "Insuficiente",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 7,
+   "id": "baja-sin-base",
+   "titulo": "Lectura preliminar sin acciones ni requisitos",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:riesgo"
+    ],
+    "reliability": "Baja",
+    "actions": [
+     "a:cierre"
+    ]
+   },
+   "expect": {
+    "mode": "datos_primero",
+    "status": "sin_base",
+    "header": null,
+    "fallback": "sin_base",
+    "seeAll": false,
+    "held": 1,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Baja",
+    "mode": "datos_primero",
+    "status": "sin_base",
+    "header": null,
+    "notice": "Lectura preliminar: primero los datos; las recomendaciones del negocio se retienen hasta corregirlos.",
+    "cards": [],
+    "featured": [],
+    "counts": {
+     "total": 0,
+     "datos": 0,
+     "revisar": 0,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": {
+     "type": "sin_base",
+     "title": "No hay acciones que recomendar con la confiabilidad actual",
+     "items": []
+    },
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (0)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 0
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 0
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 1,
+     "items": [
+      {
+       "id": "a:cierre",
+       "reason": "El elemento que la motiva no se presenta con la confiabilidad actual."
+      }
+     ],
+     "note": "1 recomendación no se presenta porque la confiabilidad de la lectura no las sustenta."
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [],
+   "z3Retenidos": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close"
+   ],
+   "z3Nivel": "Baja",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 8,
+   "id": "rechazadas",
+   "titulo": "Recomendaciones genéricas, sin motivo, con importe, causales o de asignación no se muestran",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial",
+     "x:hip"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:generica",
+     "a:sin-motivo",
+     "a:importe",
+     "a:amount",
+     "a:hip-decidir",
+     "a:causal",
+     "a:asignada"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "order": [
+     "a:gap"
+    ],
+    "seeAll": false,
+    "held": 0,
+    "rejected": 7
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:gap"
+    ],
+    "counts": {
+     "total": 1,
+     "datos": 0,
+     "revisar": 1,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (1)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 1
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 1
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [
+     {
+      "id": "a:generica",
+      "errors": [
+       "Recomendación genérica: no dice qué hacer ni dónde."
+      ]
+     },
+     {
+      "id": "a:sin-motivo",
+      "errors": [
+       "Una recomendación debe citar al menos un hallazgo, riesgo u oportunidad que la motive."
+      ]
+     },
+     {
+      "id": "a:importe",
+      "errors": [
+       "El texto de la acción no lleva importes (el impacto es el del elemento que la motiva)."
+      ]
+     },
+     {
+      "id": "a:amount",
+      "errors": [
+       "Una acción no tiene importe propio: el impacto es el del elemento que la motiva (evita doble conteo)."
+      ]
+     },
+     {
+      "id": "a:causal",
+      "errors": [
+       "Una recomendación no afirma causas."
+      ]
+     },
+     {
+      "id": "a:asignada",
+      "errors": [
+       "La acción no puede asignar responsables, fechas ni estatus (gestión de tareas fuera de alcance)."
+      ]
+     },
+     {
+      "id": "a:hip-decidir",
+      "errors": [
+       "Se apoya en una señal o hipótesis: solo puede recomendarse comprobarla, no decidir sobre ella."
+      ]
+     }
+    ],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:channel|app|-|conversionRate|2026-09|plan|pattern:app_cr",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 9,
+   "id": "sin-gestion-de-tareas",
+   "titulo": "Los campos de responsable, fecha y estatus se ignoran",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:tarea"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "order": [
+     "a:tarea"
+    ],
+    "stripped": 1,
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:tarea",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:tarea"
+    ],
+    "counts": {
+     "total": 1,
+     "datos": 0,
+     "revisar": 1,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (1)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 1
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 1
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [
+     {
+      "id": "a:tarea",
+      "fields": [
+       "owner",
+       "dueDate",
+       "status"
+      ]
+     }
+    ],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 10,
+   "id": "accion-sin-elemento",
+   "titulo": "Una acción cuyo motivo no está a la vista no se muestra",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:huerfana"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "order": [
+     "a:gap"
+    ],
+    "unlinked": 1,
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:gap"
+    ],
+    "counts": {
+     "total": 1,
+     "datos": 0,
+     "revisar": 1,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (1)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 1
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 1
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [
+     {
+      "id": "a:huerfana",
+      "reason": "El elemento que la motiva no está a la vista en «Qué merece atención»."
+     }
+    ],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 11,
+   "id": "duplicadas",
+   "titulo": "La misma acción propuesta por dos motores es una sola",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:canal",
+     "x:driver",
+     "x:riesgo",
+     "x:rec1",
+     "x:rec2",
+     "x:potencial"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:gap-guia"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "order": [
+     "a:gap"
+    ],
+    "alsoFrom": {
+     "a:gap": 1
+    },
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "1 de 1",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": [
+       "guide · nextStep"
+      ]
+     }
+    ],
+    "featured": [
+     "a:gap"
+    ],
+    "counts": {
+     "total": 1,
+     "datos": 0,
+     "revisar": 1,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (1)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 1
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 1
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|aov|2026-09|plan|scenario_aov",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 12,
+   "id": "hipotesis-es-comprobacion",
+   "titulo": "Una acción apoyada en una hipótesis es una comprobación",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap",
+     "x:hip"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:hip"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "order": [
+     "a:gap",
+     "a:hip"
+    ],
+    "taggedHypothesis": [
+     "a:hip"
+    ],
+    "basisOf": {
+     "a:hip": "hipotesis",
+     "a:gap": "calculo"
+    },
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:hip",
+      "kind": "investigar",
+      "kindLabel": "Comprobar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Comprobar la conversión de App con dos semanas más",
+      "why": "Hay una señal por confirmar en App.",
+      "cites": [
+       {
+        "id": "f:channel|app|-|conversionRate|2026-09|plan|pattern:app_cr",
+        "dedupKey": "channel|app|-|conversionRate|2026-09|plan|pattern:app_cr",
+        "symbol": "▲",
+        "claseLabel": "Riesgo",
+        "title": "La conversión de App podría estar deteriorándose",
+        "certaintyLabel": "Hipótesis",
+        "supportLabel": "Respaldo bajo",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "segmentos",
+       "label": "Segmentos"
+      },
+      "source": "analistaDetectors · validation",
+      "basisCertainty": {
+       "level": "hipotesis",
+       "label": "Hipótesis",
+       "support": "bajo"
+      },
+      "tags": [
+       "Se apoya en una señal o hipótesis: es una comprobación, no una decisión",
+       "Se apoya en un elemento con respaldo bajo"
+      ],
+      "rank": 1,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:gap",
+     "a:hip"
+    ],
+    "counts": {
+     "total": 2,
+     "datos": 0,
+     "revisar": 1,
+     "investigar": 1,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (2)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 2
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 1
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 1
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:channel|app|-|conversionRate|2026-09|plan|pattern:app_cr"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 13,
+   "id": "datos-primero-en-media",
+   "titulo": "La acción sobre los datos va antes que las demás",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:riesgo",
+     "x:gap",
+     "x:meta"
+    ],
+    "reliability": "Media",
+    "actions": [
+     "a:cierre",
+     "a:gap",
+     "a:meta"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 3",
+    "order": [
+     "a:meta",
+     "a:cierre",
+     "a:gap"
+    ],
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Media",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "3 de 3",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:meta",
+      "kind": "datos",
+      "kindLabel": "Completar o corregir datos",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Definir la meta anual",
+      "why": "Sin la meta anual no se puede valorar el cumplimiento del año.",
+      "cites": [
+       {
+        "id": "f:total|total|-|target|2026-09|plan|data:meta",
+        "dedupKey": "total|total|-|target|2026-09|plan|data:meta",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "Falta la meta anual definida",
+        "certaintyLabel": "Hecho",
+        "supportLabel": "Respaldo alto",
+        "impactRef": null
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "metas",
+       "label": "Metas"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "hecho",
+       "label": "Hecho",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:cierre",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Revisar el pronóstico de cierre",
+      "why": "El cierre proyectado queda por debajo de la meta.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|forecast_close",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|forecast_close",
+        "symbol": "▲",
+        "claseLabel": "Riesgo",
+        "title": "El cierre proyectado queda por debajo de la meta",
+        "certaintyLabel": "Estimación",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Venta en riesgo",
+         "display": "−$723 mil",
+         "provenanceLabel": "proyectado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "pronostico",
+       "label": "Pronóstico"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "estimacion",
+       "label": "Estimación",
+       "support": "alto"
+      },
+      "tags": [
+       "El importe citado es una estimación"
+      ],
+      "rank": 1,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 2,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:meta",
+     "a:cierre",
+     "a:gap"
+    ],
+    "counts": {
+     "total": 3,
+     "datos": 1,
+     "revisar": 2,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (3)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 3
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 1
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 2
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|target|2026-09|plan|data:meta",
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Media",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  },
+  {
+   "n": 14,
+   "id": "impacto-citado-no-se-suma",
+   "titulo": "Dos acciones sobre el mismo elemento citan el mismo importe y no lo suman",
+   "origen": "ilustrativo (acciones y elementos simulados con el formato de los motores)",
+   "input": {
+    "findings": [
+     "x:gap"
+    ],
+    "reliability": "Alta",
+    "actions": [
+     "a:gap",
+     "a:gap-canales"
+    ]
+   },
+   "expect": {
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "sameImpactRef": [
+     "a:gap",
+     "a:gap-canales"
+    ],
+    "seeAll": false,
+    "held": 0,
+    "rejected": 0
+   },
+   "salida": {
+    "level": "Alta",
+    "mode": "completo",
+    "status": "con_acciones",
+    "header": "2 de 2",
+    "notice": null,
+    "cards": [
+     {
+      "id": "a:gap",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Ver el diagnóstico de la brecha",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "diagnostico",
+       "label": "Diagnóstico de brecha"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     },
+     {
+      "id": "a:gap-canales",
+      "kind": "revisar",
+      "kindLabel": "Revisar",
+      "level": "accion",
+      "levelLabel": "Recomendación",
+      "label": "Abrir el cumplimiento por canal",
+      "why": "La venta acumulada queda por debajo del plan de los mismos días.",
+      "cites": [
+       {
+        "id": "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+        "dedupKey": "total|total|-|revenue|2026-09|plan|pacing_gap",
+        "symbol": "◆",
+        "claseLabel": "Hallazgo",
+        "title": "La venta acumulada está por debajo del plan",
+        "certaintyLabel": "Cálculo",
+        "supportLabel": "Respaldo alto",
+        "impactRef": {
+         "label": "Brecha observada",
+         "display": "−$723 mil",
+         "provenanceLabel": "observado",
+         "note": "Importe del elemento citado; no es un importe de la acción y no se suma."
+        }
+       }
+      ],
+      "requires": [],
+      "destination": {
+       "view": "canales",
+       "label": "Canales"
+      },
+      "source": "attentionEngine · next",
+      "basisCertainty": {
+       "level": "calculo",
+       "label": "Cálculo",
+       "support": "alto"
+      },
+      "tags": [],
+      "rank": 0,
+      "alsoFrom": []
+     }
+    ],
+    "featured": [
+     "a:gap",
+     "a:gap-canales"
+    ],
+    "counts": {
+     "total": 2,
+     "datos": 0,
+     "revisar": 2,
+     "investigar": 0,
+     "decidir": 0
+    },
+    "fallback": null,
+    "seeAll": {
+     "visible": false,
+     "label": "Ver todas (2)",
+     "filters": [
+      {
+       "id": "todas",
+       "label": "Todas",
+       "count": 2
+      },
+      {
+       "id": "datos",
+       "label": "Completar o corregir datos",
+       "count": 0
+      },
+      {
+       "id": "revisar",
+       "label": "Revisar",
+       "count": 2
+      },
+      {
+       "id": "investigar",
+       "label": "Comprobar",
+       "count": 0
+      },
+      {
+       "id": "decidir",
+       "label": "Evaluar una alternativa",
+       "count": 0
+      }
+     ]
+    },
+    "held": {
+     "count": 0,
+     "items": [],
+     "note": null
+    },
+    "unlinked": [],
+    "rejected": [],
+    "stripped": [],
+    "order": {
+     "criteria": [
+      "Las acciones sobre los datos van primero",
+      "Después, el orden del elemento de «Qué merece atención» que motiva la acción",
+      "Dentro del mismo elemento: revisar, comprobar y evaluar alternativas"
+     ],
+     "note": "El criterio definitivo de priorización corresponde a la subfase 4.4; las recomendaciones redactadas con IA, a la 5.4."
+    }
+   },
+   "z3Visibles": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap"
+   ],
+   "z3Retenidos": [],
+   "z3Nivel": "Alta",
+   "comparacion": {
+    "coincide": true,
+    "diferencias": []
+   }
+  }
+ ]
+}

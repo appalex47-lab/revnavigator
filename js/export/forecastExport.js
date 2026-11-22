@@ -15,7 +15,8 @@
 
   const block = (b) => FP.exporter.toContractBlock(b);
 
-  function periodOut(p) {
+  /** `th` = umbrales EFECTIVOS del run (run.settings.pacingThresholds): el estado exportado sale de la regla central FP.gap.pacingStatus (P-12), sin umbral propio ni por defecto. */
+  function periodOut(p, th) {
     if (!p) return null;
     return {
       first_date: p.firstDate, last_date: p.lastDate, status: p.status, days: p.days, counted_days: p.countedDays,
@@ -23,15 +24,15 @@
       plan: block(p.plan), plan_to_date: block(p.planToDate), actual_to_date: block(p.actualToDate), forecast: block(p.forecast),
       gap_to_date: Object.fromEntries(C().metricKeys.map((k) => [C().metrics[k].csv, p.toDate[k]])),
       forecast_gap: Object.fromEntries(C().metricKeys.map((k) => [C().metrics[k].csv, p.forecastGap[k]])),
-      pacing_status: p.pacingStatus
+      pacing_status: FP.gap.pacingStatus(p.toDate && p.toDate.revenue ? p.toDate.revenue.compliance : null, th)
     };
   }
 
-  function seriesOut(s) {
+  function seriesOut(s, th) {
     return {
-      annual: periodOut(s.annual),
-      months: s.months.map((m) => ({ month: m.key, ...periodOut(m) })),
-      weeks: s.weeks.map((w) => ({ week: w.key, week_start: w.weekStart, week_end: w.weekEnd, crosses_months: w.crossesMonths, ...periodOut(w) }))
+      annual: periodOut(s.annual, th),
+      months: s.months.map((m) => ({ month: m.key, ...periodOut(m, th) })),
+      weeks: s.weeks.map((w) => ({ week: w.key, week_start: w.weekStart, week_end: w.weekEnd, crosses_months: w.crossesMonths, ...periodOut(w, th) }))
     };
   }
 
@@ -83,7 +84,7 @@
       forecastVersion: latest ? { id: latest.id, version: latest.forecastVersion, generated_at: latest.generatedAt, reference_date: latest.referenceDate, is_current_run: false } : null,
       plan: { total: block(run.total.annual.plan), ...Object.fromEntries(chIds.map((ch) => [ch, block(run.channels[ch].annual.plan)])) },
       actual: { total: block(run.total.annual.actualToDate), ...Object.fromEntries(chIds.map((ch) => [ch, block(run.channels[ch].annual.actualToDate)])) },
-      pacing: { total: seriesOut(run.total), ...Object.fromEntries(chIds.map((ch) => [ch, seriesOut(run.channels[ch])])) },
+      pacing: { total: seriesOut(run.total, run.settings.pacingThresholds), ...Object.fromEntries(chIds.map((ch) => [ch, seriesOut(run.channels[ch], run.settings.pacingThresholds)])) },
       forecast: { total: block(run.total.annual.forecast), ...Object.fromEntries(chIds.map((ch) => [ch, block(run.channels[ch].annual.forecast)])) },
       gaps: {
         total: { annual_gap_to_date: run.total.gap.annualGap, forecast_gap: run.total.gap.forecastGap, monthly: run.total.gap.monthlyGap },
@@ -101,7 +102,7 @@
           forecast: block(r.annual && r.annual.forecast), forecast_gap_revenue: r.annual ? r.annual.forecastGap.revenue : null, confidence: r.confidence, fallback_days: r.fallbackDays }]))]))
       },
       forecast_change: change,
-      events: run.events.map((e) => ({ type: e.type, name: e.name, start: e.start, end: e.end, days: e.days, observation: e.observation, total: periodOut(e.total) })),
+      events: run.events.map((e) => ({ type: e.type, name: e.name, start: e.start, end: e.end, days: e.days, observation: e.observation, total: periodOut(e.total, run.settings.pacingThresholds) })),
       alerts: run.alerts
     };
   }

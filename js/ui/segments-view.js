@@ -46,7 +46,7 @@
       if (r.extra && fin(r.extra.newCustomers)) a.newCustomers += r.extra.newCustomers;
       out.set(k, a);
     });
-    out.forEach((a) => { a.cr = a.has.orders && a.has.traffic && a.traffic > 0 ? a.orders / a.traffic : null; a.aov = a.has.revenue && a.has.orders && a.orders > 0 ? a.revenue / a.orders : null; });
+    out.forEach((a) => { a.cr = a.has.orders && a.has.traffic ? FP.metrics.calcConversionRate(a.orders, a.traffic) : null; a.aov = a.has.revenue && a.has.orders ? FP.metrics.calcAov(a.revenue, a.orders) : null; });
     return out;
   }
 
@@ -181,7 +181,7 @@
         <p class="field__hint">Diferencias matemáticas entre segmentos, no causas: cualquier explicación es una hipótesis por validar.</p></div>
       <div id="sg-map"><h3 class="panel__title">Mapa de tráfico y conversión</h3>${quadrantMap(ins, esc) || '<p class="field__hint">Hacen falta al menos 2 segmentos con volumen suficiente.</p>'}</div>
       <section aria-labelledby="sg-r"><h3 class="panel__title" id="sg-r">Rankings</h3>
-        <p class="field__hint">Solo segmentos con al menos ${F.integer(ins.threshold)} sesiones (el mayor entre 500 y el 1 % del tráfico), salvo «Más venta».${ins.multi ? ' Cada segmento va con el nombre de su dimensión; un mismo visitante cuenta en cada una.' : ''}</p>
+        <p class="field__hint">Solo segmentos con al menos ${F.integer(ins.threshold)} sesiones (${FP.sampleSufficiency.describeSegmentMin().text}), salvo «Más venta».${ins.multi ? ' Cada segmento va con el nombre de su dimensión; un mismo visitante cuenta en cada una.' : ''}</p>
         <div class="sgrank"><div><h4>Más venta</h4>${list(ins.rankings.revenue, (r) => money(r.current.revenue))}</div><div><h4>Mejor CR</h4>${list(ins.rankings.bestCr, (r) => pct(r.current.cr, 2))}</div>
           <div><h4>Menor CR (bajo el total)</h4>${list(ins.rankings.worstCr, (r) => pct(r.current.cr, 2))}</div><div><h4>Menor AOV (bajo el total)</h4>${list(ins.rankings.worstAov, (r) => money(r.current.aov))}</div></div></section>`;
   }
@@ -225,10 +225,10 @@
     const blocks = Array.from({ length: 8 }, (_, i) => { const end = addDays(to, -7 * (7 - i)); return { from: addDays(end, -6), to: end }; });
     const series = keys.map((k) => {
       const w = blocks.map((b) => { const m = sumBy(recs, { from: b.from, to: b.to, channel, dimension }).get(k); return m ? { traffic: m.traffic, orders: m.orders } : { traffic: 0, orders: 0 }; });
-      const cr = w.map((x) => (x.traffic > 0 ? x.orders / x.traffic : null));
+      const cr = w.map((x) => FP.metrics.calcConversionRate(x.orders, x.traffic));
       const sum = (arr) => arr.reduce((a, x) => ({ traffic: a.traffic + x.traffic, orders: a.orders + x.orders }), { traffic: 0, orders: 0 });
       const last = sum(w.slice(6)), prev = sum(w.slice(0, 6));
-      const crLast = last.traffic ? last.orders / last.traffic : null, crPrev = prev.traffic ? prev.orders / prev.traffic : null;
+      const crLast = FP.metrics.calcConversionRate(last.orders, last.traffic), crPrev = FP.metrics.calcConversionRate(prev.orders, prev.traffic);
       const wi = FP.segmentInsights.wilson(last.orders, last.traffic);
       const dir = crLast === null || crPrev === null || !wi ? 'na' : crPrev > wi.hi ? 'down' : crPrev < wi.lo ? 'up' : 'flat';
       const label = (sumBy(recs, { from: blocks[0].from, to, channel, dimension }).get(k) || {}).label || k;
@@ -389,7 +389,7 @@
       ['Distinguible del azar', 'Prueba de dos proporciones al 95 %; «no concluyente» si no pasa.'], ['Tendencia', '2 últimas semanas contra las 6 anteriores, con el intervalo de Wilson al 95 %.'], ['Otros', 'Segmentos con menos del mínimo de sesiones se agrupan; si pesan 25 % o más, se avisa.'], ['Dimensiones', 'Cada dimensión parte la misma venta de otra manera: sus efectos no se suman entre sí. El cruce (Dispositivo × Fuente/medio) sí es una partición.']];
     const cs = C.diagnostics.trafficSummary;
     const meth = `<details class="px-meth" id="sg-meth"${sg.meth ? ' open' : ''}><summary>Método y definiciones</summary><div class="px-meth__b"><section class="px-dsec"><h4>Definiciones</h4><dl class="px-defs">${defs.map((d) => `<div><dt>${esc(d[0])}</dt><dd>${esc(d[1])}</dd></div>`).join('')}</dl></section>
-      <section class="px-dsec"><h4>Umbrales (provisionales)</h4><dl class="px-fi"><div><dt>Mínimo de sesiones</dt><dd>El mayor entre 500 y el 1 % del tráfico (ajustable en ⚙ Filtros)</dd></div><div><dt>Oportunidad</dt><dd>CR bajo el total, diferencia concluyente y ≥ ${(cs.oppMinShare * 100).toFixed(1)} % de la venta para proponer simularla</dd></div><div><dt>Ticket bajo</dt><dd>≥ 30 pedidos y más de 15 % bajo el total</dd></div><div><dt>Mezcla del CR en el resumen</dt><dd>Se nombra desde ${cs.mixMinPp} pp</dd></div></dl>
+      <section class="px-dsec"><h4>Umbrales (provisionales)</h4><dl class="px-fi"><div><dt>Mínimo de sesiones</dt><dd>${FP.sampleSufficiency.describeSegmentMin().text.replace(/^el/, 'El')} (ajustable en ⚙ Filtros)</dd></div><div><dt>Oportunidad</dt><dd>CR bajo el total, diferencia concluyente y ≥ ${(cs.oppMinShare * 100).toFixed(1)} % de la venta para proponer simularla</dd></div><div><dt>Ticket bajo</dt><dd>≥ 30 pedidos y más de 15 % bajo el total</dd></div><div><dt>Mezcla del CR en el resumen</dt><dd>Se nombra desde ${cs.mixMinPp} pp</dd></div></dl>
       <p class="px-cap">Los segmentos no tienen plan: la referencia es el periodo anterior. WhatsApp y Llamadas no tienen datos por segmento.</p></section></div></details>`;
     const foot = `<section class="px-blk px-foot"><span class="px-mu">Segmentos de GA4 · ${esc(ref.res.period.from)} a ${esc(ref.res.period.to)} · ${infos.length === 1 ? '1 dimensión' : infos.length + ' dimensiones'}</span></section>`;
     $('segments-view').innerHTML = `${head}<div class="px px-sg"><div class="px-app" id="sg-frame" data-mode="${sg.mode}">${topbar}${verdict}${intro}

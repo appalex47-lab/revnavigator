@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm');
-const ctx={console};vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/analytics/changeEngine.js','utf8'),ctx);
+const ctx={console};vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/calculations/metrics.js','utf8'),ctx);vm.runInContext(fs.readFileSync('js/analytics/changeEngine.js','utf8'),ctx);   // 4.2 (P-13): changeEngine usa FP.metrics.calcGap
 const E=ctx.FP.changeEngine;const checks=[];const t=(n,o)=>checks.push({n,ok:!!o});
 const day=(date,plan,actual)=>({date,counted:actual!=null,plan:{revenue:plan},actual:actual==null?{revenue:null}:{revenue:actual}});
 const mkSeries=(vals,fc,gapPlan)=>({days:vals.map(([d,p,a])=>day(d,p,a)),months:[{key:'2026-10',forecast:{revenue:fc},plan:{revenue:gapPlan},forecastGap:{revenue:{gap:fc-gapPlan,gapPct:(fc-gapPlan)/gapPlan}}}],annual:{firstDate:'2026-01-01',forecast:{revenue:fc*12},plan:{revenue:gapPlan*12}}});
@@ -13,6 +13,7 @@ t('ayer = último día con todos los canales',lf.day==='2026-10-12');
 t('día parcial detectado y excluido',lf.partial.length===1&&lf.partial[0].date==='2026-10-13'&&lf.partial[0].missing[0]==='b'&&lf.partial[0].othersRevenue===95);
 const c=E.compare(run,{labels:{a:'Canal A',b:'Canal B',total:'Total'}});
 t('compara contra plan',Math.abs(c.total.vsPlan-(140/150-1))<1e-9);
+t('brecha en pesos = real − plan (total: 140 − 150 = −10) y por canal (a: 90 − 100 = −10; b: 50 − 50 = 0); cierre 4.1/4.2: faltaba verificar el signo y el valor',c.total.gap===-10&&c.channels.find(x=>x.id==='a').gap===-10&&c.channels.find(x=>x.id==='b').gap===0);
 t('mismo día semana pasada',c.status==='ok'&&c.total.lastWeek===null||Math.abs(c.total.vsLastWeek)<1);
 t('sin foto previa lo dice',c.headline.some(s=>/foto anterior/.test(s)));
 const snap=E.snapshot(run,{now:'2026-10-12T22:00:00Z',today:'2026-10-12'});

@@ -126,7 +126,7 @@ async def main():
         await q.click('.app-nav a[data-nav="ajustes"]'); await q.wait_for_timeout(700); await q.evaluate("document.querySelectorAll('#view-ajustes [data-pane]').forEach(e=>e.hidden=false)"); await q.wait_for_timeout(150)
         sv = await q.evaluate("""()=>{const v=document.getElementById('view-ajustes');const has=i=>!!v.querySelector('#'+i);
           return {vis:!v.hidden,h2:(v.querySelector('h2')||{}).innerText,secs:['st-modo','st-ia','st-almacenamiento','st-negocio'].map(has),
-            ctl:['dx-key-input','dx-model'].map(has),bc:['bc-status','bc-form','bc-actions'].map(has),mode:v.querySelectorAll('#st-modo [data-action="ux-mode"]').length,
+            ctl:['dx-model'].map(has),bc:['bc-status','bc-form','bc-actions'].map(has),mode:v.querySelectorAll('#st-modo [data-action="ux-mode"]').length,
             stor:!!v.querySelector('#st-almacenamiento [data-action="storage-tests"]'),cur:document.querySelectorAll('.app-nav [aria-current="page"]').length,
             plan:/Configuración de planeación/.test(v.innerText)}}""")
         chk('R-3 la pantalla reúne modo de uso, análisis con IA, almacenamiento y Negocio, con sus controles de siempre', sv['vis'] and sv['h2'] == 'Configuración de RevNavigator' and all(sv['secs']) and all(sv['ctl']) and all(sv['bc']) and sv['mode'] == 2 and sv['stor'] and sv['cur'] == 1, sv)
@@ -157,18 +157,15 @@ async def main():
         await q.click('#st-modo [data-action="ux-mode"][data-value="analyst"]'); await q.wait_for_timeout(300)
         m2 = await q.evaluate("FP.app.state.ux.mode")
         chk('R-3 modo de uso: el selector de Configuración cambia el modo de toda la app', m1 == 'learner' and m2 == 'analyst', (m1, m2))
-        # API key de Cohere: se configura aquí y la usan las demás vistas
+        # Cierre técnico: ya no hay API key en el navegador. La IA va solo por el servidor del equipo (requiere sesión).
         await q.evaluate("FP.app.state.stTab='ia';FP.app.render()"); await q.wait_for_timeout(200)
-        await q.fill('#dx-key-input', 'clave-de-prueba-123'); await q.press('#dx-key-input', 'Tab'); await q.wait_for_timeout(200)
-        await q.fill('#dx-model', 'modelo-de-prueba'); await q.press('#dx-model', 'Tab'); await q.wait_for_timeout(200)
-        await q.check('#st-ia [data-action="dx-remember"]'); await q.wait_for_timeout(300)
-        k = await q.evaluate("[FP.app.state.dx.apiKey, FP.app.state.dx.model, FP.app.state.dx.rememberKey, !!localStorage.getItem(Object.keys(localStorage).find(x=>x.includes('cohereApiKey'))||'')]")
-        chk('R-3 IA: la API key, el modelo y «recordar» se guardan desde Configuración', k[0] == 'clave-de-prueba-123' and k[1] == 'modelo-de-prueba' and k[2] is True and k[3] is True, k)
+        await q.fill('#dx-model', 'modelo-de-prueba'); await q.press('#dx-model', 'Tab'); await q.wait_for_timeout(300)
+        k = await q.evaluate("[FP.app.state.dx.model, FP.app.state.dx.apiKey === undefined, !!document.getElementById('dx-key-input'), !!document.querySelector('[data-action=\"dx-remember\"]'), Object.keys(localStorage).some(x=>x.includes('cohereApiKey')), !!document.querySelector('#st-ia [data-ai-local]')]")
+        chk('R-3 IA: el modelo se guarda desde Configuración; no existe campo de API key ni «recordar», no queda ninguna key guardada y se explica que la IA requiere sesión', k == ['modelo-de-prueba', True, False, False, False, True], k)
         await q.goto(u + '#diagnostico'); await q.wait_for_timeout(800)
         await q.evaluate("document.querySelectorAll('#view-diagnostico details.dx-more').forEach(d=>d.open=true)"); await q.wait_for_timeout(150)   # la IA vive en «Ver más → Confianza»
-        dxs = await q.evaluate("""()=>{const v=document.getElementById('view-diagnostico');const inp=v.querySelector('#dx-key-input');return {visibleKeyInput:!!(inp&&inp.offsetParent),pill:/API key configurada/.test(v.innerText),link:!!v.querySelector('a[data-nav="ajustes"]'),btn:!!v.querySelector('[data-action="dx-ai"]')}}""")
-        chk('R-3 Diagnóstico ya no pide la API key: muestra «API key configurada» (la explicación y el enlace van en el tooltip) y conserva el botón «Generar hipótesis»', dxs['visibleKeyInput'] is False and dxs['pill'] and dxs['btn'], dxs)
-        await q.evaluate("FP.app.state.dx.apiKey = ''; FP.app.state.dx.rememberKey = false; FP.app.actions['dx-remember']({checked:false})")
+        dxs = await q.evaluate("""()=>{const v=document.getElementById('view-diagnostico');const inp=v.querySelector('#dx-key-input');return {visibleKeyInput:!!(inp&&inp.offsetParent),pill:/Requiere sesión/.test(v.innerText),btn:!!v.querySelector('[data-action="dx-ai"]')}}""")
+        chk('R-3 Diagnóstico no pide ninguna API key: muestra «Requiere sesión» sin sesión de equipo y conserva el botón «Generar hipótesis»', dxs['visibleKeyInput'] is False and dxs['pill'] and dxs['btn'], dxs)
         # Almacenamiento: salió de Producto y vive en Configuración
         await q.goto(u + '#prodevol'); await q.wait_for_timeout(700)
         pr = await q.evaluate("[(document.getElementById('pa-status')||document.getElementById('pe-body')).innerText.includes('Pruebas de almacenamiento'), !!document.querySelector('#pe-body a[data-nav=\"ajustes\"]')]")

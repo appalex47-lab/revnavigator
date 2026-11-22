@@ -32,7 +32,7 @@
     const scope = src.channel && src.channel !== 'total' ? ((FP.config.channels || []).find((c) => c.id === src.channel) || {}).label || src.channel : 'Canal digital';
     let conclusion;
     if (!hasPlan) conclusion = `${scope} lleva ${fmt('moneyC', r.actual)} de venta real; no hay plan a la fecha para medir el avance`;
-    else if (Math.abs(gapPct) < 0.005) conclusion = `${scope} va a la par del plan: la venta real está ${fmt('pct', Math.abs(gapPct))} ${gap < 0 ? 'por debajo' : 'por encima'} a la fecha`;
+    else if (FP.gap.pacingStatus(1 + gapPct, run.settings ? run.settings.pacingThresholds : undefined) === 'on_plan') conclusion = `${scope} va a la par del plan: la venta real está ${fmt('pct', Math.abs(gapPct))} ${gap < 0 ? 'por debajo' : 'por encima'} a la fecha`;
     else conclusion = `${scope} va ${fmt('pct', Math.abs(gapPct))} ${gap < 0 ? 'por debajo' : 'por encima'} de su plan a la fecha (${fmt('smoneyC', gap)})`;
     // Confiabilidad: solo lo que la página de confiabilidad ya trae (nivel y aviso de divergencia entre métodos); nada propio.
     const rel = (report && report.pages || []).find((p) => p.id === 'reliability' && p.status === 'included');

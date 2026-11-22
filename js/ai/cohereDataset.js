@@ -17,7 +17,7 @@
    * @param {string[]} headers  encabezados del archivo
    * @returns {Promise<object>} detección (la misma si no hubo consulta o no se pudo validar; con aiNote si la IA no resolvió)
    */
-  async function resolve(detection, headers, { apiKey = '', model = null } = {}) {
+  async function resolve(detection, headers, { model = null } = {}) {
     if (!detection || !detection.ambiguous || !detection.alternatives || !detection.alternatives.length) return detection;
     if (!FP.cohereClient || typeof FP.cohereClient.chatJson !== 'function') return detection;
     const cand = [detection.datasetType, ...detection.alternatives.map((a) => a.datasetType)].filter((x, i, a) => a.indexOf(x) === i);
@@ -30,7 +30,7 @@
     const user = [`Encabezados: ${JSON.stringify(headers)}`,
       `Tipos candidatos: ${JSON.stringify(profiles.map((p) => ({ id: p.id, label: p.label, identificadores: p.identifiers, esperados: p.expected })))}`].join('\n');
     const r = await FP.cohereClient.chatJson({ audit: { purpose: 'Tipo de archivo (duda entre dos)', columns: headers.map((h) => ({ header: h, examplesSent: 0, protected: null })) },
-      system, user, schema: SCHEMA(ids), apiKey, model: model || FP.config.diagnostics.cohere.model });
+      system, user, schema: SCHEMA(ids), model: model || FP.config.diagnostics.cohere.model });
     if (!r.ok) return r.sent === false ? detection : { ...detection, aiNote: 'La IA no pudo resolver la duda; se conserva la detección por reglas.' };
     const p = FP.cohereClient.parseJson(r.text);
     const v = p.ok && p.value ? p.value : null, conf = v ? Number(v.confidence) : NaN;

@@ -1,0 +1,384 @@
+{
+  "version": 2,
+  "subfase": "3.1",
+  "nota": "Fuente de verdad de la matriz UX ↔ motores. Versión 2: incorpora las decisiones aprobadas D-01 a D-04 y las aclaraciones A y B (filas M27–M33). tools/regression/batch_fase3_1_home_auditoria.py comprueba contra la aplicación real que cada ruta FP.* declarada existe (Disponible/Parcial) y que lo «Por desarrollar» no tiene todavía implementación en js/; tools/audit/verificar_consistencia_3_1.py comprueba la consistencia entre matriz, documento y wireframe.",
+  "estados": {
+    "Disponible": "El motor existe, calcula lo necesario y ya puede alimentar la experiencia.",
+    "Parcial": "El motor existe pero no cubre todo lo que el diseño necesita, o no está conectado al Home, o falta una pieza (etiqueta, estado, contrato).",
+    "Por desarrollar": "No existe en js/; hoy es solo especificación (Fase 2) o ni siquiera eso."
+  },
+  "filas": [
+    {
+      "id": "M01",
+      "elemento": "Etiqueta de estado general del negocio (6 estados)",
+      "fuente": "cumplimiento, cierre proyectado, evolución vs comparable, hallazgos activos",
+      "motores": [],
+      "especificacion": "tools/audit/command-center-contracts.js · classifyBusinessState",
+      "estado": "Por desarrollar",
+      "completa": "3.2 (diseño) · 4.2 (motor)"
+    },
+    {
+      "id": "M02",
+      "elemento": "Conclusión en una frase (veredicto)",
+      "fuente": "homeResumen.build: cumplimiento, cierre, driver principal, nº de hallazgos",
+      "motores": [
+        "FP.homeResumen.build",
+        "FP.homeSummaryEngine.compute"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 5.2",
+      "nota": "Descriptiva y sin etiqueta de certeza; mezcla reglas de redacción en código de vista. Su capacidad narrativa (corta/larga) se conserva dentro de la Zona 1 (D-04); ver M31."
+    },
+    {
+      "id": "M03",
+      "elemento": "Cumplimiento y brecha a la fecha",
+      "fuente": "gap.js · toDate.revenue (real − plan, mismos días)",
+      "motores": [
+        "FP.gap.pacingStatus",
+        "FP.homeView.periodFigures"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M04",
+      "elemento": "Cierre proyectado y brecha de cierre",
+      "fuente": "forecastEngine · forecast, forecastGap",
+      "motores": [
+        "FP.forecastEngine.runForecast"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M05",
+      "elemento": "Evolución contra comparable (periodo anterior / año anterior)",
+      "fuente": "homeSummaryEngine.why (actual vs periodo anterior) y temporalEngine",
+      "motores": [
+        "FP.homeSummaryEngine.why",
+        "FP.temporalEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 4.3",
+      "nota": "Se calcula vs periodo anterior pero solo se muestra dentro de un plegable; no hay productor único de growthVsComparable ni comparación contra año anterior en Inicio."
+    },
+    {
+      "id": "M06",
+      "elemento": "Drivers (sesiones, CR, AOV) con estado de atribución",
+      "fuente": "attributeSegment (9 estados), driverEngine nivel 1, homeSummaryEngine.compute (incluye whyPlan, función interna no exportada)",
+      "motores": [
+        "FP.attribution.attributeSegment",
+        "FP.driverEngine.level1",
+        "FP.homeSummaryEngine.compute"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 4.2",
+      "nota": "El cálculo y los 9 estados existen; Inicio muestra contribuciones dentro de un plegable y sin rotular el estado de atribución."
+    },
+    {
+      "id": "M07",
+      "elemento": "Cumplimiento por canal",
+      "fuente": "homeSummaryEngine.channels",
+      "motores": [
+        "FP.homeSummaryEngine.channels"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M08",
+      "elemento": "Concentración de la brecha en un canal",
+      "fuente": "agente analista (brecha_concentrada) y contributionEngine",
+      "motores": [
+        "FP.agents.analista.detect",
+        "FP.contributionEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "4.3",
+      "nota": "Existe en el agente; Inicio solo muestra un banner con el conteo."
+    },
+    {
+      "id": "M09",
+      "elemento": "Hallazgos de portada (qué necesita atención)",
+      "fuente": "attentionEngine.evaluate: tipos gap, driver, forecast, channel, data, followup",
+      "motores": [
+        "FP.attentionEngine.evaluate"
+      ],
+      "estado": "Disponible",
+      "completa": "—",
+      "nota": "No emite tipos riesgo ni oportunidad; esa clasificación es M27."
+    },
+    {
+      "id": "M10",
+      "elemento": "Hallazgos de detalle de los agentes",
+      "fuente": "FP.agents.analista.detect",
+      "motores": [
+        "FP.agents.analista.detect"
+      ],
+      "estado": "Parcial",
+      "completa": "4.4",
+      "nota": "Conteo propio («4 cosas») distinto al de attentionEngine («2 hallazgos»)."
+    },
+    {
+      "id": "M11",
+      "elemento": "Contrato único de hallazgo con deduplicación",
+      "fuente": "cc.finding v1",
+      "motores": [],
+      "especificacion": "tools/audit/command-center-contracts.js · validateFinding, mergeFindings",
+      "estado": "Por desarrollar",
+      "completa": "4.4",
+      "nota": "Incluye el campo type (hallazgo, desviación, riesgo, oportunidad) que sostiene la clasificación de M27."
+    },
+    {
+      "id": "M12",
+      "elemento": "Riesgos",
+      "fuente": "forecastGap, hallazgos forecast/meta en riesgo, calidad de datos",
+      "motores": [
+        "FP.attentionEngine.evaluate",
+        "FP.forecastEngine.runForecast"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 4.4",
+      "nota": "Las señales existen pero ningún motor las clasifica como riesgo. Tratamiento propio del riesgo (severidad, impacto en riesgo): ver M27."
+    },
+    {
+      "id": "M13",
+      "elemento": "Oportunidades",
+      "fuente": "recoveryOptions, scenarioEngine, riskOpportunityEngine (sin uso en producción)",
+      "motores": [
+        "FP.recoveryEngine.recoveryOptions",
+        "FP.scenarioEngine.simulate"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 4.4 · 4.5",
+      "nota": "Se puede calcular venta potencial/recuperable; ningún motor emite una oportunidad como hallazgo. Tratamiento propio de la oportunidad (estimación, alternativas excluyentes): ver M27."
+    },
+    {
+      "id": "M14",
+      "elemento": "Impacto en ventas por hallazgo (MXN)",
+      "fuente": "FP.economics: fromGap, fromSimulation, fromRecovery",
+      "motores": [
+        "FP.economics.fromGap",
+        "FP.economics.fromSimulation",
+        "FP.economics.fromRecovery"
+      ],
+      "estado": "Parcial",
+      "completa": "4.5",
+      "nota": "El módulo existe y está probado; ninguna vista lo usa todavía."
+    },
+    {
+      "id": "M15",
+      "elemento": "Contribución bruta estimada (solo con margen configurado)",
+      "fuente": "FP.economics.contributionOf + settings.economics",
+      "motores": [
+        "FP.economics.contributionOf",
+        "FP.economics.availability"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 4.5",
+      "nota": "Condicionada a margen; todavía sin vista."
+    },
+    {
+      "id": "M16",
+      "elemento": "Etiqueta de certeza (hecho, cálculo, driver, señal, estimación, hipótesis)",
+      "fuente": "narrativeEngine.LEVELS y cc.finding.certainty",
+      "motores": [
+        "FP.narrativeEngine.LEVELS"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 5.5",
+      "nota": "narrativeEngine tiene 6 niveles; falta «estimación» y conectar la etiqueta a cada elemento del Inicio. La certeza de una conclusión nunca supera la confiabilidad (M29)."
+    },
+    {
+      "id": "M17",
+      "elemento": "Confiabilidad y cobertura de datos",
+      "fuente": "homeSummaryEngine.trust, contextEngine.dataReadiness",
+      "motores": [
+        "FP.homeSummaryEngine.trust",
+        "FP.contextEngine.dataReadiness"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M18",
+      "elemento": "Qué falta para concluir (datos insuficientes)",
+      "fuente": "attentionEngine tipo data, contextEngine.requirements",
+      "motores": [
+        "FP.contextEngine.requirements"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M19",
+      "elemento": "Siguiente paso y recomendación",
+      "fuente": "attentionEngine.next, guide.nextStep, actionPriorityEngine",
+      "motores": [
+        "FP.guide.nextStep",
+        "FP.actionPriorityEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "3.4 · 5.4",
+      "nota": "Pasos de ruta genéricos; la priorización de acciones existe pero no alimenta Inicio."
+    },
+    {
+      "id": "M20",
+      "elemento": "Qué cambió desde ayer",
+      "fuente": "changeEngine / changesView.summaryOf",
+      "motores": [
+        "FP.changesView.summaryOf",
+        "FP.changeEngine"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M21",
+      "elemento": "Escenarios y acciones en curso",
+      "fuente": "contextEngine.collectStatus (conteos)",
+      "motores": [
+        "FP.contextEngine.collectStatus"
+      ],
+      "estado": "Parcial",
+      "completa": "3.4",
+      "nota": "Solo conteos."
+    },
+    {
+      "id": "M22",
+      "elemento": "Tendencia y patrones",
+      "fuente": "trendEngine, patternEngine",
+      "motores": [
+        "FP.trendEngine",
+        "FP.patternEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "4.3",
+      "nota": "Existen; Inicio no los consume."
+    },
+    {
+      "id": "M23",
+      "elemento": "Mezcla y participación",
+      "fuente": "shareMixEngine",
+      "motores": [
+        "FP.shareMixEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "4.3",
+      "nota": "Existe; Inicio no lo consume."
+    },
+    {
+      "id": "M24",
+      "elemento": "Confianza del forecast",
+      "fuente": "forecastConfidence",
+      "motores": [
+        "FP.forecastConfidence"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 4.2",
+      "nota": "Existe; Inicio no lo consume."
+    },
+    {
+      "id": "M25",
+      "elemento": "Evidencia y trazabilidad por cifra",
+      "fuente": "explain.whyButton, traceability",
+      "motores": [
+        "FP.explain.whyButton"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M26",
+      "elemento": "Contexto de lectura (canal, periodo, fecha de datos)",
+      "fuente": "state.ux.home, homeView.periodFigures, navigation.contextLabel",
+      "motores": [
+        "FP.homeView.periodFigures",
+        "FP.navigation.contextLabel"
+      ],
+      "estado": "Disponible",
+      "completa": "—"
+    },
+    {
+      "id": "M27",
+      "elemento": "Clasificación de cada elemento de atención: hallazgo, riesgo u oportunidad (D-02)",
+      "fuente": "cc.finding.type; cada clase conserva significado y tratamiento propios",
+      "motores": [],
+      "especificacion": "tools/audit/command-center-contracts.js · validateFinding (TYPES)",
+      "estado": "Por desarrollar",
+      "completa": "3.3 (diseño) · 4.4 (motor)",
+      "nota": "Hoy attentionEngine emite seis tipos técnicos (gap, driver, forecast, channel, data, followup); ninguno es riesgo ni oportunidad."
+    },
+    {
+      "id": "M28",
+      "elemento": "Selección de los destacados por impacto, urgencia y confiabilidad (D-03)",
+      "fuente": "attentionEngine: priority, severity, support; actionPriorityEngine",
+      "motores": [
+        "FP.attentionEngine.evaluate",
+        "FP.actionPriorityEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 3.4 · 4.4",
+      "nota": "Existen prioridad, severidad y respaldo por hallazgo; no existe un criterio que combine impacto económico, urgencia y confiabilidad."
+    },
+    {
+      "id": "M29",
+      "elemento": "Condicionamiento de la lectura ejecutiva por confiabilidad (aclaración B)",
+      "fuente": "attentionEngine.support (alto/medio/bajo), homeSummaryEngine.trust (cobertura, avisos), contextEngine.dataReadiness, hallazgos que bloquean",
+      "motores": [
+        "FP.homeSummaryEngine.trust",
+        "FP.contextEngine.dataReadiness",
+        "FP.attentionEngine.evaluate"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 4.2",
+      "nota": "Las señales de confiabilidad existen; la regla que baja la contundencia de la conclusión (y que impide presentar como definitiva una lectura sin sustento) no existe."
+    },
+    {
+      "id": "M30",
+      "elemento": "Acceso al universo completo de hallazgos y acciones («Ver todos»; D-03)",
+      "fuente": "attentionEngine.evaluate devuelve todos los hallazgos; actionPriorityEngine ordena acciones",
+      "motores": [
+        "FP.attentionEngine.evaluate",
+        "FP.actionPriorityEngine"
+      ],
+      "estado": "Parcial",
+      "completa": "3.3 · 3.4",
+      "nota": "Los datos completos existen; falta el diseño de acceso con filtros por clasificación."
+    },
+    {
+      "id": "M31",
+      "elemento": "Narrativa corta/larga integrada en la lectura ejecutiva (D-04)",
+      "fuente": "homeResumen.build: filas del resumen en versión corta y larga",
+      "motores": [
+        "FP.homeResumen.build"
+      ],
+      "estado": "Disponible",
+      "completa": "—",
+      "nota": "Se reutiliza como contenido de la Zona 1; deja de ser un bloque independiente."
+    },
+    {
+      "id": "M32",
+      "elemento": "Recorrido del sistema (avance por etapas) — sale del Home principal (D-04)",
+      "fuente": "homeView.journey (6 etapas calculadas con datos reales)",
+      "motores": [
+        "FP.homeView.journey"
+      ],
+      "estado": "Disponible",
+      "completa": "—",
+      "nota": "Su contenido se conserva sin cambios en la vista de ayuda existente; no se pierde información."
+    },
+    {
+      "id": "M33",
+      "elemento": "Detalle metodológico y de atribución (método, orden, estado, «contribución ≠ causa»; D-01)",
+      "fuente": "attributeSegment, driverEngine nivel 1",
+      "motores": [
+        "FP.attribution.attributeSegment",
+        "FP.driverEngine.level1"
+      ],
+      "estado": "Parcial",
+      "completa": "3.2 · 4.2",
+      "nota": "El cálculo y su método existen; Inicio no los muestra con su estado ni con la advertencia."
+    }
+  ]
+}

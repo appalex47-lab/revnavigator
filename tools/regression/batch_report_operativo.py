@@ -57,6 +57,9 @@ async def main():
         chk('O14 la casilla quita la lámina de Evolución de la vista previa', 'evolution' not in await f.evaluate(PAGES))
         await f.click('#rp-offlist input[data-id="evolution"]'); await f.wait_for_timeout(300)
         chk('O15 y la vuelve a poner', 'evolution' in await f.evaluate(PAGES))
+        tt = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"pacing\"] .rp-title')||{textContent:''}).textContent")
+        ts = await f.evaluate("(document.querySelector('#view-presentacion .rp-page[data-page=\"summary\"] .rp-title')||{textContent:''}).textContent")
+        chk('O10e Operativo tiene voz propia: Pacing «Vamos al … del plan a la fecha (… de …)» y Resumen «A la fecha vamos al … del plan; <canal> resta …»', tt.startswith('Vamos al ') and 'de $' in tt and ts.startswith('A la fecha vamos al '), [tt, ts])
         # umbrales editables
         chk('O18 con Operativo aparece la sensibilidad (2 campos con valor provisional como ejemplo)', await f.evaluate("document.querySelectorAll('.rp-th input').length") == 2 and await f.evaluate("document.querySelector('.rp-th input').placeholder") == '0.5')
         await f.fill('.rp-th input[data-key="belowPlanPct"]', '20'); await f.dispatch_event('.rp-th input[data-key="belowPlanPct"]', 'change'); await f.wait_for_timeout(300)

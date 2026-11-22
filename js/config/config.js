@@ -436,11 +436,14 @@
       attributionOrder: ['trafficVolume', 'conversionRate', 'aov'],
       /** Resumen general de Inicio. PROVISIONALES: criterios propuestos, no benchmarks; ajústalos con tu historial. */
       homeSummary: {
-        planBand: 0.02,       // «en plan»: el cumplimiento acumulado está dentro de ±2 % de la meta
         flatPct: 0.01,        // «en línea»: el forecast de cierre queda a menos de 1 % de la meta
         driverMinPct: 0.01    // se nombra el motor que más pesa si la brecha es ≥ 1 % de la meta acumulada
       },
       /** Resumen general de Tráfico y conversión (todas las dimensiones). PROVISIONALES: criterios propuestos, no benchmarks; ajústalos con tu historial. */
+      /** Tolerancias de CONCILIACIÓN entre dos importes del mismo universo (P-04). Dos propósitos, no dos versiones de lo mismo: `representationMXN` = medio centavo, el mínimo para que una diferencia sea REAL y no ruido de representación (Z1 marca «pendiente» desde ahí); `decisionMXN` = umbral de DECISIÓN de D-02: toda diferencia SUPERIOR a este valor queda pendiente de conciliación. Ninguna declara «conciliada». */
+      reconciliation: { representationMXN: 0.005, decisionMXN: 0.01 },
+      /** Volumen mínimo para mostrar un segmento por separado: el MAYOR entre `minSessions` y `minShare` del tráfico del periodo. Fuente ÚNICA (P-16): la leen FP.sampleSufficiency.segmentMinSessions y, a través de ella, los motores de segmentos y el reporte. */
+      segmentMinVolume: { minSessions: 500, minShare: 0.01 },
       trafficSummary: {
         mixMinPp: 0.03,       // la mezcla del CR se nombra si dentro + mezcla suman ≥ 0.03 pp
         counterShare: 0.15,   // «contrapeso»: otro efecto que pesa ≥ 15 % del efecto mayor
@@ -474,7 +477,6 @@
       },
       minObservations: 7,        // días mínimos para confianza suficiente
       cohere: {
-        endpoint: 'https://api.cohere.com/v2/chat',
         model: 'command-a-03-2025',
         timeoutMs: 45000,
         maxHypotheses: 6,
@@ -576,6 +578,7 @@
       // S2: lo que NO se sincroniza solo (preferencias por dispositivo)
       autoSkipKeys: ['uxSettings', 'productSettings', 'productsCloud'],
       autoDebounceMs: 4000,
+      conflictKeys: ['*'],   // cierre técnico: en TODAS las claves de sincronización automática una escritura ajena nunca se pisa en silencio (ver cloudSync.js)
       skipKeys: ['cohereApiKey', 'storageMigration', 'cloudSession', 'thresholdSuggestion']   // secretos y banderas locales: nunca viajan a la nube
     },
     storageDb: {
@@ -586,6 +589,8 @@
     },
     /** Presentation Intelligence · formato Operativo. PROVISIONALES: criterios propuestos para decir qué se considera «bajo el plan», no benchmarks; ajústalos con tu historial. */
     reports: {
+      /** Nivel «se aleja del plan» del texto del reporte: cumplimiento por debajo de este valor (el estado frente al plan —arriba / en plan / debajo— sale SIEMPRE de pacingThresholds). */
+      farFromPlanBelow: 0.9,
       operativo: {
         belowPlanPct: 0.005,   // un indicador está «bajo el plan» (o «por encima») cuando se aparta ≥ 0.5 % de su plan; menos se considera ruido
         weakPct: 0.01          // una semana, mes o día es «la más floja» solo si su venta queda ≥ 1 % bajo el plan; si no, el periodo está en línea

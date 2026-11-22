@@ -1,0 +1,191 @@
+{
+ "nota": "Modificaciones autorizadas por el usuario a archivos protegidos. Un cambio distinto del registrado se sigue detectando.",
+ "archivos": {
+  "FASE_3_1_ARQUITECTURA_INFORMACION.md": {
+   "hash_base": "330a1c8ad9c13fe561e8df5e0840041269ff37d793d72de45958b796ffff847c",
+   "hash_nuevo": "d929a6fec87fd62648d167075b1fa994897ddd75c23462812b0a4eb20946ce1f",
+   "autorizacion": "H-01 (12-nov-2026): aclarar la regla «una pieza vive en una sola capa y zona» (una zona propietaria y una fuente de verdad; las demás zonas referencian); solo ese apartado",
+   "registro": "docs/command-center/ACLARACION_H01_H02_PROPIEDAD_Z5.md"
+  },
+  "FASE_3_2_RESUMEN_EJECUTIVO.md": {
+   "hash_base": "4c1ae33a3b1f78e62415dc7b0082f18a5f01e257c58004e90100674f39727bae",
+   "hash_nuevo": "d13cd0dfb83e417b674fed822a37256be6a7cdb4c0dcfef3b5301d3baac3edd4",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "FASE_3_2_ESCENARIOS_Z1.md": {
+   "hash_base": "8542781537e5241dc8ff171e1c56782c0fb13c1c18b7d0845ed8749dccd77558",
+   "hash_nuevo": "f49d60fa97207b3196519336a1804c9efbb81150ff8ef23a0242d51ff812b2e6",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "generated/ESCENARIOS_Z1.json": {
+   "hash_base": "96f0d7b1427b36723a3dd92c27b29f9affde4973bf2b1ea767764dc307c6785b",
+   "hash_nuevo": "b7f7c30852bef74f2a2373c63984afd50ff306f33260536de934d2cf225b03ef",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "wireframes/z1_3_2_wireframe.html": {
+   "hash_base": "0e9bd2b105cf666077a97e25d15d78e63c84ddeb204463f5428ef6f44283efe8",
+   "hash_nuevo": "3820ab88342bc4d652c381d6643b05ff919ed12fedcd1afbccf49dc10c0dc783",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "tools/audit/z1-lectura-ejecutiva.js": {
+   "hash_base": "09f1059ee0582a62308476c152580fde6f637cdd863ce42c3caf9d8b3b5d04c4",
+   "hash_nuevo": "5ae008c095d467101d420a997bb2eaaa4e4b1f75eea57121e3e5ac4461a673c6",
+   "autorizacion": "D-05 (12-nov-2026): corregir la afirmación «datos completos» de Z1 y sus condiciones de uso; sin tocar fórmulas, motor, atribución, contratos de Fase 2 ni la arquitectura de Z1",
+   "registro": "docs/command-center/CAMBIO_AUTORIZADO_D05_Z1.md"
+  },
+  "js/config/config.js": {
+   "hash_base": "d23c103374b9c8db4dab316ffcbedae0af9771e31dd4479771e7cfdac979108f",
+   "hash_nuevo": "0b23dd93be9d198dad71ea840c1b829e2769eff26d1e6056a8d10f72ee90a81a",
+   "autorizacion": "Fase 4.1 · P-01 (autorización del usuario, 12-nov-2026): una sola regla y una sola configuración (FP.config.forecast.pacingThresholds) para el estado frente al plan; solo los sitios cuyo concepto es «cumplimiento acumulado frente al plan». Registro: docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md | Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md"
+  },
+  "js/ui/guidance/contextEngine.js": {
+   "hash_base": "633de0316bcc5ef2a9f0796a8bd3915b0dfcbdb6a3991970e555c5ce0cc0f59f",
+   "hash_nuevo": "87d1c6dab87e888f6bd5615770bc20930363fbaa16c2b84b4e46e18b9ddf4fc1",
+   "autorizacion": "Fase 4.1 · P-01 (autorización del usuario, 12-nov-2026): una sola regla y una sola configuración (FP.config.forecast.pacingThresholds) para el estado frente al plan; solo los sitios cuyo concepto es «cumplimiento acumulado frente al plan». Registro: docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md | Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md"
+  },
+  "js/ui/guidance/home-resumen.js": {
+   "hash_base": "fdf747b65652ace0fb6a33833166cfa1cb716ee277d17f1656c8c9f0573c8843",
+   "hash_nuevo": "cf5c4004004f8b502f817867dd884c5d473cb36004f58d56d2ad2c184e55123c",
+   "autorizacion": "Fase 4.1 · P-01 (autorización del usuario, 12-nov-2026): una sola regla y una sola configuración (FP.config.forecast.pacingThresholds) para el estado frente al plan; solo los sitios cuyo concepto es «cumplimiento acumulado frente al plan». Registro: docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md | Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md"
+  },
+  "js/ui/pacing-view.js": {
+   "hash_base": "98eac2f35d0ac3e1a2da4765edc75c3c9abf68f55c08dfb5e7affe3e50f3dd0c",
+   "hash_nuevo": "94bfc5e47b3b74e6a3096edd4e464c427c28533f9ec5f61a64d14df271b82dd4",
+   "autorizacion": "Fase 4.1 · P-01 (autorización del usuario, 12-nov-2026): una sola regla y una sola configuración (FP.config.forecast.pacingThresholds) para el estado frente al plan; solo los sitios cuyo concepto es «cumplimiento acumulado frente al plan». Registro: docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md | Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md",
+   "registro": "docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md"
+  },
+  "js/ui/pc-resumen.js": {
+   "hash_base": "26834a5f042e205d81bce7af5017d9556a11c6cd1627b3490c31c58a707769b4",
+   "hash_nuevo": "df2381c2cef0e9333ef80055204c608bdc764c52af125c6f74c4c32d082717c6",
+   "autorizacion": "Fase 4.1 · P-01 (autorización del usuario, 12-nov-2026): una sola regla y una sola configuración (FP.config.forecast.pacingThresholds) para el estado frente al plan; solo los sitios cuyo concepto es «cumplimiento acumulado frente al plan». Registro: docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md | Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md",
+   "registro": "docs/fase-4-1-integridad/CONTRATO_ESTADO_COMERCIAL.md"
+  },
+  "index.html": {
+   "hash_base": "20d540e18916911abbd0391cfd8853cd109a0fd8cdb030b36eaaacbbbf3661d7",
+   "hash_nuevo": "5198b6c11fed5d3876c6d331979fd9478aa3beff98d898b27c13c79ec4a4cbc4",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/analytics/changeEngine.js": {
+   "hash_base": "b894ac74453d0cb46accb7c1eff442ce52d2ff80505cdbac00841d4cb35ca63a",
+   "hash_nuevo": "5e25318a52aa23b0f93af4f21631ab3421c1c2d7ad51afce5c3ab89aafbe0e39",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/analytics/trafficConversionEngine.js": {
+   "hash_base": "d7824414c2f12a5dc19e6e49cdb602e3e0fe51be61c61a22aafa3497d32491d1",
+   "hash_nuevo": "687243a8ca845e4cf57c7ac7d7563f5c4437d7ec7811fdcc3b106888e3310b4b",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/calculations/pacing.js": {
+   "hash_base": "61c85f96f75b7883b724c126e926866c5fffc3944bff04b75bedf60a4eda20ed",
+   "hash_nuevo": "5d2b33395c17ddd44f401f5fbb0b62f7b319832666c7f9c37dca127f5d139f00",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/diagnostics/driverEngine.js": {
+   "hash_base": "fc257dbbe3dc7f812151dd00775d4de5713be6e347694b4a51eb4d36cc312299",
+   "hash_nuevo": "42b4b0a0df23788842f682daa80fa39d99d0a0d4f00b46c9b3b904cde585a13e",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/export/forecastExport.js": {
+   "hash_base": "9de7fb120fd8890e57514b327166401e629ba3869f3bc1e7f4f836716dc456ec",
+   "hash_nuevo": "85f23f4353774829d66d43e7639dfe4079be3c86d0ba977301e50c39e970c387",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/report/reportBuilder.js": {
+   "hash_base": "3834606a0674dc19ff4be759b837aaabb9bddbe8e2498164f435837ee96e7180",
+   "hash_nuevo": "0d78ab72c1b22e471e4ae359d4c8e7b0fea46e2c14ad743f0e8a65cffbd02583",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/ui/segmentInsights.js": {
+   "hash_base": "00ff2654b76ea36b7b0ecc66935dce82b61bb9ecc1cfd27e82772bb72e4bdbf7",
+   "hash_nuevo": "962bc8ad64476523ea2c98ab1e645fb6a841f72f9b863fb1e566d420ddc6f605",
+   "autorizacion": "Fase 4.2 (autorización del usuario, 12-nov-2026): P-12 exportación con umbral efectivo, P-13 migración de GAP-3/GAP-6 a FP.metrics.calcGap, P-16 mínimo de sesiones por segmento en una sola fuente (FP.config.diagnostics.segmentMinVolume), y carga de planStatus/sampleSufficiency en index.html. Registro: docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/fase-4-2-integracion-contratos/MATRIZ_CONSUMIDORES_CONTRATOS.md"
+  },
+  "js/analytics/attentionEngine.js": {
+   "hash_base": "b23c76f68c043c92e6f4236054629d13136c382860ac8c0c67e2033f7d5654aa",
+   "hash_nuevo": "e71a23899e971466c14e0367b388c744a04573689743522f908fb912b5c5f105",
+   "autorizacion": "Cierre técnico 4.1/4.2 (autorización del usuario): eliminar umbrales de respaldo paralelos del estado frente al plan (attentionEngine) y generar los textos del mínimo de sesiones por segmento desde la configuración central (segments-view). Registro: docs/cierre-fase-4-1-4-2/INFORME_CIERRE_TECNICO.md",
+   "registro": "docs/cierre-fase-4-1-4-2/INFORME_CIERRE_TECNICO.md"
+  },
+  "js/ui/segments-view.js": {
+   "hash_base": "5e546e48c557b514026ba6c8a0194867e94effed8ec653111c473c72c1b7f544",
+   "hash_nuevo": "50f2c36b0b74987e38c7232e33fd23eb1df5953c731357515170b2d7134d3567",
+   "autorizacion": "Cierre técnico 4.1/4.2 (autorización del usuario): eliminar umbrales de respaldo paralelos del estado frente al plan (attentionEngine) y generar los textos del mínimo de sesiones por segmento desde la configuración central (segments-view). Registro: docs/cierre-fase-4-1-4-2/INFORME_CIERRE_TECNICO.md | Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/cierre-fase-4-1-4-2/INFORME_CIERRE_TECNICO.md"
+  },
+  "js/analytics/planBridgeEngine.js": {
+   "hash_base": "b5484b5e54cabe77a4afaf714c6488d09df41a511f05b85ee5ca2dffafedb65e",
+   "hash_nuevo": "dab5c1172f7118fc789e2b5c210c976ad52799eb4a6c545c2d06ed2fd5bb556c",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/calculations/metrics.js": {
+   "hash_base": "b398e5c5ed41dcf663c4662faad83f3f3383e78c36bc9e2ccc8880462d63e4b9",
+   "hash_nuevo": "2c8b56e4434f49980f4f9c36f3afba67444d966a3cd9c3d47f4ac5ea2b2a309d",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/diagnostics/attribution.js": {
+   "hash_base": "6263a350243ec77d164a0808de2194f0399c1afb08f85aef2b2d425bcc679c2b",
+   "hash_nuevo": "4bbefad0e7374704cee8c91dbb8b9a01ded6d4bd04397cf2b695d02e101459fd",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/forecast/reforecastEngine.js": {
+   "hash_base": "2bc361e64f7488f0b6b43ca1f100626de788ce892375f21fcd4c5bbd37d1ab8f",
+   "hash_nuevo": "cdd8d69d9abefe1a52901cae4c93ef8e547c867f22c63da97fa6b5c4f1c0a094",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/projection/projection.js": {
+   "hash_base": "417dd33222c726dd4948b1e5bd5305f47f437c2a2d8a6acc8709f01a944784de",
+   "hash_nuevo": "2745d04884417d9b1caf64b4e963b52a27d8cdbf247d11a61c9566c5f12b6596",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/promotions/opportunityEngine.js": {
+   "hash_base": "a11fa0fb26e4501b32c46dff7f2e249d5d0317872c68e1f2cdd4791ac109041d",
+   "hash_nuevo": "43eb1ee7f40c378b2c34f7ba36bb244eef4aaab47355c370219e79b1379587fc",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/report/directivo.js": {
+   "hash_base": "8be15c22c4ba408f520b84e16a5368874bb60519d9ade2096f52ff43be924430",
+   "hash_nuevo": "6fced3d91eac21e5713bf210e5bf13147a3bb0301749d856e5664b3f705253ca",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/report/reportCopy.js": {
+   "hash_base": "6cbb891e3263d617d2fb15399e554628f0b6fd27f258f5e638b34b4a7c1db609",
+   "hash_nuevo": "dde8ef8a2555c17595fedca4da0a4cbdd2e6680b29e6bb4421dfd37344343c91",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/report/voice.js": {
+   "hash_base": "64ed00e544a26338ae8d694962c868cf953d31b12d441722bb91076584755edd",
+   "hash_nuevo": "e91c7b56b4a1a0bf8e841e43523773ff02da5ee272b87a9126115321c8ac10d4",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  },
+  "js/ui/guidance/attention-view.js": {
+   "hash_base": "192afcce5b652b9e3229b0b7889f209e025ec8823e3fc08103a4a44473624f43",
+   "hash_nuevo": "20d5906f587547b0d89dfc5889d8766f1083ee6e4c723899a232b9bf681c3a86",
+   "autorizacion": "Reapertura 4.1/4.2 (mandato de ejecución total del usuario): migración completa de CR/AOV/brecha a FP.metrics (calcConversionRate/calcAov exigen denominador > 0; calcRelativeChange), P-04 (configuración única de conciliación), P-11 (el reporte usa la regla central de estado), consumidores reales de los contratos (attention-view, home-resumen, contextEngine). Registro: docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md",
+   "registro": "docs/reapertura-fase-4-1-4-2/INFORME_REAPERTURA.md"
+  }
+ }
+}

@@ -1,0 +1,460 @@
+{
+ "version": 1,
+ "subfase": "3.3",
+ "nota": "Fuente de verdad de la matriz de trazabilidad de Z3. Se verifica contra la aplicación real (tools/regression/batch_fase3_3_3_4_zonas.py) y contra el documento y el wireframe (verificadores de consistencia). Las filas M-xx remiten a docs/command-center/generated/MATRIZ_UX_MOTORES.json (3.1).",
+ "estados": {
+  "Disponible": "El motor existe y entrega lo necesario; solo falta presentarlo según este diseño.",
+  "Parcial": "El motor o parte de él existe, pero falta una pieza (regla, etiqueta, clasificación, conexión al Home) para cumplir este diseño.",
+  "Por desarrollar": "No existe en js/. Es solo diseño propuesto o especificación; su implementación es una dependencia futura."
+ },
+ "categoriasDependencia": {
+  "contratos_existentes": "Resoluble con contratos y motores existentes: solo falta conectar y presentar.",
+  "completar_motores": "Requiere completar o ampliar un motor (Fase 4) antes de poder mostrarse.",
+  "requiere_ia": "Requiere inteligencia artificial (Fase 5) para su versión final; existe una versión determinista de respaldo.",
+  "validacion_produccion": "Requiere validación con datos y usuarios de producción (umbrales y supuestos de la especificación)."
+ },
+ "filas": [
+  {
+   "id": "Z3-01",
+   "elemento": "Lista única de elementos de atención con su clase (◆ ▲ ●)",
+   "requisito": "Una sola experiencia con tres clases que conservan clasificación, significado y tratamiento",
+   "decision": "D-02",
+   "componente": "Tarjeta de elemento (clase y símbolo)",
+   "fuente": "Contrato cc.finding (type) y clasificación por clase",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M11",
+    "M27"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-3-z3.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Contrato único con clasificación en js/ (hoy es solo especificación)"
+    }
+   ],
+   "especificacion": "tools/audit/z3-atencion.js · build"
+  },
+  {
+   "id": "Z3-02",
+   "elemento": "Hallazgos de portada",
+   "requisito": "Mostrar lo observado o calculado, sin juicio de valor",
+   "decision": "D-02",
+   "componente": "Tarjeta ◆",
+   "fuente": "attentionEngine.evaluate",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M09"
+   ],
+   "wireframe": "z3-lista",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Adaptar la salida de attentionEngine al contrato cc.finding"
+    }
+   ]
+  },
+  {
+   "id": "Z3-03",
+   "elemento": "Riesgos",
+   "requisito": "Mostrar lo que queda por debajo del plan o de un umbral con su consecuencia",
+   "decision": "D-02",
+   "componente": "Tarjeta ▲",
+   "fuente": "attentionEngine y forecastEngine",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate",
+    "FP.forecastEngine.runForecast"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M12"
+   ],
+   "wireframe": "z3-lista",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Clasificar riesgos con el contrato; riskOpportunityEngine sin uso queda como candidato"
+    }
+   ]
+  },
+  {
+   "id": "Z3-04",
+   "elemento": "Oportunidades",
+   "requisito": "Mostrar venta recuperable o potencial con supuestos y restricciones declaradas",
+   "decision": "D-02",
+   "componente": "Tarjeta ●",
+   "fuente": "recoveryEngine y scenarioEngine",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.recoveryEngine.recoveryOptions",
+    "FP.scenarioEngine.simulate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M13"
+   ],
+   "wireframe": "z3-lista",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Exponer las alternativas con su grupo excluyente en el contrato de hallazgo"
+    }
+   ]
+  },
+  {
+   "id": "Z3-05",
+   "elemento": "Selección de los tres destacados por urgencia, confiabilidad e impacto",
+   "requisito": "Destacar hasta tres elementos sin limitar el universo",
+   "decision": "D-03",
+   "componente": "Fila de destacados",
+   "fuente": "attentionEngine (prioridad, severidad, soporte) y actionPriorityEngine",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate",
+    "FP.actionPriorityEngine"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M28"
+   ],
+   "wireframe": "z3-lista",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Criterio definitivo de priorización (la especificación usa orden cualitativo sin puntajes)"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.4",
+     "detalle": "Validar con usuarios que el orden coincide con lo que consideran urgente"
+    }
+   ]
+  },
+  {
+   "id": "Z3-06",
+   "elemento": "«Ver todos (N)» y filtros por clase",
+   "requisito": "Acceso al universo completo",
+   "decision": "D-03",
+   "componente": "Desplegable y filtros",
+   "fuente": "attentionEngine.evaluate (todos los hallazgos)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M30"
+   ],
+   "wireframe": "z3-ver-todos",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.4",
+     "detalle": "El motor ya devuelve el universo completo"
+    }
+   ]
+  },
+  {
+   "id": "Z3-07",
+   "elemento": "Impacto en ventas por elemento con su procedencia",
+   "requisito": "Importe observado o proyectado, rotulado, sin mezclar clases",
+   "decision": "D-02",
+   "componente": "Bloque de impacto de la tarjeta",
+   "fuente": "FP.economics (fromGap, fromSimulation, fromRecovery)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.economics.fromGap",
+    "FP.economics.fromSimulation",
+    "FP.economics.fromRecovery"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M14"
+   ],
+   "wireframe": "z3-impacto",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.5",
+     "detalle": "Calcular el impacto de cada hallazgo de portada con los adaptadores"
+    }
+   ]
+  },
+  {
+   "id": "Z3-08",
+   "elemento": "Contribución bruta estimada condicionada al margen",
+   "requisito": "Mostrar contribución solo con margen configurado; si no, «Margen no configurado · Configurar»",
+   "decision": "D-02",
+   "componente": "Línea de contribución de la tarjeta",
+   "fuente": "FP.economics.contributionOf",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.economics.contributionOf",
+    "FP.economics.availability"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M15"
+   ],
+   "wireframe": "z3-impacto",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.5",
+     "detalle": "Capa de contribución ya existe"
+    },
+    {
+     "categoria": "completar_motores",
+     "fase": "4.5",
+     "detalle": "Margen por canal, producto o pedido: hoy solo existe el promedio general"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.5",
+     "detalle": "Validar el margen con finanzas"
+    }
+   ]
+  },
+  {
+   "id": "Z3-09",
+   "elemento": "Certeza y respaldo de cada elemento",
+   "requisito": "Que cada tarjeta diga qué tan firme es",
+   "decision": "3.1 §3.5",
+   "componente": "Línea de certeza de la tarjeta",
+   "fuente": "narrativeEngine.LEVELS y attentionEngine.support",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.narrativeEngine.LEVELS",
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M16"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Escalera única con «estimación» en los motores"
+    }
+   ]
+  },
+  {
+   "id": "Z3-10",
+   "elemento": "Hipótesis aparte, con cómo validarla",
+   "requisito": "Que una hipótesis nunca sostenga el título",
+   "decision": "3.1 §3.5",
+   "componente": "Evidencia plegada de la tarjeta",
+   "fuente": "attentionEngine (hypothesis)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.attentionEngine.evaluate"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M16"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Incluir «cómo validarla» en cada hipótesis"
+    }
+   ]
+  },
+  {
+   "id": "Z3-11",
+   "elemento": "Condición de la lectura: qué se retiene según la confiabilidad",
+   "requisito": "Con Baja solo lo observado; con Insuficiente solo lo que falta",
+   "decision": "Aclaración B",
+   "componente": "Aviso y nota de elementos retenidos",
+   "fuente": "Especificación de confiabilidad (3.2)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "wireframe": "z3-retenidos",
+   "evidencia": "Prueba tools/test-fase3-3-z3.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Regla de confiabilidad en el motor de diagnósticos"
+    }
+   ],
+   "especificacion": "tools/audit/z3-atencion.js · build"
+  },
+  {
+   "id": "Z3-12",
+   "elemento": "Panel «Qué falta para concluir»",
+   "requisito": "Decir qué dato falta en lugar de mostrar cero",
+   "decision": "3.1 §9",
+   "componente": "Panel de datos",
+   "fuente": "contextEngine.requirements",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.contextEngine.requirements"
+   ],
+   "estado": "Disponible",
+   "depende": [
+    "M18"
+   ],
+   "wireframe": "z3-datos",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z3-13",
+   "elemento": "Deduplicación y linaje de hallazgos",
+   "requisito": "El mismo hallazgo dicho por varios motores es uno solo, con su origen",
+   "decision": "D-02",
+   "componente": "Origen en la evidencia plegada",
+   "fuente": "mergeFindings (especificación de Fase 2)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M11"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-3-z3.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Portar mergeFindings a js/ con las mismas pruebas"
+    }
+   ],
+   "especificacion": "tools/audit/z3-atencion.js · build"
+  },
+  {
+   "id": "Z3-14",
+   "elemento": "Totales por clase sin doble conteo",
+   "requisito": "No mezclar clases; alternativas que cierran la misma brecha como rango; superposición sin cifra",
+   "decision": "D-02",
+   "componente": "Totales por clase",
+   "fuente": "FP.economics.combineImpacts",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.economics.combineImpacts"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M14"
+   ],
+   "wireframe": "z3-totales",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.5",
+     "detalle": "combineImpacts toma el «mayor» por valor en las superposiciones: con importes negativos subestimaría una brecha; Z3 no muestra cifra en ese caso y se documenta para 4.5"
+    }
+   ]
+  },
+  {
+   "id": "Z3-15",
+   "elemento": "Vigencia: en vigilancia y resueltos",
+   "requisito": "Rotular lo que no reapareció y sacar lo resuelto de la portada",
+   "decision": "3.1 §7",
+   "componente": "Rótulo de vigilancia",
+   "fuente": "changeEngine (reconcile)",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.changeEngine"
+   ],
+   "estado": "Parcial",
+   "depende": [
+    "M20"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Lote batch_fase3_3_3_4_zonas: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Aplicar el ciclo de vida del contrato a los hallazgos"
+    }
+   ]
+  },
+  {
+   "id": "Z3-16",
+   "elemento": "Rechazo por contrato: sin fuente o clase inconsistente no se muestra",
+   "requisito": "Sin trazabilidad no hay hallazgo",
+   "decision": "Principio 5.3",
+   "componente": "Lista de descartados (Z5)",
+   "fuente": "validateFinding (especificación de Fase 2)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M11"
+   ],
+   "wireframe": "z3-lista",
+   "evidencia": "Prueba tools/test-fase3-3-z3.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Validación de contrato en el motor"
+    }
+   ],
+   "especificacion": "tools/audit/z3-atencion.js · build"
+  },
+  {
+   "id": "Z3-17",
+   "elemento": "Reglas de texto de las tarjetas (T1–T6)",
+   "requisito": "Sin términos financieros, sin causas inferidas, oportunidad como estimación",
+   "decision": "Principio 5.2",
+   "componente": "Título y descripción de la tarjeta",
+   "fuente": "Validador checkCardText (especificación)",
+   "motor": "Especificación",
+   "motores": [],
+   "estado": "Por desarrollar",
+   "depende": [
+    "M16"
+   ],
+   "wireframe": "z3-tarjeta",
+   "evidencia": "Prueba tools/test-fase3-3-z3.js y verificador de consistencia",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.4",
+     "detalle": "Validador en el motor"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.5",
+     "detalle": "Aplicar las mismas reglas a textos generados con IA"
+    }
+   ],
+   "especificacion": "tools/audit/z3-atencion.js · build"
+  }
+ ]
+}

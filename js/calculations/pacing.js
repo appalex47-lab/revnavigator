@@ -103,7 +103,7 @@
   /**
    * Resumen de un periodo (mes, semana, año, evento) a partir de filas diarias del motor.
    * @returns { firstDate, lastDate, status, days, countedDays, missingActualDays,
-   *            plan, toDate: gap por métrica, forecast, forecastGap: por métrica, pacingStatus }
+   *            plan, toDate: gap por métrica, forecast, forecastGap: por métrica }
    */
   function summarizePeriod(rows, cutoff) {
     if (!rows.length) return null;
@@ -123,8 +123,8 @@
       plan, planToDate: counted.length ? planToDate : null, actualToDate,
       toDate,
       forecast,
-      forecastGap: blockForecastGap(plan, forecast),
-      pacingStatus: G().pacingStatus(toDate.revenue.compliance)
+      forecastGap: blockForecastGap(plan, forecast)
+   // El estado frente al plan NO se calcula aquí: depende de los umbrales EFECTIVOS del usuario; se clasifica donde se muestra/exporta con FP.gap.pacingStatus (P-01/P-12).
     };
   }
 

@@ -27,7 +27,7 @@ t('se obtuvieron los 89 reportes del armador', reports.length === 89, reports.le
 
 const allIds = (rep) => rep.pages.map((p) => p.id);
 const selections = [['default', () => ['reliability', 'seasonality', 'annex']], ['ninguna', () => []], ['sin pacing', () => ['pacing']], ['sin resumen, cierre y decisiones', () => ['summary', 'closing', 'decisions']],
-  ['solo anexo fuera', () => ['annex']], ['todo fuera', (rep) => allIds(rep)], ['ids inexistentes', () => ['zzz', 'nada']], ['undefined', () => undefined]];
+  ['solo anexo fuera', () => ['annex']], ['todo fuera (salvo la portada: obligatoria desde esta ronda)', (rep) => allIds(rep).filter((id) => id !== 'cover')], ['ids inexistentes', () => ['zzz', 'nada']], ['undefined', () => undefined]];
 const shape = (us) => us.map((u) => [u.id, u.sub === undefined ? null : u.sub, u.title, u.page && u.page.id, u.number, Object.keys(u).sort().join(',')]);
 let combos = 0, same = 0, identical = 0;
 reports.forEach((rep, n) => selections.forEach(([name, f]) => {
@@ -37,6 +37,18 @@ reports.forEach((rep, n) => selections.forEach(([name, f]) => {
 }));
 t(`EQUIVALENCIA: ${combos} combinaciones (89 reportes × ${selections.length} selecciones) con las mismas láminas, orden, títulos, subanexos, numeración y forma`, same === combos, { same, combos });
 t('las láminas apuntan a la MISMA página del reporte (no a una copia)', reports.every((rep) => C.units(rep, []).every((u) => rep.pages.includes(u.page))));
+
+
+/* ---- cierre técnico: la portada obligatoria y las páginas repetidas se resuelven en el compositor, no en la interfaz ---- */
+const pgx = (id, o) => ({ id, title: id, status: 'included', ...(o || {}) });
+const repX = () => ({ schema: 'executive_report', schemaVersion: '1.0.0', pages: [pgx('cover'), pgx('summary'), pgx('pacing'), pgx('closing'), pgx('decisions'), pgx('annex', { omitted: [] })], included: [], omitted: [], total: 0 });
+t('la portada NO se puede excluir desde el compositor (exclude:["cover"], «todo fuera», o una selección guardada)', ['legacy'].every(() => [['cover'], allIds(repX()), ['cover', 'summary']].every((ex) => C.compose(repX(), { profile: 'legacy', exclude: ex }).slides[0].id === 'cover')) && C.units(repX(), ['cover'])[0].id === 'cover');
+t('quitar la portada no deja un motivo «seleccion-persona» para ella (no hay nada que mostrar como quitado)', !C.compose(repX(), { profile: 'legacy', exclude: ['cover'] }).excluded.some((e) => e.block === 'cover'));
+const dup = repX(); dup.pages.push(pgx('pacing', { title: 'otro pacing' }), pgx('cover', { title: 'otra portada' }));
+const pd = C.compose(dup, { profile: 'legacy', exclude: [] });
+t('páginas repetidas: nunca dos láminas con el mismo id (se usa la primera) y la repetida queda excluida con motivo «duplicada»', pd.slides.filter((s) => s.id === 'pacing').length === 1 && pd.slides.filter((s) => s.id === 'cover').length === 1 && pd.excluded.filter((e) => e.kind === 'duplicada').map((e) => e.block).sort().join() === 'cover,pacing' && pd.slides.find((s) => s.id === 'pacing').title === 'pacing', pd.excluded);
+t('páginas repetidas: la primera ocurrencia es la que se usa aunque la segunda traiga otro título, y el orden/numeración no cambian respecto al reporte sin repetir', JSON.stringify(C.compose(dup, { profile: 'legacy' }).slides.map((s) => [s.id, s.order])) === JSON.stringify(C.compose(repX(), { profile: 'legacy' }).slides.map((s) => [s.id, s.order])));
+t('páginas repetidas: tampoco en units() (lo que dibuja la vista y el PDF)', C.units(dup, []).filter((u) => u.id === 'pacing').length === 1);
 
 /* ---- el plan: razones, exclusiones y avisos ---- */
 let planOk = 0, anyLimit = 0, bySlide = 0, noMutate = true;

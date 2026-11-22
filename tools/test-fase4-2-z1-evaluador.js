@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+/* Fase 4.2 · Bloque B — evaluador de Z1 portado a js/ (js/commandCenter/z1.js, FP.z1) y estado del negocio (businessState.js) frente a las ESPECIFICACIONES ACEPTADAS, más la
+ * integración Z1 → cc.reliability/1. Carga los módulos como lo haría el navegador (contexto limpio, solo FP global, en orden de dependencias). Datos SIMULADOS.
+ * node tools/test-fase4-2-z1-evaluador.js */
+const fs = require('fs'), path = require('path'), vm = require('vm'), R = path.join(__dirname, '..');
+let bad = 0, n = 0; const t = (name, c, d) => { n++; console.log((c ? '✔ ' : '✘ ') + name + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 300) : '')); if (!c) bad++; };
+const src = (f) => fs.readFileSync(path.join(R, f), 'utf8');
+const ctx = vm.createContext({ console }); ctx.window = ctx; ctx.globalThis = ctx;
+let err = null; try { ['js/config/config.js', 'js/calculations/metrics.js', 'js/calculations/gap.js', 'js/economics/impactModel.js', 'js/commandCenter/businessState.js', 'js/commandCenter/z1.js', 'js/commandCenter/reliability.js'].forEach((f) => vm.runInContext(src(f), ctx, { filename: f })); } catch (e) { err = e.message; }
+const FPc = ctx.FP;
+const Z1 = require('./audit/z1-lectura-ejecutiva.js'), S1 = require('./audit/z1-escenarios.js'), h = S1.helpers, CC = require('./audit/command-center-contracts.js'), RS = require('./audit/confiabilidad-contrato.js');
+const J = (x) => JSON.stringify(x);
+t('A1 FP.z1 y FP.businessState se cargan en un contexto limpio de navegador (sin require) y exponen la misma API que la especificación', !err && FPc.z1 && FPc.businessState && Object.keys(Z1).every((k) => k in FPc.z1), err);
+t('A2 dependencias explícitas: sin FP.businessState o sin FP.gap, falla con un mensaje claro (no silenciosamente)', (() => { const c2 = vm.createContext({ console }); c2.window = c2; c2.globalThis = c2; vm.runInContext(src('js/commandCenter/z1.js'), c2); let m1 = '', m2 = ''; try { c2.FP.z1.build(S1.SCENARIOS[0].input); } catch (e) { m1 = e.message; } vm.runInContext(src('js/commandCenter/businessState.js'), c2); try { c2.FP.businessState.classifyBusinessState({ compliance: 1 }); } catch (e) { m2 = e.message; } return /requiere FP\./.test(m1 + m2) && m1 !== '' && m2 !== ''; })(), 'sin dependencias');
+/* ---------- B) un solo evaluador: el texto es el de la especificación ---------- */
+const norm = (s) => s.replace(/\s+/g, ' ').trim();
+const specBody = /function \(CC, ECON\) \{\n([\s\S]*)\n\}\);\s*$/.exec(src('tools/audit/z1-lectura-ejecutiva.js'))[1];
+const jsFull = src('js/commandCenter/z1.js'), jsBody = jsFull.slice(jsFull.indexOf('  \'use strict\';'), jsFull.lastIndexOf('\n});'));
+t('B1 el cuerpo completo del evaluador en js/ es TEXTUALMENTE el de la especificación aceptada (una sola definición de las reglas; cualquier divergencia se detecta)', norm(jsBody) === norm(specBody));
+t('B2 la única diferencia de dependencias es la inyección (businessState / economics); el evaluador no importa módulos de tools/', !/require\(/.test(jsFull.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')));
+/* ---------- C) comportamiento idéntico ---------- */
+t('C1 los 14 escenarios aceptados de 3.2: build() y evaluate() idénticos entre la especificación y el port', S1.SCENARIOS.every((s) => J(Z1.build(s.input)) === J(FPc.z1.build(s.input)) && J(Z1.evaluate(s.input)) === J(FPc.z1.evaluate(s.input))));
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+const r = rng(42042), pick = (a) => a[Math.floor(r() * a.length)];
+const rand = () => { const plan = Math.round(1e6 + r() * 4e7), act = r() < 0.05 ? null : Math.round(plan * (0.7 + r() * 0.6)); return h.base({ period: h.period({ daysCounted: r() < 0.04 ? 0 : 1 + Math.floor(r() * 29) }), plan: { available: r() > 0.06 }, revenue: { planToDate: plan, actualToDate: act, gap: act === null ? null : act - plan, compliance: act === null ? null : act / plan, gapPct: act === null ? null : act / plan - 1 },
+  activity: pick([undefined, { sessions: null, orders: 900, revenue: act }, { sessions: 0, orders: 0, revenue: 0 }, { sessions: 20000, orders: 900, revenue: act }, { sessions: 20000, orders: 0, revenue: act }, { sessions: 0, orders: 5, revenue: act }, { sessions: 20000, orders: null, revenue: act }]),
+  forecast: { target: plan * 1.5, close: plan * 1.4, gapPct: pick([-0.06, 0.02, null]) }, comparable: pick([undefined, h.COMP('ok', 0.02, 1e5, plan * 0.9), h.COMP('sin_base_comparable', null, null, null)]),
+  reliability: h.REL({ support: pick(['alto', 'medio', 'bajo']), coverage: pick([null, 1, 0.8, 0.5, 0.59, 0.6]), warnings: r() < 0.15 ? ['Aviso.'] : [], blocking: r() < 0.05 ? ['Bloqueo.'] : [], dataErrors: r() < 0.05 }) }); };
+const inputs = Array.from({ length: 4000 }, rand);
+t('C2 4 000 entradas aleatorias (nulos, ceros, sesiones/pedidos ausentes, cobertura en el límite 0.6/0.59): build() idéntico', inputs.every((i) => J(Z1.build(i)) === J(FPc.z1.build(i))));
+const bands = [undefined, { aboveFrom: 1.05, onPlanFrom: 0.95 }, { aboveFrom: 1.02, onPlanFrom: 0.97, growth: 0.05 }, { minCoverage: 0.8 }];
+let bsDiff = []; for (let k = 0; k < 20000; k++) { const x = { compliance: pick([null, NaN, 0.9, 0.99, 1, 1.01, 0.989999, 1.0099999, 0.8 + r() * 0.4]), coverage: pick([null, 0.5, 0.6, 0.9, 1]), growthVsComparable: pick([null, -0.1, -0.03, -0.0099, 0, 0.0099, 0.03, 0.1]), forecastGapPct: pick([null, -0.1, -0.011, 0.02]), findings: pick([[], [{ severity: 'critica' }], [{ severity: 'importante' }]]), concentration: r() < 0.3, dataWarnings: r() < 0.3, blockingData: r() < 0.05 }, b = pick(bands); if (J(CC.classifyBusinessState(x, b)) !== J(FPc.businessState.classifyBusinessState(x, b))) bsDiff.push([x, b]); }
+t('C3 businessState (única diferencia: el eje de cumplimiento delega en FP.gap.pacingStatus): salida idéntica a la especificación en 20 000 entradas × 4 configuraciones de bandas (incl. bordes 0.99/1.01 y cobertura 0.6)', !bsDiff.length, bsDiff.slice(0, 2));
+t('C4 el eje de cumplimiento NO repite comparaciones de umbral (una sola regla): el código de businessState llama a FP.gap.pacingStatus y no contiene `compliance >= b.aboveFrom`', /FP\.gap\.pacingStatus|\.pacingStatus\(/.test(src('js/commandCenter/businessState.js')) && !/compliance >= b\.(aboveFrom|onPlanFrom)/.test(src('js/commandCenter/businessState.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')));
+/* ---------- D) Z1 → cc.reliability/1 ---------- */
+t('D1 Z1 → reliability: FP.reliability.assess(i) (sin pasar la evaluación) usa FP.z1 y es idéntico a la especificación en 4 000 entradas', inputs.every((i) => J(FPc.reliability.assess(i)) === J(RS.assess(i))));
+t('D2 trazabilidad: el nivel y las causas de reliability son EXACTAMENTE los de Z1 (mismo objeto de evaluación), en las 4 000 entradas', inputs.every((i) => { const o = FPc.z1.build(i), a = FPc.reliability.assess(i); return a.level === o.reliability.level && J(a.causes) === J(o.reliability.causes) && a.mode === o.reliability.mode && a.completeness === o.completeness.status; }));
+t('D3 no existe una segunda regla de nivel: reliability.js no asigna niveles (los lee de Z1)', !/level\s*=\s*['"](Alta|Media|Baja|Insuficiente)/.test(src('js/commandCenter/reliability.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')));
+/* ---------- E) ausencia ≠ cero; casos límite; D-01 ---------- */
+const base = S1.SCENARIOS[1].input, z = (o) => FPc.z1.build({ ...base, ...o });
+const sess = inputs.filter((i) => i.activity && i.activity.sessions === null);
+t(`E1 sesiones AUSENTES (${sess.length} entradas): la conversión queda «no verificable» (nunca se convierte en 0 ni en conclusión) y la completitud es «incompleta»`, sess.length > 100 && sess.every((i) => { const o = FPc.z1.build(i); return o.conclusions.conversion === 'no_verificable' && o.completeness.status === 'incompleta' && o.completeness.missing.includes('sesiones'); }));
+const ord = inputs.filter((i) => i.activity && i.activity.orders === null);
+t(`E2 pedidos AUSENTES (${ord.length} entradas): la conversión no se calcula ni se declara «cero observado»`, ord.length > 100 && ord.every((i) => { const o = FPc.z1.build(i); return o.conclusions.conversion !== 'cero_observado' && o.conclusions.conversion !== 'observable'; }));
+t('E3 cero LEGÍTIMO: pedidos = 0 con sesiones > 0 y venta es «cero observado» (dato real, no ausencia) — escenario 10', FPc.z1.build(S1.SCENARIOS[9].input).conclusions.conversion === 'cero_observado');
+t('E4 actividad cero verificada (sesiones 0, pedidos 0, venta 0): «sin actividad», no se emite brecha ni conclusión (escenario 7)', (() => { const o = FPc.z1.build(S1.SCENARIOS[6].input); return o.comparability.code === 'sin_actividad' && o.reliability.level === 'Insuficiente'; })());
+t('E5 datos contradictorios (pedidos > 0 con sesiones 0): «resultado no calculable», venta observada no visible y nivel Insuficiente (escenario 12)', (() => { const o = FPc.z1.build(S1.SCENARIOS[11].input); return o.comparability.code === 'no_calculable' && o.reliability.level === 'Insuficiente'; })());
+t('E6 D-01: SIN plan, la venta observada válida se muestra y la brecha/cumplimiento NO (no se bloquea el dato observado por falta de plan)', (() => { const o = z({ plan: { available: false } }); return o.economic.observed.visible === true && o.economic.compliance.visible === false && o.conclusions.cumplimiento === 'no_concluyente'; })());
+t('E7 caso límite: cobertura 0.6 y 0.59 se evalúan de forma determinista (mismo resultado en dos corridas) y el port coincide con la especificación en ambas', [0.6, 0.59].every((c) => { const o = { reliability: { ...base.reliability, coverage: c } }; return J(z(o)) === J(z(o)) && J(z(o)) === J(Z1.build({ ...base, ...o })); }));
+t('E8 datos completos → Alta con completitud verificada y todos los usos permitidos; insuficientes → Insuficiente (escenarios 1 y 6)', FPc.reliability.assess(S1.SCENARIOS[0].input).level === 'Alta' && FPc.reliability.assess(S1.SCENARIOS[5].input).level === 'Insuficiente');
+t('E9 sin umbral universal de confiabilidad: Z1 no contiene una constante única que decida «confiable» (el nivel sale de bloqueos duros, límites y avisos explícitos)', /hard\.length/.test(jsFull) && !/universalThreshold:\s*true/.test(jsFull));
+/* ---------- F) mutaciones del port ---------- */
+function mutate(from, to) { const s = src('js/commandCenter/z1.js'); if (!s.includes(from)) return null; const c2 = vm.createContext({ console }); c2.window = c2; c2.globalThis = c2; ['js/config/config.js', 'js/calculations/metrics.js', 'js/calculations/gap.js', 'js/economics/impactModel.js', 'js/commandCenter/businessState.js'].forEach((f) => vm.runInContext(src(f), c2)); vm.runInContext(s.replace(from, to), c2); return c2.FP.z1; }
+const kills = (from, to) => { const M = mutate(from, to); return !M || S1.SCENARIOS.some((s) => J(M.build(s.input)) !== J(Z1.build(s.input))) || inputs.slice(0, 500).some((i) => J(M.build(i)) !== J(Z1.build(i))); };
+t('F1 mutación: un bloqueo duro degrada a Baja en vez de Insuficiente → se detecta', kills("if (hard.length) { level = 'Insuficiente'", "if (hard.length) { level = 'Baja'"));
+t('F2 mutación: el nivel Alta ignora los avisos → se detecta', kills("level = r.support === 'alto' && !(r.warnings || []).length ? 'Alta' : 'Media'", "level = r.support === 'alto' ? 'Alta' : 'Media'"));
+console.log(`\n${n - bad} bien, ${bad} mal`); process.exit(bad ? 1 : 0);

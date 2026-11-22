@@ -1,0 +1,13 @@
+{
+  "_ayuda": "Copia a entrada-real/config-z1.json y borra las claves que empiezan con _",
+  "corte": "aaaa-mm-dd  (último día con venta real que quieres evaluar)",
+  "periodo": { "tipo": "mes | anio", "clave": "aaaa-mm (mes) o aaaa (anio)" },
+  "calidad": {
+    "_ayuda": "Estado de calidad de datos que muestra la app (Calidad de datos) por canal: ready | warnings | invalid",
+    "ecommerce": "ready", "app": "ready", "whatsapp": "ready", "llamadas": "ready"
+  },
+  "esperados": {
+    "_ayuda": "OPCIONAL: lo que TÚ esperas por entidad (canal o total). nivel: Alta | Media | Baja | Insuficiente; completitud: verificada | incompleta | no_verificable. Borra lo que no quieras comprobar.",
+    "ecommerce": { "nivel": "Alta", "completitud": "verificada" }
+  }
+}

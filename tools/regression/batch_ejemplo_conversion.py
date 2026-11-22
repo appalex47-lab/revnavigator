@@ -60,7 +60,9 @@ async def main():
         CLEAN = 'fecha,canal,venta,pedidos,traffic_volume\n' + '\n'.join(f'2026-09-{d:02d},{ch},{1000+d},{10+d},{1000+d}' for d in range(1, 31) for ch in ('ecommerce', 'app', 'whatsapp', 'llamadas')) + '\n'
         await r.wait_for_selector('input[data-action="pick-files"][data-type="actual"]', state='attached')
         await r.set_input_files('input[data-action="pick-files"][data-type="actual"]', files=[{'name': 'real.csv', 'mimeType': 'text/csv', 'buffer': CLEAN.encode()}])
-        await r.wait_for_selector('[data-action="commit-staged"]:not([disabled])', timeout=60000); await r.click('[data-action="commit-staged"]'); await r.wait_for_timeout(5000)
+        await r.wait_for_selector('[data-action="commit-staged"]:not([disabled])', timeout=60000); await r.click('[data-action="commit-staged"]')
+        try: await r.wait_for_function("FP.app.demoInfo().loaded === false && FP.app.demoInfo().real === true", timeout=60000)   # espera la condición, no un tiempo fijo (bajo carga tardaba más de 5 s)
+        except Exception: pass
         chk('E11 al importar venta real se retira el ejemplo de productos', await r.evaluate("FP.app.demoInfo().loaded === false && FP.app.demoInfo().real === true"), await r.evaluate("FP.app.demoInfo()"))
         await c3.close()
         # Con datos reales, el aviso explica por qué no hay botón

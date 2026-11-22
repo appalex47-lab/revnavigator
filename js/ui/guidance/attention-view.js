@@ -134,17 +134,19 @@
   const attrs = (st, S, key) => `data-action="route-go" data-route="${H().esc(st.id)}" data-view="${H().esc(st.view)}" data-step="${H().esc(st.id)}" data-finding="${H().esc(st.findingId || '')}" data-key="${H().esc(key)}"${st.channel ? ` data-channel="${H().esc(st.channel)}"` : ''}`;
   const money = (v) => (fin(v) ? F().currency(Math.abs(v), 0) : '—');
 
-  function findingHtml(fd, key, primaryStep) {
+  function findingHtml(fd, key, primaryStep, cf) {
     const { esc } = H();
     const sup = fd.support ? `<p class="att__sup" data-support="${esc(fd.support.level)}"><strong>Respaldo de la evidencia: ${esc(fd.support.level)}.</strong> ${esc(fd.support.why)}</p>` : '';
+    const nature = cf ? ['Naturaleza del hallazgo', [`${FP.attentionContract.KIND_LABEL[cf.kind] || cf.kind}${cf.causality === 'demonstrated' ? '' : ' · causa no demostrada'}`]] : null;
     const detail = [
+      nature,
       (fd.evidence || []).length ? ['Hecho observado', fd.evidence] : null,
       fd.decomposition ? ['Descomposición cuantitativa', [fd.decomposition, fd.note].filter(Boolean)] : null,
       fd.hypothesis ? ['Hipótesis a validar', [fd.hypothesis]] : null,
       (fd.missing || []).length ? ['Información que falta', fd.missing] : null,
       fd.nextCheck ? ['Próxima comprobación', [fd.nextCheck]] : null
     ].filter(Boolean);
-    return `<li class="att__item att__item--${esc(fd.severity)}" data-finding="${esc(fd.id)}" data-kind="${esc(fd.kind)}">
+    return `<li class="att__item att__item--${esc(fd.severity)}" data-finding="${esc(fd.id)}" data-kind="${esc(fd.kind)}"${cf ? ` data-finding-id="${esc(cf.id)}" data-nature="${esc(cf.kind)}" data-causality="${esc(cf.causality)}"` : ''}>
       <div class="att__head"><span class="ds-badge ${SEV_BADGE[fd.severity] ? `ds-badge--${SEV_BADGE[fd.severity]}` : ''}">${esc(SEV_LABEL[fd.severity] || fd.severity)}</span><strong class="att__t">${esc(fd.title)}</strong></div>
       <p class="att__what">${esc(fd.what)}</p>
       <p class="att__why"><strong>Por qué importa:</strong> ${esc(fd.why)}</p>
@@ -158,8 +160,8 @@
     const pid = att.route && att.route.primary ? att.route.primary.id : null;   // paso que ya muestra «Tu siguiente mejor paso»
     const ctx = `${esc(FP.navigation.contextLabel({ channel: S.channel }))} · ${esc(S.period.type === 'month' ? S.period.key : `Año ${S.period.key}`)}`;
     const body = att.state === 'stable'
-      ? `<p class="att__stable" data-stable="1"><strong>Estado estable.</strong> ${esc(att.stableNote)}</p>${n ? `<ol class="att__list">${att.visible.map((x) => findingHtml(x, key, pid)).join('')}</ol>` : ''}`
-      : `<ol class="att__list">${att.visible.map((x) => findingHtml(x, key, pid)).join('')}</ol>`;
+      ? `<p class="att__stable" data-stable="1"><strong>Estado estable.</strong> ${esc(att.stableNote)}</p>${n ? `<ol class="att__list">${att.visible.map((x) => findingHtml(x, key, pid, att.contract ? att.contract.byAttentionId[x.id] : null)).join('')}</ol>` : ''}`
+      : `<ol class="att__list">${att.visible.map((x) => findingHtml(x, key, pid, att.contract ? att.contract.byAttentionId[x.id] : null)).join('')}</ol>`;
     const rest = att.rest.length ? `<details class="ds-accordion att__rest"><summary><span class="ds-accordion__n" aria-hidden="true">+</span><span><h4 class="ds-accordion__t">Ver los demás hallazgos (${att.rest.length})</h4></span></summary>
       <div class="ds-accordion__body"><ol class="att__list">${att.rest.map((x) => findingHtml(x, key, pid)).join('')}</ol></div></details>` : '';
     const R = att.rules;
@@ -319,6 +321,8 @@
   function build(state, h, f, S, status, ready) {
     const input = buildInput(state, h, f, S, status, ready);
     const att = FP.attentionEngine.evaluate(input);
+    // Contratos del Command Center sobre el resultado del motor (confiabilidad por Z1, suficiencia de muestra, hallazgos cc.finding/1.1): no cambian el motor ni sus cifras
+    try { att.contract = FP.attentionContract.build(att, { f, S, input }); att.contractError = null; } catch (e) { att.contract = null; att.contractError = String((e && e.message) || e); }
     const key = ctxKey(state, h, S);
     const p = att.route.primary;
     snapshot(state, key, att, S, f);

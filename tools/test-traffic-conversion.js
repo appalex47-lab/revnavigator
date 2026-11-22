@@ -1,5 +1,5 @@
 // Pruebas de trafficConversionEngine.  node tools/test-traffic-conversion.js
-const path = require('path'); global.FP = {}; require(path.join(__dirname, '../js/analytics/trafficConversionEngine.js'));
+const path = require('path'); global.FP = {}; ['config/config.js', 'calculations/metrics.js', 'diagnostics/attribution.js', 'commandCenter/sampleSufficiency.js', 'analytics/trafficConversionEngine.js'].forEach((f) => require(path.join(__dirname, '../js/' + f)));
 let ok = 0, bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d) : '')); c ? ok++ : bad++; };
 const E = FP.trafficConversionEngine, has = { traffic: true, orders: true, revenue: true };
 const m = (traffic, orders, revenue) => ({ traffic, orders, revenue, has });
@@ -20,9 +20,9 @@ t('significancia: Google orgánico (CR igual) no es significativo', by('Google �
 t('peso: Directo explica 69 % del efecto CR negativo', Math.abs(by('Directo').share.cr - (59394 / 86425)) < 1e-4);
 // casos límite
 d = E.analyze({ rows: [{ key: 'A', label: 'A', baseline: m(1000, 20, 10000), current: m(1000, 20, 10000) }, { key: 'N', label: 'Nuevo', baseline: null, current: m(2000, 40, 30000) }, { key: 'G', label: 'Gone', baseline: m(1500, 30, 12000), current: null }] });
-t('nuevo → todo tráfico; desaparecido → tráfico negativo; reconcilia', d.allItems.find((x) => x.label === 'Nuevo').traffic === 30000 && d.allItems.find((x) => x.label === 'Gone').traffic === -12000 && d.total.reconciles && d.total.delta === 18000, d.total);
+t('nuevo / desaparecido → cambio de composición: sin base comparable, NO se reparte entre factores; reconcilia', (() => { const n = d.allItems.find((x) => x.label === 'Nuevo'), g = d.allItems.find((x) => x.label === 'Gone'); return n.status === 'cambio_de_composicion' && n.attributed === false && n.traffic === 0 && n.unattributed === 30000 && g.unattributed === -12000 && g.traffic === 0 && d.total.unattributed === 18000 && d.total.reconciles && d.total.delta === 18000; })(), d.total);
 d = E.analyze({ rows: [{ key: 'A', label: 'A', baseline: m(1000, 0, 0), current: m(1000, 20, 8000) }] });
-t('base sin pedidos → el Δ es conversión', d.allItems[0].cr === 8000 && d.allItems[0].traffic === 0 && d.allItems[0].aov === 0 && d.total.reconciles, d.allItems[0]);
+t('base sin pedidos → recuperación desde cero: el Δ NO se reparte entre conversión y ticket (sin atribución forzada)', d.allItems[0].status === 'recuperacion_desde_cero' && d.allItems[0].attributed === false && d.allItems[0].cr === 0 && d.allItems[0].traffic === 0 && d.allItems[0].aov === 0 && d.allItems[0].unattributed === 8000 && d.total.reconciles, d.allItems[0]);
 d = E.analyze({ rows: [{ key: 'A', label: 'A', baseline: m(1000, 20, 9000), current: m(1200, 0, 0) }] });
 t('hoy sin pedidos → reconcilia (conversión absorbe)', d.total.reconciles && d.total.delta === -9000 && d.allItems[0].aov === 0, d.allItems[0]);
 d = E.analyze({ rows: [{ key: 'A', label: 'A', baseline: m(5000, 100, 50000), current: m(5000, 100, 50000) }, { key: 'x', label: 'x', baseline: m(100, 2, 900), current: m(80, 1, 400) }, { key: 'y', label: 'y', baseline: m(50, 1, 300), current: m(60, 3, 1200) }] }, { minSessions: 500 });

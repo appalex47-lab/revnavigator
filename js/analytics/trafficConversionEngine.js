@@ -6,8 +6,9 @@
  * segmento es distinguible del azar (prueba z de dos proporciones al 95 %). Solo aritmética: no dice causas.
  *
  * Entrada: filas de segmentsView.summarize → { key, label, current:{traffic,orders,revenue,has}, baseline:{…} }.
- * Casos límite: segmento nuevo → todo su Δ es tráfico; desaparecido → tráfico negativo; base sin pedidos → el Δ es conversión
- * (no existe un ticket base); sin pedidos hoy → conversión (el ticket no existe). Poco volumen → se agrupa en «Otros».
+ * Casos límite (regla única en FP.attribution.attributeSegment): segmento nuevo o desaparecido → «cambio de composición» y base sin pedidos →
+ * «recuperación desde cero»: el Δ NO se reparte entre factores (`unattributed`); sin pedidos hoy → conversión cero (el ticket no es observable).
+ * Poco volumen → se agrupa en «Otros».
  */
 (function (root) {
   'use strict';
@@ -20,7 +21,7 @@
   /** Prueba z de dos proporciones (CR base contra CR actual). */
   function crTest(a, b) {
     if (!a || !b || !(a.t > 0) || !(b.t > 0)) return { z: null, significant: null };
-    const p0 = a.o / a.t, p1 = b.o / b.t, pp = (a.o + b.o) / (a.t + b.t), se = Math.sqrt(pp * (1 - pp) * (1 / a.t + 1 / b.t));
+    const p0 = FP.metrics.calcConversionRate(a.o, a.t), p1 = FP.metrics.calcConversionRate(b.o, b.t), pp = FP.metrics.calcConversionRate(a.o + b.o, a.t + b.t), se = Math.sqrt(pp * (1 - pp) * (1 / a.t + 1 / b.t));
     if (!(se > 0)) return { z: 0, significant: false };
     const z = (p1 - p0) / se;
     return { z, significant: Math.abs(z) >= Z95 };
@@ -28,18 +29,13 @@
 
   /** Efectos de un segmento. base/cur: {t,o,r} o null. La suma de los tres efectos = r1 − r0. */
   function effects(base, cur) {
-    const r0 = base ? base.r : 0, r1 = cur ? cur.r : 0, delta = r1 - r0;
-    if (!base || !cur || !(base.t > 0)) return { traffic: delta, cr: 0, aov: 0, delta, kind: !base ? 'new' : !cur ? 'gone' : 'newTraffic', crTest: crTest(base, cur) };
-    const cr0 = base.o / base.t, cr1 = cur.t > 0 ? cur.o / cur.t : 0;
-    // Sin pedidos en la base no hay ticket base: el cambio de venta se atribuye a la conversión.
-    if (!(base.o > 0)) return { traffic: 0, cr: delta, aov: 0, delta, kind: 'noBaseOrders', crTest: crTest(base, cur) };
-    const aov0 = base.r / base.o;
-    const traffic = (cur.t - base.t) * cr0 * aov0;
-    const cr = cur.t * (cr1 - cr0) * aov0;
-    // Sin pedidos hoy no hay ticket actual: lo que queda del Δ es conversión (el ticket no existe).
-    const aov = cur.o > 0 ? cur.t * cr1 * (cur.r / cur.o - aov0) : 0;
-    const residual = delta - traffic - cr - aov;                    // solo ≠ 0 si hay pedidos 0 con venta ≠ 0 (dato inconsistente)
-    return { traffic, cr: cr + residual, aov, delta, kind: 'both', crTest: crTest(base, cur) };
+    // Adaptador: la regla de atribución vive en FP.attribution.attributeSegment (fuente única). Aquí solo se conserva la forma histórica
+    // { traffic, cr, aov, delta, kind } y se agregan status / attributed / unattributed / reason. Siempre secuencial («un factor a la vez»).
+    const s = FP.attribution.attributeSegment(base, cur, { method: 'sequential' });
+    const legacy = { cambio_de_composicion: !base ? 'new' : 'gone', sin_base_comparable: 'newTraffic', recuperacion_desde_cero: 'noBaseOrders' };
+    const delta = s.delta === null ? 0 : s.delta;
+    return { traffic: s.traffic, cr: s.cr, aov: s.aov, delta, unattributed: s.unattributed === null ? delta : s.unattributed,
+      attributed: s.attributed, status: s.status, reason: s.reason, kind: legacy[s.status] || 'both', crTest: crTest(base, cur) };
   }
 
   /**
@@ -48,7 +44,7 @@
    * problema de etiquetado: la app lo marca para revisar, no lo afirma.
    */
   function qualityChecks(dec, totalCr) {
-    const flags = [], minS = dec.minSessions || 500;
+    const flags = [], minS = dec.minSessions || FP.sampleSufficiency.segmentMinSessions(0);
     dec.allItems.filter((x) => x.grouped === 0 && x.cur && x.cur.t >= minS).forEach((x) => {
       const cr1 = x.cur.o / x.cur.t, cr0 = x.base && x.base.t > 0 ? x.base.o / x.base.t : null;
       const added = x.cur.t - (x.base ? x.base.t : 0);
@@ -77,7 +73,7 @@
     }
     if (!all.length) return { status: 'no_data', excluded };
     const T1all = sum(all, (x) => x.cur && x.cur.t);
-    if (minSessions === null) minSessions = Math.max(500, Math.ceil(0.01 * T1all));   // misma regla que segmentInsights: el mayor entre 500 y el 1 % del tráfico
+    if (minSessions === null) minSessions = FP.sampleSufficiency.segmentMinSessions(T1all);   // fuente única (P-16): el mayor entre el piso y el 1 % del tráfico, de FP.config.diagnostics.segmentMinVolume
     const hasBase = all.some((x) => x.base);
     if (!hasBase) return { status: 'no_baseline', excluded };
 
@@ -93,11 +89,11 @@
     items.forEach((x) => { Object.assign(x, effects(x.base, x.cur)); });
 
     // Total (suma exacta de los segmentos, incluidos los agrupados)
-    const total = { traffic: sum(items, (x) => x.traffic), cr: sum(items, (x) => x.cr), aov: sum(items, (x) => x.aov), delta: sum(items, (x) => x.delta) };
+    const total = { traffic: sum(items, (x) => x.traffic), cr: sum(items, (x) => x.cr), aov: sum(items, (x) => x.aov), unattributed: sum(items, (x) => x.unattributed), delta: sum(items, (x) => x.delta) };   // unattributed = lo que no tiene base comparable (ver attribution.attributeSegment)
     const T0 = sum(all, (x) => x.base && x.base.t), O0 = sum(all, (x) => x.base && x.base.o), R0 = sum(all, (x) => x.base && x.base.r);
     const T1 = sum(all, (x) => x.cur && x.cur.t), O1 = sum(all, (x) => x.cur && x.cur.o), R1 = sum(all, (x) => x.cur && x.cur.r);
     total.base = R0; total.current = R1; total.deltaPct = R0 > 0 ? (R1 - R0) / R0 : null;
-    total.reconciles = Math.abs(total.traffic + total.cr + total.aov - (R1 - R0)) < 0.5;
+    total.reconciles = Math.abs(total.traffic + total.cr + total.aov + total.unattributed - (R1 - R0)) < 0.5;
 
     // Mezcla del CR total: cambio dentro de los segmentos contra cambio de mezcla de tráfico (los nuevos/desaparecidos van a mezcla)
     let mix = null;
@@ -112,7 +108,7 @@
     const neg = (k) => sum(items.filter((x) => x[k] < 0), (x) => x[k]), pos = (k) => sum(items.filter((x) => x[k] > 0), (x) => x[k]);
     items.forEach((x) => {
       x.dominant = Math.abs(x.traffic) >= Math.abs(x.cr) && Math.abs(x.traffic) >= Math.abs(x.aov) ? 'traffic' : Math.abs(x.cr) >= Math.abs(x.aov) ? 'cr' : 'aov';
-      if (!x.delta && !x.traffic && !x.cr && !x.aov) x.dominant = null;
+      if (!x.traffic && !x.cr && !x.aov) x.dominant = null;   // solo sin base comparable: no hay efecto atribuido que destacar
       x.share = {};
       ['traffic', 'cr', 'aov'].forEach((k) => { const d = x[k] < 0 ? neg(k) : pos(k); x.share[k] = d ? x[k] / d : null; });
       x.crPpDelta = x.base && x.cur && x.base.t > 0 && x.cur.t > 0 ? (x.cur.o / x.cur.t - x.base.o / x.base.t) * 100 : null;
@@ -185,11 +181,11 @@
     });
     const list = [...merged.values()].map((x) => {
       const e = effects(x.base, x.cur);
-      return { ...x, delta: e.delta, traffic: e.traffic, cr: e.cr, aov: e.aov, kind: e.kind, crTest: e.crTest,
+      return { ...x, delta: e.delta, traffic: e.traffic, cr: e.cr, aov: e.aov, unattributed: e.unattributed, attributed: e.attributed, status: e.status, kind: e.kind, crTest: e.crTest,
         cr0: x.base && x.base.t > 0 ? x.base.o / x.base.t : null, cr1: x.cur && x.cur.t > 0 ? x.cur.o / x.cur.t : null };
     });
     const rowsA = [...new Set(list.map((x) => x.a))], colsB = [...keep, ...(list.some((x) => x.b === 'Otros') ? ['Otros'] : [])];
-    return { cells: list, rowsA, colsB, total: sum(list, (x) => x.delta), reconciles: Math.abs(sum(list, (x) => x.traffic + x.cr + x.aov) - sum(list, (x) => x.delta)) < 0.5 };
+    return { cells: list, rowsA, colsB, total: sum(list, (x) => x.delta), reconciles: Math.abs(sum(list, (x) => x.traffic + x.cr + x.aov + x.unattributed) - sum(list, (x) => x.delta)) < 0.5 };
   }
 
   /**
@@ -207,10 +203,10 @@
     // Dimensión de referencia: la que cubre más tráfico y venta del periodo actual (sus totales son «el total»)
     const ref = ok.slice().sort((a, b) => (b.dec.totals.cur.t - a.dec.totals.cur.t) || (b.dec.totals.cur.r - a.dec.totals.cur.r))[0];
     const tb = ref.dec.totals.base, tc = ref.dec.totals.cur, e = effects(tb, tc);
-    const total = { traffic: e.traffic, cr: e.cr, aov: e.aov, delta: e.delta, base: tb.r, current: tc.r, deltaPct: tb.r > 0 ? (tc.r - tb.r) / tb.r : null,
-      reconciles: Math.abs(e.traffic + e.cr + e.aov - e.delta) < 0.5 };
+    const total = { traffic: e.traffic, cr: e.cr, aov: e.aov, unattributed: e.unattributed, status: e.status, attributed: e.attributed, delta: e.delta, base: tb.r, current: tc.r, deltaPct: tb.r > 0 ? (tc.r - tb.r) / tb.r : null,
+      reconciles: Math.abs(e.traffic + e.cr + e.aov + e.unattributed - e.delta) < 0.5 };
     total.lead = EFFK.slice().sort((a, b) => Math.abs(total[b]) - Math.abs(total[a]))[0];
-    const totals = { base: tb, cur: tc, cr0: tb.t > 0 ? tb.o / tb.t : null, cr1: tc.t > 0 ? tc.o / tc.t : null, aov0: tb.o > 0 ? tb.r / tb.o : null, aov1: tc.o > 0 ? tc.r / tc.o : null };
+    const totals = { base: tb, cur: tc, cr0: FP.metrics.calcConversionRate(tb.o, tb.t), cr1: FP.metrics.calcConversionRate(tc.o, tc.t), aov0: FP.metrics.calcAov(tb.r, tb.o), aov1: FP.metrics.calcAov(tc.r, tc.o) };
     // Cobertura: cuánto del total de referencia ve cada dimensión (si una cubre menos, su lectura es parcial)
     const dimsOut = parts.map((p) => {
       if (p.dec.status !== 'ok') return { dim: p.dim, label: p.label, status: p.dec.status, dec: p.dec, ins: p.ins };

@@ -16,7 +16,7 @@
       <div class="rp-op__notes">${p.notes.map((n) => `<p class="rp-small">${esc(n)}</p>`).join('')}</div></div>`;
   }
   function riskBody(p) {
-    const c = p.counts, S = FP.reportGerencial.STATUS, chip = (k, n) => `<span class="rp-sem rp-sem--${k}"><span aria-hidden="true">${S[k].mark}</span> ${n} ${esc(S[k].label.toLowerCase())}</span>`;
+    const c = p.counts, S = FP.reportGerencial.STATUS, chip = (k, n) => `<span class="rp-sem rp-sem--${k}"><span aria-hidden="true">${S[k].mark}</span> ${Number.isFinite(n) ? n : '—'} ${esc(S[k].label.toLowerCase())}</span>`;
     const list = (rows, cls) => rows.length ? rows.map((r) => `<div class="rp-dir"><span>${esc(r.label)}</span><b class="${cls}">${esc(f('smoneyC', r.gap))}${isNum(r.gapPct) ? ` · ${esc(f('spct', r.gapPct))}` : ''}</b></div>`).join('') : '<p class="rp-small">Ninguno.</p>';
     return `<div class="rp-op"><div class="rp-dir__chips">${chip('ok', c.ok)}${chip('watch', c.watch)}${chip('alert', c.alert)}</div>
       ${p.total ? `<div class="rp-dir rp-dir--tot"><span>${esc(p.total.label)}</span><b class="${p.total.gap < 0 ? 'rp-neg' : 'rp-pos'}">${esc(f('smoneyC', p.total.gap))}${isNum(p.total.gapPct) ? ` · ${esc(f('spct', p.total.gapPct))}` : ''}</b></div>` : ''}

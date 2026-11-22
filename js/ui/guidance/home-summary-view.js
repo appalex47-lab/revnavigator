@@ -71,7 +71,8 @@
       const cov = w.coverage, up = w.delta >= 0;
       const head = `La venta ${up ? 'subió' : 'bajó'} ${esc(sMoney(Math.abs(w.delta)).replace(/^[+−]/, ''))} (${esc(F().signedPercent(w.baseline ? w.delta / w.baseline : null, 1))}): ${esc(F().currency(w.current, 0))} contra ${esc(F().currency(w.baseline, 0))}.`;
       let eff = '';
-      if (w.effects) eff = wf(w.effects) + `<ul class="headline"><li>${esc(domTxt(w.effects))}${w.kind === 'noBaseOrders' ? ' Sin pedidos en el periodo anterior, el cambio se atribuye a conversión.' : ''}</li></ul>` + cmpTable(w.metrics, w.effects, { base: cap(pw.base), cur: cap(pw.cur) });
+      if (w.effects) eff = wf(w.effects) + `<ul class="headline"><li>${esc(domTxt(w.effects))}</li></ul>` + cmpTable(w.metrics, w.effects, { base: cap(pw.base), cur: cap(pw.cur) });
+      else if (w.attribution && w.why && w.why !== 'no_traffic') eff = `<p class="field__hint" data-why="${esc(w.why)}">No se reparte el cambio entre tráfico, conversión y ticket: ${esc(w.attribution.reason || 'no hay una base comparable.')} La variación observada es ${esc(sMoney(w.delta))}.</p>`;
       else eff = `<p class="field__hint" data-why="no_traffic">No se puede separar tráfico, conversión y ticket: ${S.channel === 'total' ? 'alguno de los canales no trae sesiones, y sumar canales con y sin sesiones mezclaría cosas distintas. Elige un canal con sesiones (Ecommerce o App).' : 'este canal no trae sesiones en el periodo.'}</p>`;
       const cuadre = cov.paired < cov.expected ? ` Faltan ${cov.expected - cov.paired} de ${cov.expected} días por canal con dato en ambos periodos; esos no cuentan.` : '';
       prev = `<ul class="headline"><li>${head}</li></ul>${eff}<p class="field__hint" data-why-cov>Compara ${cov.paired} de ${cov.expected} días por canal (${esc(rangeTxt(cov.currentRange))} contra ${esc(rangeTxt(cov.baselineRange))}).${esc(cuadre)}</p>`;

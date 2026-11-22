@@ -37,7 +37,7 @@ async def main():
         await q.evaluate("localStorage.setItem('fp.cloudSession', JSON.stringify({access_token:'TOK-USER',refresh_token:'r-1',expires_at:Math.floor(Date.now()/1000)+3600,user_id:'u1',email:'ana@empresa.com',anonymous:false,team_id:'T-A',team_name:'Ecommerce'}))")
         await prep()
         chk('C3 con sesión: avisa que la IA usa el servidor del equipo', await q.locator('[data-ai-server]').count() == 1 and 'servidor de tu equipo' in await q.inner_text('[data-ai-server]'))
-        chk('C4 con sesión la IA está disponible sin pegar ninguna key', await q.evaluate("FP.cohereConnection.isConfigured()") is True and await q.evaluate("FP.app.state.dx.apiKey") == '')
+        chk('C4 con sesión la IA está disponible sin pegar ninguna key', await q.evaluate("FP.cohereConnection.isConfigured()") is True and await q.evaluate("FP.app.state.dx.apiKey === undefined && !document.getElementById('dx-key-input')") is True)
         await q.click('[data-action="dx-proxy-test"]'); await q.wait_for_timeout(1500)
         m = await q.inner_text('#dx-proxy-msg')
         chk('C5 la prueba funciona y dice que fue por el servidor', 'Funciona' in m and 'servidor del equipo' in m, m)

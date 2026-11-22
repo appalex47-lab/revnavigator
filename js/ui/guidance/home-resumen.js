@@ -37,8 +37,8 @@
     if (future) verdict = 'El periodo todavía no empieza: no hay venta real que comparar con la meta.';
     else if (!ok) verdict = 'Todavía no hay plan y venta real suficientes para medir la brecha contra la meta.';
     else {
-      const comp = t.compliance, dev = comp - 1;
-      const a = dev >= cfg.planBand ? `Vas ${Math.abs(dev * 100).toFixed(1)} % por encima de la meta acumulada` : dev > -cfg.planBand ? `Vas en plan: ${(comp * 100).toFixed(1)} % de la meta acumulada` : `Vas ${B(Math.abs(dev * 100).toFixed(1) + ' %')} por debajo de la meta acumulada`;
+      const comp = t.compliance, dev = comp - 1, st = FP.planStatus.classify({ planToDate: plan, actualToDate: cur, daysCounted: p.countedDays, planAvailable: true }, { thresholds: f.run && f.run.settings ? f.run.settings.pacingThresholds : undefined }).state;   // cc.plan_status/1 → FP.gap.pacingStatus: misma regla y misma configuración efectiva que Pacing/Atención (P-01, 4.2)
+      const a = st === 'above' ? `Vas ${Math.abs(dev * 100).toFixed(1)} % por encima de la meta acumulada` : st === 'on_plan' ? `Vas en plan: ${(comp * 100).toFixed(1)} % de la meta acumulada` : `Vas ${B(Math.abs(dev * 100).toFixed(1) + ' %')} por debajo de la meta acumulada`;
       let b = '.';
       if (fin(fg.gapPct) && fin(fc)) b = Math.abs(fg.gapPct) < cfg.flatPct ? '; al ritmo actual cierras en línea con la meta.' : `; al ritmo actual cierras en ${x.C(fc)}, ${Math.abs(fg.gapPct * 100).toFixed(1)} % ${fg.gapPct < 0 ? 'por debajo' : 'por encima'} de la meta.`;
       const d = top && plan > 0 && Math.abs(t.gap) / plan >= cfg.driverMinPct ? ` Lo que más pesa: ${DN[top.id] || esc(top.label)} (${x.SM(top.contribution)}).` : '';
@@ -49,6 +49,8 @@
     const T = S.trust, cov = T.coverage, chips = [];
     chips.push([T.lastActual ? 'ok' : 'warn', `● Venta real hasta el ${esc(T.lastActual || '—')}`, 'El último día con venta real cargado.']);
     if (cov) chips.push([cov.paired === 0 || cov.paired < cov.expected * 0.5 ? 'warn' : 'ok', `● ${cov.paired} de ${cov.expected} días comparados`, 'Días por canal con venta en ambos periodos: lo que respalda la lectura de «Por qué».']);
+    const K = c.att && c.att.contract ? c.att.contract : null;   // contratos del Command Center (confiabilidad Z1, suficiencia de muestra)
+    if (K) chips.push([K.reliability.level === 'Alta' ? 'ok' : K.reliability.level === 'Insuficiente' ? 'warn' : 'mu', `● Confiabilidad de la lectura: ${esc(K.reliability.level)}`, esc(K.reliability.explain.limits.length ? K.reliability.explain.limits.join(' ') : 'Cobertura completa, sin avisos de calidad y actividad verificada.')]);
     const q = T.quality;
     if (q && q.flagged > 0) chips.push(['warn', `◐ ${FP.format.integer(q.flagged)} registro${q.flagged === 1 ? '' : 's'} con aviso`, 'Los avisos no bloquean el análisis, pero conviene revisarlos antes de actuar.']);
     else if (q) chips.push(['ok', '● Sin avisos de calidad', 'Calidad de datos sin avisos ni errores.']);
@@ -60,7 +62,7 @@
     const kpis = [];
     kpis.push(['Cumplimiento', ok ? x.pct(t.compliance, 1) : '—', ok ? `${x.M(cur)} de ${x.M(plan)}` : 'Sin cifra para este periodo']);
     kpis.push(['Gap (brecha)', ok ? x.SM(t.gap) : '—', 'Venta − meta acumulada']);
-    kpis.push(['Forecast de cierre', fin(fc) ? x.C(fc) : '—', fin(fg.gapPct) ? `${x.spct(fg.gapPct)} vs meta del periodo` : 'Sin meta para comparar']);
+    kpis.push(['Forecast de cierre', fin(fc) ? x.C(fc) : '—', (fin(fg.gapPct) ? `${x.spct(fg.gapPct)} vs meta del periodo` : 'Sin meta para comparar') + (K && K.sample.status === 'insuficiente' ? ` · estimación preliminar: ${K.sample.reasons[0]}` : '')]);
     kpis.push(['Por revisar', `${nF} ${nF === 1 ? 'hallazgo' : 'hallazgos'}`, nextTitle ? `Siguiente paso: ${esc(nextTitle.toLowerCase())}` : 'Sin siguiente paso']);
 
     /* ---- Resumen general ---- */

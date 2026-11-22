@@ -2,6 +2,7 @@
 H1 registro de consultas (sin valores, solo en la sesión) · H2 lo aprendido editable y borrable · H3 protección ampliada de datos personales y columnas marcadas a mano ·
 H4 ayuda de la IA cuando el tipo de archivo es ambiguo · H5 columnas dudosas del mapeo · H6 casos de error (respuesta inválida, sin key, IA desactivada, red caída).
 Cada escenario de archivo se corre con el flujo normal y con el Worker y se comparan. Cohere se simula (ninguna llamada real)."""
+from sim_proxy import sim
 import asyncio, sys, os, json, datetime as dt, threading, functools, http.server, socketserver
 from playwright.async_api import async_playwright
 ROOT = os.path.abspath(sys.argv[1])
@@ -30,7 +31,7 @@ async def ctx(b, worker, key=True, ai=True, norm=False):
     c = await b.new_context(viewport={'width': 1280, 'height': 900}); q = await c.new_page(); errs = []; q.on('pageerror', lambda e: errs.append(str(e)[:200]))
     await q.clock.set_fixed_time(dt.datetime(2026, 10, 2, 9, 0)); u = f'http://127.0.0.1:{port}/index.html'; await q.goto(u + '#carga'); await q.wait_for_timeout(300)
     await q.evaluate(f"FP.importWorker.setMinBytes({0 if worker else 10 ** 12})")
-    await q.evaluate(f"FP.app.state.dx.apiKey = {json.dumps('clave-de-prueba' if key else '')}; FP.app.state.settings.enableAI = {json.dumps(ai)}")
+    await q.evaluate(sim(bool(key))); await q.evaluate(f"FP.app.state.settings.enableAI = {json.dumps(ai)}")
     await q.evaluate(STUB); return c, q, u, errs
 async def pick(q, text, name='raro.csv', dtype='actual'):
     await q.set_input_files(f'input[data-action="pick-files"][data-type="{dtype}"]', files=[{'name': name, 'mimeType': 'text/csv', 'buffer': text.encode()}])
@@ -66,8 +67,8 @@ async def main():
         await q.evaluate("window.__ans.net=true"); await q.evaluate("FP.cohereClient.chatJson({system:'s',user:'u',schema:{type:'object'},audit:{purpose:'Prueba red'}})"); await q.evaluate("window.__ans.net=false")
         lg = await q.evaluate(LOG)
         chk('H1 cada consulta que sale se registra con su propósito (y «Consulta» si no tiene), columnas, ejemplos y protegidas; una que falla por la red queda como «unavailable»', [x['purpose'] for x in lg] == ['Prueba red', 'Consulta', 'Prueba A'] and lg[2]['columnsSent'] == 2 and lg[2]['examplesSent'] == 2 and lg[2]['prot'] == [{'header': 'Correo', 'reason': 'nombre de la columna'}] and lg[0]['status'] == 'unavailable' and not lg[0]['ok'] and lg[2]['ok'] and lg[2]['model'] and lg[2]['chars'], lg)
-        await q.evaluate("FP.app.state.dx.apiKey=''"); n0 = await q.evaluate("FP.aiAudit.count()"); await q.evaluate("FP.cohereClient.chatJson({system:'s',user:'u',schema:{type:'object'}})"); n1 = await q.evaluate("FP.aiAudit.count()")
-        chk('H1 una consulta que NO salió (sin API key) no se registra: no hubo nada que transparentar', n1 == n0, (n0, n1))
+        await q.evaluate(sim(False)); n0 = await q.evaluate("FP.aiAudit.count()"); await q.evaluate("FP.cohereClient.chatJson({system:'s',user:'u',schema:{type:'object'}})"); n1 = await q.evaluate("FP.aiAudit.count()")
+        chk('H1 una consulta que NO salió (sin sesión de equipo) no se registra: no hubo nada que transparentar', n1 == n0, (n0, n1))
         await q.evaluate("for(let i=0;i<105;i++)FP.aiAudit.record({purpose:'x'+i,status:'ok',ok:true})")
         chk('H1 el registro guarda como máximo 100 consultas (las más recientes)', await q.evaluate("[FP.aiAudit.count(),FP.aiAudit.list()[0].purpose,FP.aiAudit.list()[99].purpose]") == [100, 'x104', 'x5'])
         await c.close()
@@ -123,11 +124,11 @@ async def main():
             await q.evaluate("FP.app.actions['learn-set']({dataset:{header:'monto_vendido'},value:'orders'})"); await q.wait_for_timeout(300)
             await reload(q)
             chk(f'H2 ({tag}) cambiar el campo de una columna aprendida se guarda y sobrevive a recargar la página', await q.evaluate("FP.importer.learnedMappings()") == {'monto_vendido': 'orders'}, await q.evaluate("FP.importer.learnedMappings()"))
-            await q.evaluate("FP.importWorker.setMinBytes(" + ("0" if worker else "10**12") + ")"); await q.evaluate("FP.app.state.dx.apiKey='clave-de-prueba'; FP.app.state.settings.enableAI=true")
+            await q.evaluate("FP.importWorker.setMinBytes(" + ("0" if worker else "10**12") + ")"); await q.evaluate(sim(True)); await q.evaluate("FP.app.state.settings.enableAI=true")
             await q.evaluate("FP.app.actions['learn-set']({dataset:{header:'monto_vendido'},value:'revenue'})")
             await q.evaluate("FP.app.actions['learn-del']({dataset:{header:'monto_vendido'}})"); await q.wait_for_timeout(300)
             empty = await q.evaluate("FP.importer.learnedMappings()"); await reload(q)
-            await q.evaluate("FP.importWorker.setMinBytes(" + ("0" if worker else "10**12") + ")"); await q.evaluate("FP.app.state.dx.apiKey='clave-de-prueba'; FP.app.state.settings.enableAI=true; window.__ans.map={mappings:[{header:'Monto vendido',field:'revenue',confidence:0.95,reason:'x'}]}")
+            await q.evaluate("FP.importWorker.setMinBytes(" + ("0" if worker else "10**12") + ")"); await q.evaluate(sim(True)); await q.evaluate("FP.app.state.settings.enableAI=true; window.__ans.map={mappings:[{header:'Monto vendido',field:'revenue',confidence:0.95,reason:'x'}]}")
             await q.goto(u + '#carga'); await q.wait_for_selector('input[data-action="pick-files"][data-type="actual"]', state='attached'); await pick(q, sales('Monto vendido')); n2 = await q.evaluate("window.__req.length")
             chk(f'H2 ({tag}) al olvidar una columna aprendida la IA vuelve a preguntar la próxima vez (y queda guardado tras recargar)', empty == {} and n2 == 1, (empty, n2))
             await q.evaluate("FP.app.actions['learn-clear']()"); chk(f'H2 ({tag}) «Olvidar todo» vacía lo aprendido', await q.evaluate("[FP.importer.learnedMappings(),FP.app.state.settings.aiHeaderAliases]") == [{}, {}])

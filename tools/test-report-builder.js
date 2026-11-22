@@ -1,8 +1,9 @@
 // Presentación ejecutiva (PDF): reglas críticas del armador de contenido.  node tools/test-report-builder.js
 const fs = require('fs'), vm = require('vm');
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-ctx.FP = { config: { currency: 'MXN', confidenceLabels: { excellent: 'Excelente', sufficient: 'Suficiente', limited: 'Limitada', insufficient: 'Insuficiente' } } };
-['js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+const realCfg = (() => { const c2 = vm.createContext({}); c2.window = c2; vm.runInContext(fs.readFileSync('js/config/config.js', 'utf8'), c2); const C = c2.FP.config; return JSON.parse(JSON.stringify({ forecast: { pacingThresholds: C.forecast.pacingThresholds }, reports: { farFromPlanBelow: C.reports.farFromPlanBelow }, diagnostics: { segmentMinVolume: C.diagnostics.segmentMinVolume } })); })();   // P-11/P-16: umbrales de la configuración REAL (fuente única), sin copiar valores
+ctx.FP = { config: { ...realCfg, currency: 'MXN', confidenceLabels: { excellent: 'Excelente', sufficient: 'Suficiente', limited: 'Limitada', insufficient: 'Insuficiente' } } };
+['js/calculations/metrics.js', 'js/calculations/gap.js', 'js/forecast/methodAdvisor.js', 'js/commandCenter/sampleSufficiency.js', 'js/report/reportBuilder.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const RB = ctx.FP.reportBuilder; let bad = 0;
 /* Línea base del armador (Presentation Intelligence · Fase 0): con RB_GOLDEN_OUT=<archivo> se registra, por cada llamada a build(), la huella de cada página
    (id, estado, título, titular y SHA-256 de su contenido canónico). No cambia nada del comportamiento de la prueba. Lo usa tools/test-report-golden.js. */

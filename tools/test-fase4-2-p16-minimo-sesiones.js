@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+/* Fase 4.2 · Bloque C (P-16) — el mínimo de sesiones por segmento (el MAYOR entre 500 y el 1 % del tráfico) vive en UNA fuente: FP.config.diagnostics.segmentMinVolume, leída por
+ * FP.sampleSufficiency.segmentMinSessions. Se ejecutan los motores REALES (trafficConversionEngine, segmentInsights) y se compara contra la fórmula ANTERIOR (transcrita aquí). Datos SIMULADOS.
+ * node tools/test-fase4-2-p16-minimo-sesiones.js */
+const fs = require('fs'), path = require('path'), R = path.join(__dirname, '..');
+global.window = global; global.FP = {}; ['config/config.js', 'calculations/metrics.js', 'ui/format.js', 'diagnostics/attribution.js', 'commandCenter/sampleSufficiency.js', 'analytics/trafficConversionEngine.js', 'ui/segmentInsights.js'].forEach((f) => require(path.join(R, 'js', f)));
+let bad = 0, n = 0; const t = (name, c, d) => { n++; console.log((c ? '✔ ' : '✘ ') + name + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 300) : '')); if (!c) bad++; };
+const src = (f) => fs.readFileSync(path.join(R, f), 'utf8'), strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+const SS = FP.sampleSufficiency, old = (T) => Math.max(500, Math.ceil(0.01 * T));   // fórmula anterior (las 3 copias eran idénticas)
+t('A1 el piso y la participación están en UNA configuración (FP.config.diagnostics.segmentMinVolume = {500, 0.01})', FP.config.diagnostics.segmentMinVolume.minSessions === 500 && FP.config.diagnostics.segmentMinVolume.minShare === 0.01);
+/* ---------- equivalencia con la regla anterior ---------- */
+const grid = [0, 1, 499, 500, 49999, 50000, 50001, 50049, 50050, 123456, 1e6, 1e7, 2.5e7]; let rs = 12345; const rnd = () => { rs = (rs * 1664525 + 1013904223) >>> 0; return rs / 4294967296; }; for (let i = 0; i < 20000; i++) grid.push(Math.floor(rnd() * 3e6));
+t(`A2 equivalencia exacta con la fórmula anterior en ${grid.length} tráficos (bordes 49 999/50 000/50 001 y redondeo hacia arriba)`, grid.every((T) => SS.segmentMinSessions(T) === old(T)), grid.filter((T) => SS.segmentMinSessions(T) !== old(T)).slice(0, 3));
+t('A3 sin tráfico (null/undefined/NaN) devuelve el piso, igual que la regla anterior con T = 0', [null, undefined, NaN].every((T) => SS.segmentMinSessions(T) === 500));
+/* ---------- un solo sitio ---------- */
+const files = ['js/analytics/trafficConversionEngine.js', 'js/ui/segmentInsights.js', 'js/report/reportBuilder.js'];
+t('B1 los 3 sitios ya NO contienen la regla (ni `Math.max(500`, ni constantes MIN_SESSIONS/MIN_SHARE/SEG_MIN_*, ni el respaldo `|| 500`)', files.every((f) => { const s = strip(src(f)); return !/Math\.max\(\s*(500|MIN_SESSIONS|SEG_MIN_SESSIONS)/.test(s) && !/\b(MIN_SESSIONS|MIN_SHARE|SEG_MIN_SESSIONS|SEG_MIN_SHARE)\b/.test(s) && !/minSessions \|\| 500/.test(s); }));
+t('B2 los 3 sitios (y el respaldo de trafficConversionEngine) llaman a FP.sampleSufficiency.segmentMinSessions', files.every((f) => /FP\.sampleSufficiency\.segmentMinSessions\(/.test(strip(src(f)))) && (strip(src(files[0])).match(/segmentMinSessions\(/g) || []).length === 2);
+t('B3 el criterio de suficiencia contextual (sampleSufficiency.evaluate) usa la MISMA función: no hay otra copia del cálculo', /segmentMinSessions\(x\.totalSessions\)/.test(strip(src('js/commandCenter/sampleSufficiency.js'))) && !/Math\.ceil\(c\.share/.test(strip(src('js/commandCenter/sampleSufficiency.js'))));
+t('B4 la función falla con un mensaje claro si falta la configuración (no cae en un valor copiado)', (() => { const saved = FP.config; FP.config = {}; try { SS.segmentMinSessions(100); return false; } catch (e) { return /segmentMinVolume/.test(e.message); } finally { FP.config = saved; } })());
+/* ---------- los motores reales leen la fuente ---------- */
+const m = (traffic, orders, revenue) => ({ traffic, orders, revenue, has: { traffic: true, orders: true, revenue: true } });
+const mk = (T) => ({ rows: [['A', 0.5], ['B', 0.3], ['C', 0.19], ['D', 0.01]].map(([l, s]) => ({ key: l, label: l, baseline: m(Math.round(T * s * 0.9), Math.round(T * s * 0.02), Math.round(T * s * 9)), current: m(Math.round(T * s), Math.round(T * s * 0.022), Math.round(T * s * 10)) })) });
+const sets = [[100000, 1000], [30000, 500], [10000, 500], [800000, 8000]];
+t('C1 trafficConversionEngine.analyze: minSessions = regla anterior para tráficos distintos (resultado sin cambio)', sets.every(([T]) => { const d = FP.trafficConversionEngine.analyze(mk(T)), tot = d.totals.cur.t; return d.minSessions === old(tot); }));
+t('C2 segmentInsights.analyze: threshold = regla anterior (mismos datos)', sets.every(([T]) => { const rows = mk(T).rows, tot = rows.reduce((s, r) => s + r.current.traffic, 0); const i = FP.segmentInsights.analyze({ rows }); return i && i.threshold === old(tot); }));
+t('C3 la fuente es única: cambiar la configuración cambia el umbral en AMBOS motores a la vez (config de prueba {200, 0.02})', (() => { const saved = FP.config, cfg = JSON.parse(JSON.stringify(saved)); cfg.diagnostics.segmentMinVolume = { minSessions: 200, minShare: 0.02 }; FP.config = cfg; try { const rows = mk(100000).rows, tot = rows.reduce((s, r) => s + r.current.traffic, 0); return FP.trafficConversionEngine.analyze({ rows }).minSessions === Math.max(200, Math.ceil(0.02 * tot)) && FP.segmentInsights.analyze({ rows }).threshold === Math.max(200, Math.ceil(0.02 * tot)); } finally { FP.config = saved; } })());
+t('C4 la excepción explícita se conserva: un mínimo elegido por el usuario (minSessions) sigue ganando sobre el automático en trafficConversionEngine', FP.trafficConversionEngine.analyze(mk(100000), { minSessions: 7777 }).minSessions === 7777);
+t('C5 la participación del tráfico se calcula con el tráfico del contexto de CADA sitio (conservado, no unificado): total actual de los segmentos con tráfico (tráfico de la dimensión), no un total global', (() => { const d = FP.trafficConversionEngine.analyze(mk(100000)); return d.minSessions === old(d.totals.cur.t); })());
+console.log(`\n${n - bad} bien, ${bad} mal`); process.exit(bad ? 1 : 0);

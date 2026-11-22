@@ -5,7 +5,7 @@ const IDS = ['ecommerce', 'app', 'whatsapp'];
 ctx.FP = { config: { channelIds: IDS, channels: IDS.map((id) => ({ id, label: id })) }, calendar: { toISODate: (d) => d.toISOString().slice(0, 10) } };
 let STORE = null;
 ctx.FP.dataStore = { cached: (store, key, deps, fn) => fn(), resolveLatest: (store, type) => (type === 'historical' ? store.rows : []) };
-['js/calculations/weights.js', 'js/forecast/distribution.js', 'js/projection/projectionCalibration.js', 'js/projection/projection.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+['js/calculations/metrics.js', 'js/calculations/weights.js', 'js/forecast/distribution.js', 'js/projection/projectionCalibration.js', 'js/projection/projection.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const PC = ctx.FP.projectionCalibration, PJ = ctx.FP.projection; let bad = 0, n = 0;
 const t = (name, c, d) => { n++; console.log((c ? '✔ ' : '✘ ') + name + (!c && d !== undefined ? ' — ' + JSON.stringify(d) : '')); if (!c) bad++; };
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;

@@ -90,7 +90,7 @@ async def main():
         data_ls = [k for k in inv['ls'] if k.split(':')[0] in ('historicalData','planData','actualData','segmentsData','dataset','plans','forecasts','targets','settings','aliases','businessContext','diagnosticSettings')]
         chk('S1e sin claves de datos en localStorage', data_ls == [], data_ls)
         chk('S1f sesión, ruta y cola de cambios borradas', inv['ses'] is None and inv['route'] is None and inv['changes'] is None, inv)
-        chk('S1g se conservan uxSettings, onboardingDone y cohereApiKey', all(k in inv['ls'] for k in ('uxSettings', 'onboardingDone', 'cohereApiKey')), inv['ls'])
+        chk('S1g se conservan uxSettings y onboardingDone, y cierre técnico: una API key heredada (cohereApiKey) YA NO se conserva al cerrar sesión', all(k in inv['ls'] for k in ('uxSettings', 'onboardingDone')) and 'cohereApiKey' not in inv['ls'], inv['ls'])
         chk('S1h authChoice se borró (el siguiente uso vuelve a ver la bienvenida)', 'authChoice' not in inv['ls'], inv['ls'])
         chk('S1i la app dejó de mostrar datos en memoria', await q.evaluate("FP.app.state.store ? FP.dataStore.records(FP.app.state.store,'actual').length === 0 : true"))
         await q.wait_for_timeout(600)

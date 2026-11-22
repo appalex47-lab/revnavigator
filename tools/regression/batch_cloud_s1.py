@@ -54,10 +54,18 @@ async def main():
             team = me['team']
             if u.path == '/rest/v1/team_members': return await jr(route, 200, [{'team_id': team, 'teams': {'name': TEAMS[team]}}] if team else [])
             if not team: return await jr(route, 200, [])
+            if u.path == '/rest/v1/rpc/put_blob_cas':   # réplica de la función SQL put_blob_cas por versión (supabase/migrations/20261102_put_blob_cas.sql)
+                b = json.loads(r.post_data); cur = next((y for y in rows if y['team_id'] == team and y['key'] == b['p_key'] and y['part'] == 0), None)
+                ev = b['p_expected_version']
+                if (cur and (ev is None or int(ev) != cur.get('version', 1))) or (not cur and ev not in (None, 0)):
+                    return await jr(route, 200, {'ok': False, 'conflict': True, 'version': cur.get('version', 1) if cur else 0})
+                nv = (cur.get('version', 1) + 1) if cur else 1
+                rows[:] = [y for y in rows if not (y['team_id'] == team and y['key'] == b['p_key'])] + [{'team_id': team, 'key': b['p_key'], 'version': nv, **x} for x in b['p_rows']]
+                return await jr(route, 200, {'ok': True, 'version': nv})
             if r.method == 'POST':
                 for x in json.loads(r.post_data):
                     assert x['team_id'] == team
-                    rows[:] = [y for y in rows if not (y['team_id'] == team and y['key'] == x['key'] and y['part'] == x['part'])] + [x]
+                    old = next((y for y in rows if y['team_id'] == team and y['key'] == x['key'] and y['part'] == x['part']), None); x['version'] = (old.get('version', 1) + (1 if x['part'] == 0 else 0)) if old else 1; rows[:] = [y for y in rows if not (y['team_id'] == team and y['key'] == x['key'] and y['part'] == x['part'])] + [x]
                 return await route.fulfill(status=201, body='', headers=CORS)
             qs = parse_qs(u.query); sel = [y for y in rows if y['team_id'] == team]
             k = qs.get('key', [''])[0]; pt = qs.get('part', [''])[0]
@@ -125,6 +133,8 @@ async def main():
         await q.fill('#cloud-pw-new', 'nueva-clave-1'); await q.fill('#cloud-pw-new2', 'nueva-clave-1'); await q.click('[data-action="cloud-password-change"]'); await q.wait_for_timeout(800)
         chk('L17 cambio correcto', 'Contraseña cambiada' in await q.inner_text('#cloud-msg'), await q.inner_text('#cloud-msg'))
         await signout_flow(q, '#view-ajustes [data-action="cloud-signout"]')
+        try: await q.wait_for_selector('#view-ajustes [data-action="login-open"]', state='attached', timeout=30000)   # espera la condición (la página recarga tras cerrar sesión), no un tiempo fijo
+        except Exception: pass
         chk('L18 cerrar sesión: vuelve «Iniciar sesión» y borra la sesión local', await q.locator('#view-ajustes [data-action="login-open"]').count() == 1 and await q.evaluate("localStorage.getItem('fp.cloudSession')") is None)
         await login('ana@empresa.com', 'clave-ana-1')
         chk('L19 la contraseña vieja ya no entra', 'incorrectos' in await q.inner_text('#login-msg'))

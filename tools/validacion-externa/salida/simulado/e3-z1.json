@@ -1,0 +1,433 @@
+{
+  "id": "E-3",
+  "origen": "simulado",
+  "banner": "ORIGEN: SIMULADO (no cuenta como validación externa)",
+  "generado": "2026-11-13T04:11:13.503Z",
+  "archivos": {
+    "diario": {
+      "ruta": "tools/validacion-externa/fixtures-simulados/diario-plan-real.csv",
+      "sha256": "4fb7440a546e4b0f7e3879edc5320f8a795d7dfa33095cd949def7565ab5e576"
+    },
+    "config": {
+      "ruta": "tools/validacion-externa/fixtures-simulados/config-z1.json",
+      "sha256": "318686b8cf38e98d731c6dde7ab8c0fc88a90142697785ed8964e55dcf8f5e62"
+    }
+  },
+  "config": {
+    "corte": "2026-09-20",
+    "periodo": {
+      "tipo": "mes",
+      "clave": "2026-09"
+    },
+    "calidad": {
+      "ecommerce": "ready",
+      "app": "ready",
+      "whatsapp": "warnings",
+      "llamadas": "ready"
+    },
+    "esperados": {
+      "ecommerce": {
+        "nivel": "Alta"
+      },
+      "whatsapp": {
+        "nivel": "Media"
+      }
+    }
+  },
+  "diasEsperados": 20,
+  "estructura": {
+    "ok": true,
+    "errores": [],
+    "advertencias": [
+      "40 filas fuera del periodo hasta el corte (se ignoran; p. ej. el plan de días futuros)"
+    ],
+    "estadisticas": {
+      "filas": 80,
+      "canales": [
+        "app",
+        "ecommerce",
+        "llamadas",
+        "whatsapp"
+      ]
+    }
+  },
+  "invariantes": [
+    {
+      "id": "A1",
+      "texto": "el nivel de reliability es EXACTAMENTE el de Z1"
+    },
+    {
+      "id": "A2",
+      "texto": "la venta observada válida se muestra (o Z1 declara sin_actividad / no_calculable)"
+    },
+    {
+      "id": "A3",
+      "texto": "sesiones o pedidos ausentes llegan como null (nunca 0) y no hay conclusión de conversión"
+    },
+    {
+      "id": "A4",
+      "texto": "cobertura < 100 % ⇒ nivel ≠ Alta; actividad ausente ⇒ completitud ≠ verificada"
+    },
+    {
+      "id": "A5",
+      "texto": "valores negativos ⇒ nivel Insuficiente (no calculable)"
+    },
+    {
+      "id": "A6",
+      "texto": "ni NaN ni Infinity en la entrada ni en las salidas"
+    },
+    {
+      "id": "A7",
+      "texto": "brecha y cumplimiento de la entrada = FP.metrics.calcGap (trazabilidad)"
+    },
+    {
+      "id": "A8",
+      "texto": "coincide con lo esperado por el analista (si se declaró en config-z1.json)"
+    }
+  ],
+  "entidades": [
+    {
+      "id": "app",
+      "diasContados": 20,
+      "cobertura": 1,
+      "cumplimiento": 0.9931657812680449,
+      "nivel": "Alta",
+      "completitud": "verificada",
+      "comparabilidad": "sin_base_comparable",
+      "usos": {
+        "show_metric": "permitido",
+        "classify_state": "permitido",
+        "diagnose": "permitido",
+        "recommend": "permitido",
+        "estimate_impact": "permitido",
+        "executive_conclusion": "permitido"
+      },
+      "explicacion": {
+        "ok": [
+          "completeness",
+          "coverage",
+          "consistency"
+        ],
+        "missing": [],
+        "limits": []
+      },
+      "esperado": null,
+      "entrada": {
+        "period": {
+          "daysCounted": 20
+        },
+        "plan": {
+          "available": true
+        },
+        "revenue": {
+          "planToDate": 2251340,
+          "actualToDate": 2235953.85,
+          "gap": -15386.149999999907,
+          "compliance": 0.9931657812680449,
+          "gapPct": -0.00683421873195515
+        },
+        "activity": {
+          "sessions": 160810,
+          "orders": 3240,
+          "revenue": 2235953.85
+        },
+        "forecast": {},
+        "reliability": {
+          "support": "alto",
+          "coverage": 1,
+          "warnings": [],
+          "blocking": [],
+          "dataErrors": false
+        }
+      },
+      "invariantes": {
+        "A1": "OK",
+        "A2": "OK",
+        "A3": "OK",
+        "A4": "OK",
+        "A5": "OK",
+        "A6": "OK",
+        "A7": "OK",
+        "A8": "N/A"
+      }
+    },
+    {
+      "id": "ecommerce",
+      "diasContados": 20,
+      "cobertura": 1,
+      "cumplimiento": 1.001643491743697,
+      "nivel": "Alta",
+      "completitud": "verificada",
+      "comparabilidad": "sin_base_comparable",
+      "usos": {
+        "show_metric": "permitido",
+        "classify_state": "permitido",
+        "diagnose": "permitido",
+        "recommend": "permitido",
+        "estimate_impact": "permitido",
+        "executive_conclusion": "permitido"
+      },
+      "explicacion": {
+        "ok": [
+          "completeness",
+          "coverage",
+          "consistency"
+        ],
+        "missing": [],
+        "limits": []
+      },
+      "esperado": {
+        "nivel": "Alta"
+      },
+      "entrada": {
+        "period": {
+          "daysCounted": 20
+        },
+        "plan": {
+          "available": true
+        },
+        "revenue": {
+          "planToDate": 5545218,
+          "actualToDate": 5554331.52,
+          "gap": 9113.519999999553,
+          "compliance": 1.001643491743697,
+          "gapPct": 0.001643491743696921
+        },
+        "activity": {
+          "sessions": 396087,
+          "orders": 8036,
+          "revenue": 5554331.52
+        },
+        "forecast": {},
+        "reliability": {
+          "support": "alto",
+          "coverage": 1,
+          "warnings": [],
+          "blocking": [],
+          "dataErrors": false
+        }
+      },
+      "invariantes": {
+        "A1": "OK",
+        "A2": "OK",
+        "A3": "OK",
+        "A4": "OK",
+        "A5": "OK",
+        "A6": "OK",
+        "A7": "OK",
+        "A8": "OK"
+      }
+    },
+    {
+      "id": "llamadas",
+      "diasContados": 20,
+      "cobertura": 1,
+      "cumplimiento": 0.9941020816462629,
+      "nivel": "Alta",
+      "completitud": "verificada",
+      "comparabilidad": "sin_base_comparable",
+      "usos": {
+        "show_metric": "permitido",
+        "classify_state": "permitido",
+        "diagnose": "permitido",
+        "recommend": "permitido",
+        "estimate_impact": "permitido",
+        "executive_conclusion": "permitido"
+      },
+      "explicacion": {
+        "ok": [
+          "completeness",
+          "coverage",
+          "consistency"
+        ],
+        "missing": [],
+        "limits": []
+      },
+      "esperado": null,
+      "entrada": {
+        "period": {
+          "daysCounted": 20
+        },
+        "plan": {
+          "available": true
+        },
+        "revenue": {
+          "planToDate": 83972,
+          "actualToDate": 83476.73999999999,
+          "gap": -495.2600000000093,
+          "compliance": 0.9941020816462629,
+          "gapPct": -0.005897918353737071
+        },
+        "activity": {
+          "sessions": 5998,
+          "orders": 123,
+          "revenue": 83476.73999999999
+        },
+        "forecast": {},
+        "reliability": {
+          "support": "alto",
+          "coverage": 1,
+          "warnings": [],
+          "blocking": [],
+          "dataErrors": false
+        }
+      },
+      "invariantes": {
+        "A1": "OK",
+        "A2": "OK",
+        "A3": "OK",
+        "A4": "OK",
+        "A5": "OK",
+        "A6": "OK",
+        "A7": "OK",
+        "A8": "N/A"
+      }
+    },
+    {
+      "id": "whatsapp",
+      "diasContados": 20,
+      "cobertura": 1,
+      "cumplimiento": 0.98717045266125,
+      "nivel": "Media",
+      "completitud": "incompleta",
+      "comparabilidad": "sin_base_comparable",
+      "usos": {
+        "show_metric": "permitido",
+        "classify_state": "con_reservas",
+        "diagnose": "con_reservas",
+        "recommend": "con_reservas",
+        "estimate_impact": "con_reservas",
+        "executive_conclusion": "con_reservas"
+      },
+      "explicacion": {
+        "ok": [
+          "coverage",
+          "consistency"
+        ],
+        "missing": [
+          "datos con avisos de calidad"
+        ],
+        "limits": [
+          "Datos con avisos de calidad (declarado en config-z1.json).",
+          "Falta información: datos con avisos de calidad. Las métricas calculables se muestran; no se interpreta el motivo."
+        ]
+      },
+      "esperado": {
+        "nivel": "Media"
+      },
+      "entrada": {
+        "period": {
+          "daysCounted": 20
+        },
+        "plan": {
+          "available": true
+        },
+        "revenue": {
+          "planToDate": 168868,
+          "actualToDate": 166701.49999999997,
+          "gap": -2166.500000000029,
+          "compliance": 0.98717045266125,
+          "gapPct": -0.012829547338749966
+        },
+        "activity": {
+          "sessions": 12062,
+          "orders": 239,
+          "revenue": 166701.49999999997
+        },
+        "forecast": {},
+        "reliability": {
+          "support": "medio",
+          "coverage": 1,
+          "warnings": [
+            "Datos con avisos de calidad (declarado en config-z1.json)."
+          ],
+          "blocking": [],
+          "dataErrors": false
+        }
+      },
+      "invariantes": {
+        "A1": "OK",
+        "A2": "OK",
+        "A3": "OK",
+        "A4": "OK",
+        "A5": "OK",
+        "A6": "OK",
+        "A7": "OK",
+        "A8": "OK"
+      }
+    },
+    {
+      "id": "total",
+      "diasContados": 20,
+      "cobertura": 1,
+      "cumplimiento": 0.9988900548836074,
+      "nivel": "Media",
+      "completitud": "incompleta",
+      "comparabilidad": "sin_base_comparable",
+      "usos": {
+        "show_metric": "permitido",
+        "classify_state": "con_reservas",
+        "diagnose": "con_reservas",
+        "recommend": "con_reservas",
+        "estimate_impact": "con_reservas",
+        "executive_conclusion": "con_reservas"
+      },
+      "explicacion": {
+        "ok": [
+          "coverage",
+          "consistency"
+        ],
+        "missing": [
+          "datos con avisos de calidad"
+        ],
+        "limits": [
+          "Datos con avisos de calidad (declarado en config-z1.json).",
+          "Falta información: datos con avisos de calidad. Las métricas calculables se muestran; no se interpreta el motivo."
+        ]
+      },
+      "esperado": null,
+      "entrada": {
+        "period": {
+          "daysCounted": 20
+        },
+        "plan": {
+          "available": true
+        },
+        "revenue": {
+          "planToDate": 8049398,
+          "actualToDate": 8040463.609999999,
+          "gap": -8934.390000000596,
+          "compliance": 0.9988900548836074,
+          "gapPct": -0.001109945116392629
+        },
+        "activity": {
+          "sessions": 574957,
+          "orders": 11638,
+          "revenue": 8040463.609999999
+        },
+        "forecast": {},
+        "reliability": {
+          "support": "medio",
+          "coverage": 1,
+          "warnings": [
+            "Datos con avisos de calidad (declarado en config-z1.json)."
+          ],
+          "blocking": [],
+          "dataErrors": false
+        }
+      },
+      "invariantes": {
+        "A1": "OK",
+        "A2": "OK",
+        "A3": "OK",
+        "A4": "OK",
+        "A5": "OK",
+        "A6": "OK",
+        "A7": "OK",
+        "A8": "N/A"
+      }
+    }
+  ],
+  "fallas": [],
+  "veredicto": "APROBADA"
+}

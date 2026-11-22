@@ -7,10 +7,17 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
 (async () => {
   const { handle, sanitize } = await import(path.resolve('supabase/functions/cohere-proxy/handler.js'));
   // ---------- servidor simulado ----------
-  let upstream = [], authCalls = 0, cfg = { cohereStatus: 200, user: { id: 'u1', is_anonymous: false }, members: [{ team_id: 'T' }], authOk: true, cohereThrows: false };
+  let upstream = [], authCalls = 0, hits = 0, cfg = { rate: 'ok',  cohereStatus: 200, user: { id: 'u1', is_anonymous: false }, members: [{ team_id: 'T' }], authOk: true, cohereThrows: false };
   const fakeFetch = async (url, o = {}) => {
     const h = o.headers || {};
     if (url.endsWith('/auth/v1/user')) { authCalls++; return cfg.authOk && h.Authorization === `Bearer ${USER_TOKEN}` ? { ok: true, status: 200, json: async () => cfg.user } : { ok: false, status: 401, json: async () => ({}) }; }
+    if (url.includes('/rest/v1/rpc/ai_usage_hit')) {   // réplica de la función SQL (migración 20261102_ai_usage_rate_limit.sql); la real se prueba aparte contra PostgreSQL
+      if (cfg.rate === 'missing') return { ok: false, status: 404, json: async () => ({ code: 'PGRST202' }) };
+      hits++; const b = JSON.parse(o.body);
+      if (cfg.rate === 'minute' || hits > b.p_limit_min && cfg.rate === 'count') return { ok: true, status: 200, json: async () => ({ ok: false, scope: 'minute', retry_after: 60 }) };
+      if (cfg.rate === 'day') return { ok: true, status: 200, json: async () => ({ ok: false, scope: 'day', retry_after: 3600 }) };
+      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    }
     if (url.includes('/rest/v1/team_members')) return { ok: true, status: 200, json: async () => cfg.members };
     if (url === 'https://api.cohere.com/v2/chat') {
       if (cfg.cohereThrows) throw new Error('boom ' + COHERE_KEY);
@@ -49,6 +56,15 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
   for (const [n, b] of bads) { r = await run(req(b)); t(`rechaza: ${n} (400) y no llama a Cohere`, r.status === 400 && !upstream.length, r.status); }
   r = await run(req('no es json')); t('JSON inválido → 400', r.status === 400 && r.json.error.code === 'bad_json');
   r = await run(req({ ...good, messages: [{ role: 'user', content: 'x'.repeat(1_100_000) }] })); t('petición enorme → 413', r.status === 413 && !upstream.length);
+  // ---- Hardening: límites de frecuencia y de tamaño ----
+  upstream = []; cfg.rate = 'minute'; r = await run(req(good));
+  t('límite por minuto: 429 rate_limited con Retry-After y NO se llama a Cohere', r.status === 429 && r.json.error.code === 'rate_limited' && r.headers.get('retry-after') === '60' && !upstream.length, r.status);
+  cfg.rate = 'day'; r = await run(req(good)); t('límite diario: 429 con mensaje distinto y Retry-After largo', r.status === 429 && /diario/.test(r.json.error.message) && r.headers.get('retry-after') === '3600' && !upstream.length);
+  cfg.rate = 'missing'; r = await run(req(good)); t('si la función de límites no está instalada el proxy FALLA CERRADO (503) y no llama a Cohere', r.status === 503 && r.json.error.code === 'rate_unavailable' && !upstream.length, r.status);
+  cfg.rate = 'count'; hits = 0; const codes = []; for (let i = 0; i < 12; i++) codes.push((await run(req(good))).status);
+  t('ráfaga de 12 solicitudes con límite 10/min: las 10 primeras pasan y el resto recibe 429', codes.slice(0, 10).every((c) => c === 200) && codes.slice(10).every((c) => c === 429), codes);
+  cfg.rate = 'ok'; upstream = []; r = await run(req({ ...good, messages: [{ role: 'user', content: 'x'.repeat(200_001) }] })); t('un solo mensaje enorme (>200 mil caracteres) → 400 y no llama a Cohere', r.status === 400 && !upstream.length, r.status);
+  upstream = []; r = await run(req(good), { AI_RATE_PER_MIN: '3' }); t('los límites se configuran con secretos (AI_RATE_PER_MIN) y la solicitud válida sigue pasando', r.status === 200 && upstream.length === 1);
   const s = sanitize({ ...good, tools: [{ x: 1 }], documents: ['d'], connectors: ['c'], stream: true, max_tokens: 99999 });
   t('descarta tools/documents/connectors/stream y acota max_tokens', !('tools' in s.body) && !('documents' in s.body) && !('connectors' in s.body) && !('stream' in s.body) && s.body.max_tokens === 4000, s);
 
@@ -82,11 +98,12 @@ const COHERE_KEY = 'COHERE-SERVER-SECRET-123', USER_TOKEN = 'user-jwt-abc';
   calls.length = 0; c = await chat({ apiKey: PK });
   t('aunque haya key local, con sesión se prefiere el servidor y la key local NO sale del navegador', c.via === 'server' && !JSON.stringify(calls).includes(PK), calls);
   calls.length = 0; c = await chat({ apiKey: PK }, (u) => (u.includes('/functions/v1/') ? errResp(404) : okResp()));
-  t('servidor no instalado (404) + key local → respaldo directo a Cohere, que responde ok', c.ok === true && c.via === 'browser', c);
-  const fb = calls.map((x) => x.url); t('el respaldo llamó primero al proxy y luego a Cohere', fb.length === 2 && fb[0].includes('/functions/v1/') && fb[1] === 'https://api.cohere.com/v2/chat', fb);
+  t('cierre técnico · servidor no instalado (404) + key local → NO hay respaldo directo: falla explicando qué falta', c.ok === false && c.errorKind === 'proxy_setup' && /cohere-proxy/.test(c.errors[0]), c);
+  const fb = calls.map((x) => x.url); t('cierre técnico · la única llamada de red fue al proxy; nada a api.cohere.com y la key local no salió', fb.length === 1 && fb[0].includes('/functions/v1/') && !JSON.stringify(calls).includes('api.cohere.com') && !JSON.stringify(calls).includes(PK), fb);
+  t('cierre técnico · el cliente no contiene ninguna llamada directa a Cohere (ni «api.cohere.com», ni cabecera Bearer de Cohere) en js/', (() => { const hits = []; (function walk(d) { fs.readdirSync(d, { withFileTypes: true }).forEach((e) => { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else if (/\.js$/.test(e.name)) { const x = fs.readFileSync(f, 'utf8'); if (/api\.cohere\.com|Authorization:\s*`Bearer \$\{apiKey\}`/.test(x)) hits.push(f); } }); })('js'); return hits.length === 0; })());
   calls.length = 0; c = await chat({}, () => errResp(404));
   t('servidor no instalado y sin key: mensaje claro (proxy_setup)', c.ok === false && c.errorKind === 'proxy_setup' && /cohere-proxy/.test(c.errors[0]), c);
-  c = await chat({}, () => errResp(503, 'not_configured')); t('servidor sin secreto: dice que falta COHERE_API_KEY', c.errorKind === 'proxy_setup' && /COHERE_API_KEY/.test(c.errors[0]), c);
+  c = await chat({ apiKey: PK }, () => errResp(503, 'not_configured')); t('servidor sin secreto: dice que falta COHERE_API_KEY', c.errorKind === 'proxy_setup' && /COHERE_API_KEY/.test(c.errors[0]), c);
   for (const [st, code, kind] of [[401, 'no_session', 'no_session'], [403, 'no_team', 'no_session'], [502, 'cohere_auth', 'auth'], [429, 'cohere_quota', 'quota'], [502, 'cohere_server', 'server'], [504, 'cohere_unreachable', 'server'], [400, 'bad_request', 'http']]) {
     c = await chat({}, () => errResp(st, code)); t(`proxy ${st}/${code} → ${kind} con mensaje útil`, c.ok === false && c.errorKind === kind && c.errors[0].length > 10 && !JSON.stringify(c).includes(PK), c);
   }

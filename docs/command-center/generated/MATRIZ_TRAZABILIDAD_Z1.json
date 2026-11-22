@@ -1,0 +1,964 @@
+{
+ "version": 2,
+ "subfase": "3.2",
+ "nota": "Fuente de verdad de la matriz de trazabilidad de Z1. Se verifica contra la aplicación real (tools/regression/batch_fase3_2_z1_wireframe.py: cada ruta FP.* de Disponible y Parcial existe; lo «Por desarrollar» no existe en js/) y contra el documento y el wireframe (tools/audit/verificar_consistencia_3_2.py). Las filas M-xx remiten a docs/command-center/generated/MATRIZ_UX_MOTORES.json (3.1). Versión 2 (decisiones D-01 a D-06): añade las columnas Requisito, Decisión relacionada, Componente visual, Evidencia y Dependencia pendiente (clasificada para Fase 4 y Fase 5).",
+ "estados": {
+  "Disponible": "El motor existe y entrega lo necesario; solo falta presentarlo según este diseño.",
+  "Parcial": "El motor o parte de él existe, pero falta una pieza (regla, etiqueta, estado, conexión al Home) para cumplir este diseño.",
+  "Por desarrollar": "No existe en js/. Es solo diseño propuesto o especificación; su implementación es una dependencia futura."
+ },
+ "filas": [
+  {
+   "id": "Z1-01",
+   "elemento": "Estado ejecutivo (uno de los 6 estados del contrato)",
+   "necesidad": "Saber de un vistazo cómo está el negocio",
+   "fuente": "Cumplimiento, cierre proyectado, evolución vs comparable y hallazgos activos",
+   "motor": "classifyBusinessState (especificación de Fase 2: tools/audit/command-center-contracts.js)",
+   "motores": [],
+   "especificacion": "tools/audit/command-center-contracts.js · classifyBusinessState",
+   "disponibilidad": "Confiabilidad Alta o Media y datos suficientes",
+   "reglas": "Prioridad de reglas del modelo de lectura (MODELO_LECTURA_EJECUTIVA §3); 6 estados sin cambios",
+   "confiabilidad": "Alta: estado definitivo · Media: «con avisos» · Baja: sin etiqueta (lectura preliminar) · Insuficiente: «Sin lectura concluyente»",
+   "sinDatos": "Sin cumplimiento o cobertura < 60 %: no se emite estado",
+   "wireframe": "z1-estado",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M01"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Emitir uno de los 6 estados solo si la confiabilidad lo permite",
+   "decision": "D-03, D-05",
+   "componente": "Chip de estado (cabecera)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Conectar classifyBusinessState a un motor de diagnósticos"
+    }
+   ]
+  },
+  {
+   "id": "Z1-02",
+   "elemento": "Confiabilidad de la lectura (Alta, Media, Baja, Insuficiente)",
+   "necesidad": "Saber cuánto puede apoyarse en la lectura",
+   "fuente": "Respaldo del motor de atención (cobertura de días y calidad), confianza de datos, preparación de datos y hallazgos que bloquean",
+   "motor": "attentionEngine.support, homeSummaryEngine.trust, contextEngine.dataReadiness",
+   "motores": [
+    "FP.attentionEngine.evaluate",
+    "FP.homeSummaryEngine.trust",
+    "FP.contextEngine.dataReadiness"
+   ],
+   "disponibilidad": "Siempre visible dentro de Z1",
+   "reglas": "Orden de evaluación explícito: Insuficiente → Baja → Media → Alta (§6.1); no se confunde con el desempeño",
+   "confiabilidad": "Es el condicionante de todo lo demás",
+   "sinDatos": "Sin días comparables o sin plan: Insuficiente",
+   "wireframe": "z1-confiabilidad",
+   "estado": "Parcial",
+   "depende": [
+    "M17",
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Declarar siempre la confiabilidad (Alta, Media, Baja, Insuficiente) con su motivo",
+   "decision": "D-03, D-05",
+   "componente": "Chip de confiabilidad (cabecera)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Unificar attentionEngine, homeSummaryEngine y contextEngine en un solo nivel"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Validar con datos reales el umbral de cobertura del 60 %"
+    }
+   ]
+  },
+  {
+   "id": "Z1-03",
+   "elemento": "Periodo analizado y base de comparación (rótulo)",
+   "necesidad": "Saber qué se compara con qué y hasta qué día",
+   "fuente": "Periodo y fecha de corte, días contados, rango del comparable",
+   "motor": "homeView.periodFigures, homeSummaryEngine.why (rangos y cobertura), navigation.contextLabel",
+   "motores": [
+    "FP.homeView.periodFigures",
+    "FP.homeSummaryEngine.why",
+    "FP.navigation.contextLabel"
+   ],
+   "disponibilidad": "Con periodo elegido y plan o comparable",
+   "reglas": "Siempre se nombra el periodo, los días contados y la base (plan o comparable)",
+   "confiabilidad": "Visible en todos los niveles",
+   "sinDatos": "«Sin base comparable» o «Datos insuficientes»; nunca queda en blanco",
+   "wireframe": "z1-periodo",
+   "estado": "Parcial",
+   "depende": [
+    "M26",
+    "M05"
+   ],
+   "completa": "3.2 (diseño) · Fase 4",
+   "requisito": "Rotular periodo, día de corte y base de comparación",
+   "decision": "D-04",
+   "componente": "Chip de periodo (cabecera)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.1",
+     "detalle": "Rótulos ya disponibles en el contexto"
+    }
+   ]
+  },
+  {
+   "id": "Z1-04",
+   "elemento": "Estado de comparabilidad (7 etiquetas)",
+   "necesidad": "Saber si la comparación permite concluir",
+   "fuente": "Estados de attributeSegment agrupados: válida, sin base comparable, recuperación desde cero, cambio de composición, datos insuficientes, sin actividad, no calculable",
+   "motor": "attributeSegment (ATRIBUCION_FUENTE_DE_VERDAD.md) vía homeSummaryEngine.why",
+   "motores": [
+    "FP.attribution.attributeSegment",
+    "FP.homeSummaryEngine.why"
+   ],
+   "disponibilidad": "Siempre que exista un par base–actual",
+   "reglas": "Una comparación inválida no produce lenguaje de crecimiento ni deterioro; sin actividad, conversión cero y cambio de composición no permiten confiabilidad Alta (propuesta)",
+   "confiabilidad": "Los tres estados anteriores topan en Media; no calculable es Insuficiente",
+   "sinDatos": "Etiqueta explícita; sin porcentaje",
+   "wireframe": "z1-periodo",
+   "estado": "Parcial",
+   "depende": [
+    "M06",
+    "M33"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Etiquetar la comparabilidad con 7 estados visibles",
+   "decision": "D-04, D-06",
+   "componente": "Chip de periodo y celda de evolución",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.3",
+     "detalle": "Mapear los 9 estados de attribution a las 7 etiquetas visibles"
+    }
+   ]
+  },
+  {
+   "id": "Z1-05",
+   "elemento": "Veredicto ejecutivo (1–2 frases, ≤ 34 palabras)",
+   "necesidad": "Entender la situación, su dirección y su implicación sin conocer los motores",
+   "fuente": "Estado, cumplimiento, cierre proyectado, evolución (si es válida) y confiabilidad",
+   "motor": "homeResumen.build (veredicto actual) + regla de contundencia (por construir)",
+   "motores": [
+    "FP.homeResumen.build",
+    "FP.homeSummaryEngine.compute"
+   ],
+   "disponibilidad": "Todos los niveles, con la forma que cada uno permite",
+   "reglas": "Plantillas por estado y por modo (definitiva, con avisos, preliminar, sin lectura); a lo sumo un número (el % del cumplimiento) y ningún importe en pesos; reglas R1–R10 del validador ejecutable",
+   "confiabilidad": "Alta: asertivo · Media: «Con avisos:» · Baja: «Lectura preliminar:» · Insuficiente: «No es posible emitir…»",
+   "sinDatos": "Insuficiente: se dice que no es posible y la banda explica qué falta",
+   "wireframe": "z1-veredicto",
+   "estado": "Parcial",
+   "depende": [
+    "M02",
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2) · Fase 5 (5.2)",
+   "requisito": "Veredicto sin importes ni cifras de las tarjetas, condicionado por la confiabilidad",
+   "decision": "D-03",
+   "componente": "Titular (veredicto)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Generar el veredicto desde los motores"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.2",
+     "detalle": "Versión narrativa con IA (opcional)"
+    }
+   ]
+  },
+  {
+   "id": "Z1-06",
+   "elemento": "Narrativa corta (≤ 2 frases)",
+   "necesidad": "Entender de inmediato el contexto que el veredicto no dice",
+   "fuente": "Evolución, base de la lectura y estado de la comparación",
+   "motor": "homeResumen.build (filas en versión corta)",
+   "motores": [
+    "FP.homeResumen.build"
+   ],
+   "disponibilidad": "Siempre",
+   "reglas": "Describe en palabras, sin cifras (las cifras viven en las celdas); no repite el veredicto ni el importe protagonista; no menciona drivers ni canales",
+   "confiabilidad": "En Media avisa que los motivos están a la vista; en Baja pide corregir los datos",
+   "sinDatos": "En Insuficiente solo indica completar la información",
+   "wireframe": "z1-narr-corta",
+   "estado": "Parcial",
+   "depende": [
+    "M31"
+   ],
+   "completa": "Fase 5 (5.2)",
+   "requisito": "Narrativa corta sin cifras, ≤ 2 frases",
+   "decision": "D-03",
+   "componente": "Párrafo bajo el veredicto",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.2",
+     "detalle": "Versión determinista disponible"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.2",
+     "detalle": "Versión con IA (opcional)"
+    }
+   ]
+  },
+  {
+   "id": "Z1-07",
+   "elemento": "Indicador económico principal: brecha vs plan a la fecha (cifra protagonista solo con brecha válida)",
+   "necesidad": "Conocer la magnitud en pesos de la diferencia",
+   "fuente": "gap.js: real − plan en los mismos días contados",
+   "motor": "gap.js / pacing (toDate.revenue.gap)",
+   "motores": [
+    "FP.gap.pacingStatus",
+    "FP.homeView.periodFigures"
+   ],
+   "disponibilidad": "Con plan y venta real contada y confiabilidad distinta de Insuficiente",
+   "reglas": "Un solo número grande; el importe no se repite en el veredicto; con Baja se rotula «preliminar»",
+   "confiabilidad": "Insuficiente: se oculta",
+   "sinDatos": "«—» con la razón; nunca 0",
+   "wireframe": "z1-economico",
+   "estado": "Disponible",
+   "depende": [
+    "M03"
+   ],
+   "completa": "—",
+   "requisito": "Mostrar la brecha como cifra protagonista solo con brecha válida",
+   "decision": "D-01",
+   "componente": "Bloque económico (cifra grande)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z1-08",
+   "elemento": "Venta acumulada del periodo (subtexto de la brecha)",
+   "necesidad": "Situar la brecha en la venta del periodo",
+   "fuente": "gap.js: venta real a la fecha y cumplimiento",
+   "motor": "gap.js / pacing",
+   "motores": [
+    "FP.gap.pacingStatus",
+    "FP.homeView.periodFigures"
+   ],
+   "disponibilidad": "Junto con la brecha",
+   "reglas": "Subtexto del indicador principal; no compite con él. El % de cumplimiento se expresa una sola vez, en el veredicto: no se duplica en el indicador",
+   "confiabilidad": "Igual que el indicador principal",
+   "sinDatos": "Se oculta con el indicador",
+   "wireframe": "z1-economico",
+   "estado": "Disponible",
+   "depende": [
+    "M03"
+   ],
+   "completa": "—",
+   "requisito": "Mostrar la venta observada en el subtexto de la brecha",
+   "decision": "D-01",
+   "componente": "Subtexto del bloque económico",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z1-09",
+   "elemento": "Dirección del cambio (por encima, en línea, por debajo)",
+   "necesidad": "Saber si la diferencia es favorable o desfavorable",
+   "fuente": "Signo de la brecha y bandas de cumplimiento (≥ 1.01 arriba, ≥ 0.99 en plan)",
+   "motor": "gap.pacingStatus (etiqueta de ritmo)",
+   "motores": [
+    "FP.gap.pacingStatus"
+   ],
+   "disponibilidad": "Con brecha calculada",
+   "reglas": "La dirección del texto coincide siempre con el signo real de la brecha (R3)",
+   "confiabilidad": "Visible en todos los niveles donde hay brecha",
+   "sinDatos": "Sin brecha no hay dirección",
+   "wireframe": "z1-economico",
+   "estado": "Disponible",
+   "depende": [
+    "M03"
+   ],
+   "completa": "—",
+   "requisito": "Indicar la dirección contra el plan solo con brecha válida",
+   "decision": "D-01, D-03",
+   "componente": "Titular y bloque económico",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z1-10",
+   "elemento": "Cierre proyectado y brecha de cierre",
+   "necesidad": "Saber cómo terminaría el periodo al ritmo actual",
+   "fuente": "forecastEngine: forecast del periodo y forecastGap",
+   "motor": "forecastEngine.runForecast",
+   "motores": [
+    "FP.forecastEngine.runForecast"
+   ],
+   "disponibilidad": "Con forecast disponible y lectura Alta o Media",
+   "reglas": "Siempre rotulado «estimación»; no se muestra con Baja ni Insuficiente",
+   "confiabilidad": "Oculto con Baja e Insuficiente",
+   "sinDatos": "Celda apagada («no se muestra»)",
+   "wireframe": "z1-cierre",
+   "estado": "Disponible",
+   "depende": [
+    "M04"
+   ],
+   "completa": "—",
+   "requisito": "Mostrar el cierre proyectado con Alta o Media y brecha válida",
+   "decision": "D-01",
+   "componente": "Celda «Cierre proyectado»",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z1-11",
+   "elemento": "Evolución vs comparable (periodo anterior o año anterior)",
+   "necesidad": "Saber si el negocio crece o se deteriora",
+   "fuente": "homeSummaryEngine.why (actual vs periodo anterior) y temporalEngine",
+   "motor": "homeSummaryEngine.why, temporalEngine",
+   "motores": [
+    "FP.homeSummaryEngine.why",
+    "FP.temporalEngine"
+   ],
+   "disponibilidad": "Solo con comparación válida; si no, se rotula el estado sin porcentaje",
+   "reglas": "Sin comparación válida no hay % ni palabras de crecimiento (R2)",
+   "confiabilidad": "Oculta con Baja e Insuficiente",
+   "sinDatos": "Etiqueta de comparabilidad",
+   "wireframe": "z1-evolucion",
+   "estado": "Parcial",
+   "depende": [
+    "M05"
+   ],
+   "completa": "Fase 4 (4.3)",
+   "requisito": "Mostrar la evolución solo con comparación válida y confiabilidad suficiente",
+   "decision": "D-04",
+   "componente": "Celda «Evolución vs comparable»",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.3",
+     "detalle": "Entregar la comparación en una estructura única con venta comparable"
+    }
+   ]
+  },
+  {
+   "id": "Z1-12",
+   "elemento": "Contribución bruta estimada (solo detalle, sobre la brecha, nunca protagonista) / «Margen no configurado» / «Margen no válido»",
+   "necesidad": "Estimar qué parte de la diferencia en ventas contribuye, sin confundirla con utilidad",
+   "fuente": "FP.economics.contributionOf sobre el impacto en ventas, con settings.economics",
+   "motor": "FP.economics (modelo económico dual de Fase 2)",
+   "motores": [
+    "FP.economics.contributionOf",
+    "FP.economics.availability"
+   ],
+   "disponibilidad": "Solo con margen configurado y activo y lectura Alta o Media",
+   "reglas": "Siempre «estimada»; nunca utilidad ni beneficio neto; sin margen: línea discreta con enlace, nunca importe ni 0 (R5, R9)",
+   "confiabilidad": "Oculta con Baja e Insuficiente",
+   "sinDatos": "«Margen no configurado» o «Margen desactivado»",
+   "wireframe": "z1-contribucion",
+   "estado": "Parcial",
+   "depende": [
+    "M15"
+   ],
+   "completa": "Fase 4 (4.5)",
+   "requisito": "Mostrar la contribución solo como detalle, estimada con margen promedio general, sobre la brecha válida; distinguir margen no configurado, desactivado, no válido (según la validación del motor) y 0 % sin confirmar; un 0 % explícito es válido y da $0 estimado",
+   "decision": "D-02, C4, C5",
+   "componente": "Celda «Contribución» (detalle)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.5",
+     "detalle": "Contribución con margen promedio general y validación del margen ya existen (FP.economics)"
+    },
+    {
+     "categoria": "completar_motores",
+     "fase": "4.5",
+     "detalle": "Margen por canal, producto o pedido: hoy solo existe el promedio general; Z1 no lo inventa"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.5",
+     "detalle": "Validar con finanzas el margen promedio, su granularidad y si debe admitirse un margen bruto negativo (el contrato aceptado de Fase 2 lo rechaza)"
+    }
+   ]
+  },
+  {
+   "id": "Z1-13",
+   "elemento": "Banda de condición con los motivos visibles",
+   "necesidad": "Entender por qué la lectura es «con avisos», preliminar o no concluyente",
+   "fuente": "support.why del motor de atención, avisos de calidad, cobertura y bloqueos",
+   "motor": "attentionEngine.support, homeSummaryEngine.trust",
+   "motores": [
+    "FP.attentionEngine.evaluate",
+    "FP.homeSummaryEngine.trust"
+   ],
+   "disponibilidad": "Siempre que la confiabilidad no sea Alta",
+   "reglas": "Los motivos no van en un plegable; el motivo vive solo en esta banda (no se repite en el veredicto)",
+   "confiabilidad": "Rotulada por nivel: «Motivos de los avisos», «Por qué es preliminar», «Qué falta»",
+   "sinDatos": "Lista qué información falta",
+   "wireframe": "z1-condicion",
+   "estado": "Parcial",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Mostrar motivos visibles cuando la confiabilidad no es Alta",
+   "decision": "D-05",
+   "componente": "Banda de condición",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.2",
+     "detalle": "Motivos ya disponibles en los motores"
+    }
+   ]
+  },
+  {
+   "id": "Z1-14",
+   "elemento": "Topes y bloqueos de confiabilidad (sin actividad, conversión cero, cambio de composición)",
+   "necesidad": "No dar confiabilidad Alta a una lectura cuya comparación sugiere un problema de datos o no es directa",
+   "fuente": "Estados de atribución sin_actividad, conversion_cero_actual y cambio_de_composicion",
+   "motor": "Regla de diseño propuesta (no existe)",
+   "motores": [],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · reliability (propuesta)",
+   "disponibilidad": "Cuando el estado de comparación sea uno de los tres",
+   "reglas": "Máximo Media y motivo visible; es una propuesta de diseño pendiente de aceptación y de implementación",
+   "confiabilidad": "Media como máximo",
+   "sinDatos": "No aplica",
+   "wireframe": "z1-condicion",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Aplicar topes (conversión cero y cambio de composición no son Alta) y bloqueo duro (sin actividad)",
+   "decision": "D-04, D-05",
+   "componente": "Banda de condición",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Implementar topes y bloqueos en el motor"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Validar con datos reales el umbral de actividad mínima observable"
+    }
+   ]
+  },
+  {
+   "id": "Z1-15",
+   "elemento": "Regla de contundencia: el veredicto se condiciona por la confiabilidad (sin importes ni cifras de tarjetas)",
+   "necesidad": "Que una lectura insuficientemente sustentada no se presente como definitiva",
+   "fuente": "Nivel de confiabilidad y estado de comparabilidad",
+   "motor": "Regla de diseño propuesta (no existe)",
+   "motores": [],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · build",
+   "disponibilidad": "Siempre",
+   "reglas": "Modo definitiva, con avisos, preliminar o sin lectura; reglas R1–R9",
+   "confiabilidad": "Es la propia regla",
+   "sinDatos": "Modo sin lectura",
+   "wireframe": "z1-veredicto",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29",
+    "M16"
+   ],
+   "completa": "Fase 4 (4.2) · Fase 5 (5.5)",
+   "requisito": "Condicionar la contundencia del veredicto por la confiabilidad",
+   "decision": "D-03",
+   "componente": "Titular (veredicto)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Aplicar la regla en el motor"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.5",
+     "detalle": "Verificar con IA la consistencia"
+    }
+   ]
+  },
+  {
+   "id": "Z1-16",
+   "elemento": "Narrativa ampliada en cuatro capas (hecho observado, interpretación respaldada, limitaciones, implicación)",
+   "necesidad": "Añadir contexto sin duplicar Z2, Z3 ni Z4",
+   "fuente": "Las mismas cifras de Z1 y los motivos de confiabilidad",
+   "motor": "homeResumen.build (filas en versión larga; sin las cuatro capas)",
+   "motores": [
+    "FP.homeResumen.build"
+   ],
+   "disponibilidad": "Bajo demanda («Ver contexto»)",
+   "reglas": "Capas separadas; sin hipótesis ni causas; no repite frases de la corta ni del veredicto; ≤ 140 palabras",
+   "confiabilidad": "Las limitaciones reflejan los motivos de la confiabilidad",
+   "sinDatos": "La capa «Hecho observado» dice que no hay venta comparable",
+   "wireframe": "z1-narr-larga",
+   "estado": "Parcial",
+   "depende": [
+    "M31"
+   ],
+   "completa": "Fase 5 (5.2)",
+   "requisito": "Narrativa ampliada en cuatro capas separadas",
+   "decision": "D-03",
+   "componente": "Panel «Ver contexto»",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.2",
+     "detalle": "Versión con IA (opcional)"
+    }
+   ]
+  },
+  {
+   "id": "Z1-17",
+   "elemento": "Etiqueta de certeza (hecho, cálculo, estimación) en las cifras de Z1",
+   "necesidad": "Distinguir lo observado de lo proyectado",
+   "fuente": "Escalera de certeza de Fase 2",
+   "motor": "narrativeEngine.LEVELS (6 niveles; falta «estimación»)",
+   "motores": [
+    "FP.narrativeEngine.LEVELS"
+   ],
+   "disponibilidad": "Cifras de Z1",
+   "reglas": "El cierre siempre «estimación»; la brecha, «cálculo»; una hipótesis nunca sostiene el veredicto",
+   "confiabilidad": "La certeza nunca supera la confiabilidad",
+   "sinDatos": "No aplica",
+   "wireframe": "z1-cierre",
+   "estado": "Parcial",
+   "depende": [
+    "M16"
+   ],
+   "completa": "3.3 · Fase 5 (5.5)",
+   "requisito": "Etiquetar la certeza de las cifras (hecho, cálculo, estimación)",
+   "decision": "D-03",
+   "componente": "Subtextos de las celdas",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "5.5",
+     "detalle": "Niveles de certeza existentes"
+    }
+   ]
+  },
+  {
+   "id": "Z1-18",
+   "elemento": "Derivación del detalle a Z2–Z5 (evidencia por cifra)",
+   "necesidad": "Profundizar sin saturar Z1",
+   "fuente": "Botón de evidencia y acciones de navegación contextual",
+   "motor": "explain.whyButton",
+   "motores": [
+    "FP.explain.whyButton"
+   ],
+   "disponibilidad": "Por cifra",
+   "reglas": "Z1 sintetiza y no absorbe: drivers, hallazgos, acciones y tablas viven en Z2 a Z5",
+   "confiabilidad": "Con Baja, Z2 dice «Diagnóstico no concluyente»",
+   "sinDatos": "Con Insuficiente solo se derivan acciones de datos",
+   "wireframe": "escenarios",
+   "estado": "Disponible",
+   "depende": [
+    "M25"
+   ],
+   "completa": "—",
+   "requisito": "Derivar el detalle a Z2–Z5",
+   "decision": "D-05",
+   "componente": "Enlaces «Ver contexto»",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": []
+  },
+  {
+   "id": "Z1-19",
+   "elemento": "Alcance de la lectura: «Se conoce / No se puede concluir / Diagnóstico»",
+   "necesidad": "Saber qué se puede afirmar y qué no",
+   "fuente": "Lo visible en Z1 y el nivel de confiabilidad",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Confiabilidad Media, Baja o Insuficiente",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-alcance",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Saber qué se puede afirmar y qué no",
+   "decision": "D-01, D-05",
+   "componente": "Banda «Alcance»",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Producir el alcance desde el motor de diagnósticos"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · build (scope)"
+  },
+  {
+   "id": "Z1-20",
+   "elemento": "Venta observada como cifra protagonista cuando no hay brecha válida",
+   "necesidad": "Ver siempre lo que se vendió si el dato es válido",
+   "fuente": "Venta acumulada con actividad observable",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.gap.pacingStatus",
+    "FP.homeView.periodFigures"
+   ],
+   "disponibilidad": "Hay venta observada válida (≥ 0, con actividad)",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-economico",
+   "estado": "Parcial",
+   "depende": [
+    "M03"
+   ],
+   "completa": "Fase 4 (4.1)",
+   "requisito": "Ver siempre lo que se vendió si el dato es válido",
+   "decision": "D-01",
+   "componente": "Bloque económico (sin brecha)",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.1",
+     "detalle": "Regla de selección de la cifra protagonista"
+    }
+   ]
+  },
+  {
+   "id": "Z1-21",
+   "elemento": "Meta acumulada y cumplimiento (visibles solo con brecha válida)",
+   "necesidad": "Entender la brecha con su meta y su porcentaje",
+   "fuente": "Plan a la fecha y cumplimiento",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.gap.pacingStatus"
+   ],
+   "disponibilidad": "Hay plan, venta válida y confiabilidad ≠ Insuficiente",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-economico",
+   "estado": "Parcial",
+   "depende": [
+    "M03"
+   ],
+   "completa": "Fase 4 (4.1)",
+   "requisito": "Entender la brecha con su meta y su porcentaje",
+   "decision": "D-01",
+   "componente": "Subtexto del bloque económico",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.1",
+     "detalle": "Regla de visibilidad conjunta"
+    }
+   ]
+  },
+  {
+   "id": "Z1-22",
+   "elemento": "Venta comparable en la celda de evolución",
+   "necesidad": "Valorar la evolución con su base en pesos",
+   "fuente": "Venta del periodo comparable",
+   "motor": "Motor existente",
+   "motores": [
+    "FP.homeSummaryEngine.why",
+    "FP.temporalEngine"
+   ],
+   "disponibilidad": "Comparación válida y confiabilidad Alta o Media",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-evolucion",
+   "estado": "Parcial",
+   "depende": [
+    "M05"
+   ],
+   "completa": "Fase 4 (4.3)",
+   "requisito": "Valorar la evolución con su base en pesos",
+   "decision": "D-01, D-04",
+   "componente": "Celda «Evolución vs comparable»",
+   "evidencia": "Prueba batch_fase3_2_z1_wireframe: las rutas FP.* existen en la aplicación",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.3",
+     "detalle": "Exponer la venta comparable (baseRevenue) en el contrato de comparación"
+    }
+   ]
+  },
+  {
+   "id": "Z1-23",
+   "elemento": "Orden de evaluación de ocho pasos de la confiabilidad (bloqueo duro antes que limitación secundaria)",
+   "necesidad": "Que Baja e Insuficiente no se confundan",
+   "fuente": "Datos, actividad, base, indicadores, composición",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Siempre",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "escenarios",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Que Baja e Insuficiente no se confundan",
+   "decision": "D-05",
+   "componente": "Detalle de los escenarios (traza)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Implementar el orden en el motor de diagnósticos"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Validar la precedencia con casos reales"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · evaluate"
+  },
+  {
+   "id": "Z1-24",
+   "elemento": "Reglas de contenido del veredicto R1–R14 (validador)",
+   "necesidad": "Veredictos que no contradicen las cifras ni inventan causas",
+   "fuente": "Salida de la especificación",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Siempre que se emita veredicto",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "escenarios",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2) · Fase 5 (5.5)",
+   "requisito": "Veredictos que no contradicen las cifras ni inventan causas",
+   "decision": "D-03",
+   "componente": "Detalle de los escenarios (veredicto permitido)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Validador en el motor"
+    },
+    {
+     "categoria": "requiere_ia",
+     "fase": "5.5",
+     "detalle": "Validar textos de IA con las mismas reglas"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · checkVerdictText"
+  },
+  {
+   "id": "Z1-25",
+   "elemento": "Nombres visibles de estados, confiabilidades y comparaciones",
+   "necesidad": "Lenguaje de negocio sin códigos internos",
+   "fuente": "Tabla D-06",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Siempre",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-estado",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M01"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Lenguaje de negocio sin códigos internos",
+   "decision": "D-06",
+   "componente": "Chips de estado, confiabilidad y periodo",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.2",
+     "detalle": "Tabla de nombres lista para i18n"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · NAMES"
+  },
+  {
+   "id": "Z1-26",
+   "elemento": "Conversión cero como resultado observable sin causa atribuida ni sugerida",
+   "necesidad": "Reconocer que hay sesiones y no pedidos sin inventar un porqué",
+   "fuente": "Sesiones y pedidos del periodo",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Sesiones > 0 y pedidos = 0",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-veredicto",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M06"
+   ],
+   "completa": "Fase 4 (4.3)",
+   "requisito": "Reconocer que hay sesiones y no pedidos sin inventar un porqué",
+   "decision": "D-04",
+   "componente": "Titular (veredicto de conversión cero)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.3",
+     "detalle": "Diagnóstico de conversión cero sin atribuir causa (el motor ya distingue conversion_cero_actual)"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.3",
+     "detalle": "Validar con datos de producción si el patrón corresponde a un resultado real o a un problema de registro; Z1 no lo afirma"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · build (conversion_cero)"
+  },
+  {
+   "id": "Z1-27",
+   "elemento": "Actividad observable: distinguir venta válida, venta cero medida, sin actividad verificada, información incompleta e información inválida",
+   "necesidad": "No confundir ausencia de actividad con resultado negativo",
+   "fuente": "Sesiones, pedidos y venta del periodo",
+   "motor": "Especificación",
+   "motores": [],
+   "disponibilidad": "Siempre",
+   "reglas": "D-01 a D-06 (CIERRE_DECISIONES en el documento principal)",
+   "confiabilidad": "Según el nivel de confiabilidad; ver el documento principal",
+   "sinDatos": "No se muestra; se informa qué falta",
+   "wireframe": "z1-economico",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Clasificar el dato en válido, inconsistente (pendiente de interpretación), no verificable o no calculable; no confundir ausencia de información con venta cero; no invalidar automáticamente pedidos y venta que no cuadran",
+   "decision": "D-04, C1",
+   "componente": "Bloque económico (sin cifra, no $0)",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (escenarios, invariantes, mutaciones) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "contratos_existentes",
+     "fase": "4.2",
+     "detalle": "El motor ya marca estas combinaciones como MATHEMATICAL_INCONSISTENCY sin excluir nada (js/quality)"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Definir con producción el umbral de actividad mínima y cómo interpretar pedidos sin importe o venta sin pedidos"
+    }
+   ],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · evaluate (paso 2)"
+  },
+  {
+   "id": "Z1-28",
+   "elemento": "Agregado de actividad del periodo (sesiones, pedidos y venta) con sus medidas faltantes identificables",
+   "necesidad": "Saber si un cero es una medición real o falta de dato",
+   "fuente": "Sesiones, pedidos y venta del periodo",
+   "motor": "Especificación",
+   "motores": [],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · activityOf",
+   "disponibilidad": "Siempre",
+   "reglas": "D-01, D-04 y auditoría final (punto 1)",
+   "confiabilidad": "Falta de dato: Insuficiente; incompleto: Baja; inconsistente: Insuficiente (no calculable)",
+   "sinDatos": "«No se puede verificar la actividad»; nunca $0",
+   "wireframe": "z1-economico",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.1)",
+   "requisito": "Producir un agregado de actividad del periodo que distinga medida en cero de medida ausente (hoy el Home no lo produce: sin plan no calcula cifras del periodo y las sesiones y pedidos se agregan por segmento en attribution)",
+   "decision": "D-01, D-04, C2",
+   "componente": "Bloque económico y banda de motivos",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (A5–A8, I39–I41, M10–M14); la ausencia de productor se comprobó leyendo js/ui/guidance/home-view.js y js/diagnostics/attribution.js",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.1",
+     "detalle": "Productor de actividad agregada con medidas nulas explícitas (null ≠ 0)"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.1",
+     "detalle": "Definir y validar con datos reales la regla de conciliación entre la venta del agregado y la venta del periodo (no existe tolerancia documentada; no se usa 1 %)"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Definir con producción el umbral de actividad mínima observable"
+    }
+   ]
+  },
+  {
+   "id": "Z1-29",
+   "elemento": "Confiabilidad por conclusión (venta observada, cumplimiento, evolución, conversión y contribución por separado)",
+   "necesidad": "Que un dato faltante solo afecte a la conclusión que lo necesita",
+   "fuente": "Venta, plan y cobertura (cumplimiento); sesiones y pedidos (conversión); comparable (evolución); margen (contribución)",
+   "motor": "Especificación",
+   "motores": [],
+   "especificacion": "tools/audit/z1-lectura-ejecutiva.js · build (conclusions)",
+   "disponibilidad": "Siempre",
+   "reglas": "C3 (confiabilidad contextual) y D-05",
+   "confiabilidad": "Cada conclusión tiene su propio estado",
+   "sinDatos": "La conclusión afectada queda «no verificable» y se dice en el alcance",
+   "wireframe": "z1-alcance",
+   "estado": "Por desarrollar",
+   "depende": [
+    "M29"
+   ],
+   "completa": "Fase 4 (4.2)",
+   "requisito": "Evaluar la confiabilidad de cada conclusión según los datos que esa conclusión necesita: una medida ausente de sesiones o pedidos deja la conversión «no verificable» sin bajar la confiabilidad del cumplimiento; solo baja a «Baja» cuando falta información secundaria relevante para evaluar un resultado en cero",
+   "decision": "D-05, C3",
+   "componente": "Banda «Alcance» y chip de confiabilidad",
+   "evidencia": "Prueba tools/test-fase3-2-z1.js (A7, A15, I55–I57, M12, M16) y verificador de consistencia 3.2",
+   "dependencias": [
+    {
+     "categoria": "completar_motores",
+     "fase": "4.2",
+     "detalle": "Motor de diagnósticos con estado por conclusión"
+    },
+    {
+     "categoria": "validacion_produccion",
+     "fase": "4.2",
+     "detalle": "Validar con usuarios que la confiabilidad por conclusión se entiende"
+    }
+   ]
+  }
+ ],
+ "categoriasDependencia": {
+  "contratos_existentes": "Resoluble con contratos y motores existentes: solo falta conectar y presentar.",
+  "completar_motores": "Requiere completar o ampliar un motor (Fase 4) antes de poder mostrarse.",
+  "requiere_ia": "Requiere inteligencia artificial (Fase 5) para su versión final; existe una versión determinista de respaldo.",
+  "validacion_produccion": "Requiere validación con datos y usuarios de producción (umbrales y supuestos de la especificación)."
+ }
+}

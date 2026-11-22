@@ -1,0 +1,14 @@
+{
+ "nota": "Archivos NUEVOS de js/ añadidos por la Fase 4.1 (autorizada por el usuario). Son contratos puros, sin cablear a ninguna vista y sin cargar desde index.html. Los verificadores de Fase 3 los aceptan solo si figuran aquí.",
+ "archivos": [
+  "js/commandCenter/planStatus.js",
+  "js/commandCenter/metricCatalog.js",
+  "js/commandCenter/findings.js",
+  "js/commandCenter/reliability.js",
+  "js/commandCenter/sampleSufficiency.js",
+  "js/commandCenter/businessState.js",
+  "js/commandCenter/z1.js",
+  "js/commandCenter/z1Input.js",
+  "js/commandCenter/attentionContract.js"
+ ]
+}

@@ -36,8 +36,8 @@ async def main():
         chk('P1 estado de persistencia accesible (saved/pending)', st in ('saved', 'pending', 'n/a'), st)
         await q.goto(u + '#ajustes'); await q.reload(); await q.wait_for_timeout(1200)
         await q.evaluate("document.querySelectorAll('details').forEach(d=>d.open=true); FP.app.state.stTab='ia'; FP.app.render()")
-        has = await q.evaluate("!!document.querySelector('[data-action=dx-key-clear]') && /no es un secreto seguro/.test(document.body.innerText)")
-        chk('S1 Configuración advierte que la key en el navegador no es un secreto seguro y permite quitarla', has)
+        has = await q.evaluate("!document.querySelector('[data-action=dx-key-clear]') && !document.getElementById('dx-key-input') && !!document.querySelector('[data-ai-local],[data-ai-server]') && /API key vive allá|no guarda ni envía ninguna key/.test(document.body.innerText)")
+        chk('S1 Configuración (cierre técnico): ya no hay campo para pegar una API key; dice que la key vive en el servidor del equipo', has)
         fail_sim = """(async()=>{
           const repo = FP.app.repo || null; if(!repo) return 'no-repo';
           const orig = FP.idb.put; FP.idb.put = async()=>{ throw new Error('QuotaExceededError simulado'); };

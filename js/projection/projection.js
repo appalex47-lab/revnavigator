@@ -93,10 +93,10 @@
       const prevs = closed.map((x) => monthInfo(data, ch, baseYear - 1, x.month, today));
       if (prevs.every((p) => p.usable)) {
         const cur = closed.reduce((s, x) => s + x.revenue, 0), prev = prevs.reduce((s, p) => s + p.a.revenue, 0);
-        last2 = { months: closed.map((x) => x.key), labels: closed.map((x) => x.label), cur, prev, yoy: prev > 0 ? cur / prev - 1 : null };
+        last2 = { months: closed.map((x) => x.key), labels: closed.map((x) => x.label), cur, prev, yoy: prev > 0 ? FP.metrics.calcRelativeChange(cur, prev) : null };
       }
     }
-    return { id: ch, months, revenue: rev, orders: ord, traffic: trf, cr: trf > 0 ? ord / trf : null, aov: ord > 0 ? rev / ord : null, nReal, nPrior, nMissing, last2 };
+    return { id: ch, months, revenue: rev, orders: ord, traffic: trf, cr: FP.metrics.calcConversionRate(ord, trf), aov: FP.metrics.calcAov(rev, ord), nReal, nPrior, nMissing, last2 };
   }
 
   /** Ritmo de una ventana de w meses consecutivos (la que termina en el último mes cerrado del canal) contra el año anterior. Solo para w ≠ 2 (w = 2 usa la regla original). */
@@ -106,7 +106,7 @@
     for (let i = T - w + 1; i <= T; i++) { if (!(typeof ser[i] === 'number') || !(typeof ser[i - 12] === 'number')) return null; cur += ser[i]; prev += ser[i - 12]; }
     if (!(prev > 0)) return null;
     const lbl = []; for (let i = T - w + 1; i <= T; i++) lbl.push(MONTHS[i % 12]);
-    return { months: [], labels: w > 3 ? [lbl[0], lbl[lbl.length - 1]] : lbl, span: w, cur, prev, yoy: cur / prev - 1 };
+    return { months: [], labels: w > 3 ? [lbl[0], lbl[lbl.length - 1]] : lbl, span: w, cur, prev, yoy: FP.metrics.calcRelativeChange(cur, prev) };
   }
 
   /** Reparte `total` en partes enteras que suman exacto, según `weights`. */

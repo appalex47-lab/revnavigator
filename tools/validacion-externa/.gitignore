@@ -1,0 +1,7 @@
+# Los datos REALES nunca se versionan por accidente: ni la entrada real ni las salidas generadas con ella.
+entrada-real/*
+!entrada-real/LEEME.md
+salida/real/
+fixtures-simulados/*
+!fixtures-simulados/LEEME.md
+__test-entrada-real__/

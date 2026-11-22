@@ -113,8 +113,8 @@
     }
     return {
       revenue, orders, trafficVolume: traffic,
-      conversionRate: fin(orders) && fin(traffic) && traffic > 0 ? orders / traffic : (fin(a.conversionRate) ? a.conversionRate : null),
-      aov: fin(orders) && orders > 0 ? revenue / orders : (fin(a.aov) ? a.aov : null)
+      conversionRate: fin(orders) && fin(traffic) && traffic > 0 ? FP.metrics.calcConversionRate(orders, traffic) : (fin(a.conversionRate) ? a.conversionRate : null),
+      aov: fin(orders) && orders > 0 ? FP.metrics.calcAov(revenue, orders) : (fin(a.aov) ? a.aov : null)
     };
   }
 
@@ -222,7 +222,7 @@
     const plan = runPeriod ? runPeriod.plan : strict(rows.map((r) => r.plan));
     const actualToDate = runPeriod ? runPeriod.actualToDate : null;
     const planToDate = runPeriod ? runPeriod.planToDate : null;
-    const ahead = actualToDate && planToDate && fin(actualToDate.revenue) && fin(planToDate.revenue) ? cents(actualToDate.revenue - planToDate.revenue) : null;
+    const ahead = actualToDate && planToDate && fin(actualToDate.revenue) && fin(planToDate.revenue) ? cents(FP.metrics.calcGap(planToDate.revenue, actualToDate.revenue).abs) : null;
     return {
       key: runPeriod ? runPeriod.key || null : null,
       firstDate: rows[0].date, lastDate: rows[rows.length - 1].date,

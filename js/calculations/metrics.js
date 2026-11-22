@@ -78,8 +78,14 @@
 
   /* ---------- Relaciones del modelo ---------- */
 
-  const calcConversionRate = (orders, trafficVolume) => safeDivide(orders, trafficVolume);
-  const calcAov = (revenue, orders) => safeDivide(revenue, orders);
+  /** Tasa sobre un denominador POSITIVO (CR = pedidos ÷ volumen; AOV = venta ÷ pedidos): sin denominador > 0 (cero, negativo, ausente o no finito) NO hay tasa → null (nunca NaN/Infinity ni 0 por faltante).
+   *  Es la definición que ya declaraba derivations.js (`requires: sessions > 0 / orders > 0`) y la que aplicaban todos los sitios con guarda propia (cierre 4.1/4.2: una sola función). */
+  function safeRate(numerator, denominator) { const d = toNumberOrNull(denominator); return d !== null && d > 0 ? safeDivide(numerator, d) : null; }
+  const calcConversionRate = (orders, trafficVolume) => safeRate(orders, trafficVolume);
+  const calcAov = (revenue, orders) => safeRate(revenue, orders);
+  /** Cambio relativo de `current` contra `reference` = current ÷ reference − 1 (comparación contra plan, periodo anterior o semana pasada). null si falta alguno o la referencia es 0.
+   *  Misma magnitud que calcGap().pct = (current − reference) ÷ reference (difieren a lo sumo en el último bit); esta forma se conserva porque es la que usaban los comparativos con umbrales. */
+  function calcRelativeChange(current, reference) { const a = toNumberOrNull(current), r = toNumberOrNull(reference); if (a === null || r === null || r === 0) return null; const v = a / r - 1; return Number.isFinite(v) ? v : null; }
   const calcOrders = (trafficVolume, conversionRate) => safeMultiply(trafficVolume, conversionRate);
   const calcRevenue = (trafficVolume, conversionRate, aov) => safeMultiply(trafficVolume, conversionRate, aov);
   const calcRevenueFromOrders = (orders, aov) => safeMultiply(orders, aov);
@@ -276,7 +282,7 @@
     calculateOrders, calculateOrdersFromRevenue, calculateRevenue, calculateConversionRate, calculateAOV,
     calculateTrafficVolume, isApproximatelyEqual,
     isFiniteNumber, toNumberOrNull, safeDivide, safeMultiply, sumNullable, isClose,
-    calcConversionRate, calcAov, calcOrders, calcRevenue, calcRevenueFromOrders, calcTrafficVolume,
+    safeRate, calcRelativeChange, calcConversionRate, calcAov, calcOrders, calcRevenue, calcRevenueFromOrders, calcTrafficVolume,
     emptyBlock, normalizeBlock, findRejectedInputs, deriveBlock, validateBlock, aggregateBlocks,
     calcGap, validateHierarchy
   };

@@ -1,5 +1,7 @@
 # ARCHITECTURE.md — RevNavigator
 
+> **Nota (Command Center · Fase 1, nov 2026):** este documento describe las fases 0–9 y su versión de app (0.12.0) quedó atrás (la actual es 0.16.6). La arquitectura vigente, el catálogo de módulos generado del código y el estado de la auditoría están en `docs/command-center/` (`FASE_1_AUDITORIA.md`, `generated/CATALOGO_MODULOS.md`). Las baterías de navegador se ejecutan con `python3 tools/regression/run_batch.py batch_xxx.py <raíz>` porque la app declara una CSP.
+
 Documento de referencia para todas las fases. Antes de modificar cualquier módulo, léelo completo.
 Versión de la app: 0.12.0 (Fase 9.1). Versión del contrato de datos: **1.10.0** (sin cambios en 9.1).
 Guía de experiencia: `UX_GUIDE.md`.
@@ -71,6 +73,7 @@ Fases:
   ai/cohereActions.js           Líneas de acción posibles con Cohere + validación           (Fase 6)
   scenarios/scenarioValidation.js Entradas, bloques y restricciones de escenarios           (Fase 6)
   scenarios/scenarioEngine.js   Contexto, simulación por canal y segmento, persistencia     (Fase 6)
+  economics/impactModel.js      Modelo dual de impacto: ventas (MXN) + contribución bruta estimada opcional (Fase 2 · punto B)
   scenarios/recoveryEngine.js   Cálculo inverso, runRecoveryAnalysis, contextos importados   (Fase 6)
   impact/impactCalculator.js    Impacto simulado (estructura expectedImpact)                (Fase 6)
   impact/impactMeasurement.js   Impacto observado: baseline vs escenario vs real            (Fase 6)

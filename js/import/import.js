@@ -137,7 +137,6 @@
     delimiter = null,
     enableAI = false,
     customPrompt = '',
-    apiKey = '',
     model = null
   } = {}) {
     if (!C().dataTypes[dataType]) throw new Error(`Tipo de dato inválido: ${dataType}`);
@@ -164,7 +163,7 @@
       // La importación no mantiene una segunda conexión: si no recibe credenciales,
       // normalize/cohereClient las obtiene de FP.cohereConnection (Ajustes).
       aiMapping = await N().suggestHeaderMappingWithAI(parsed.headers, {
-        dataType, samples, customPrompt, apiKey, model
+        dataType, samples, customPrompt, model
       });
       if (aiMapping && Array.isArray(aiMapping.mapped) && aiMapping.mapped.length) {
         learnHeaderMappings(aiMapping.mapped);

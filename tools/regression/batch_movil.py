@@ -92,7 +92,12 @@ async def main():
         d = await (await b.new_context(viewport={'width': 1280, 'height': 900})).new_page(); d.on('pageerror', lambda e: errs.append(str(e)[:150]))
         await prep(d, u)
         dk = await d.evaluate("(()=>{const m=document.getElementById('ux-more');return {more:getComputedStyle(m).display,btn:getComputedStyle(document.querySelector('.ux-head__morebtn')).display,bd:getComputedStyle(document.querySelector('.nav-backdrop')).display,nav:getComputedStyle(document.getElementById('app-nav')).visibility}})()")
-        chk('M-14 en escritorio el texto está visible, no hay botón de plegar ni fondo y el menú lateral sigue fijo', dk['more'] != 'none' and dk['btn'] == 'none' and dk['bd'] == 'none' and dk['nav'] == 'visible', dk)
+        # Cambio de diseño (encabezado plegado también en escritorio): el botón «Cómo leer esta página» existe, el texto llega plegado, se abre al pulsarlo; sin fondo y con el menú lateral fijo
+        chk('M-14 en escritorio el texto llega plegado con el botón «Cómo leer esta página»; sin fondo y con el menú lateral fijo', dk['more'] == 'none' and dk['btn'] != 'none' and dk['bd'] == 'none' and dk['nav'] == 'visible', dk)
+        await q.click('.ux-head__morebtn'); await q.wait_for_timeout(200)
+        ab = await q.evaluate("[getComputedStyle(document.getElementById('ux-more')).display, document.querySelector('.ux-head__morebtn').getAttribute('aria-expanded'), document.getElementById('ux-more').innerText.includes('Qué hago aquí')]")
+        chk('M-14b en escritorio, al pulsar el botón se ven «Qué hay aquí» y «Qué hago aquí»', ab[0] != 'none' and ab[1] == 'true' and ab[2] is True, ab)
+        await q.click('.ux-head__morebtn'); await q.wait_for_timeout(150)
         await d.click('.snav__toggle[data-value="diagnosticar"]'); await d.wait_for_timeout(400)
         chk('M-15 en escritorio elegir una sección sigue abriendo su primera página', await d.evaluate("location.hash") == '#diagnostico')
         chk('M-16 sin errores de página', not errs, errs[:3])

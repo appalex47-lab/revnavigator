@@ -51,7 +51,8 @@ async def main():
         # API key recordada y negocio con nombre (no deben viajar)
         await q.goto(u + '#ajustes'); await q.wait_for_timeout(600); await q.evaluate("document.querySelectorAll('#view-ajustes [data-pane]').forEach(e=>e.hidden=false)"); await q.wait_for_timeout(300)
         await q.evaluate("FP.app.state.stTab='ia';FP.app.render()"); await q.wait_for_timeout(200)
-        await q.fill('#dx-key-input', SECRET); await q.press('#dx-key-input', 'Tab'); await q.check('#st-ia [data-action="dx-remember"]'); await q.wait_for_timeout(300)
+        # Cierre técnico: ya no se puede pegar una key; se deja una «heredada» (de una versión anterior) en el almacenamiento para comprobar que tampoco viaja en ningún export
+        await q.evaluate("(s)=>{const k=Object.keys(localStorage).find(x=>x.includes('diagnosticSettings'))||'fp.v1:diagnosticSettings';localStorage.setItem(k.replace('diagnosticSettings','cohereApiKey'),JSON.stringify({savedAt:new Date().toISOString(),data:s}));FP.app.state.dx.legacySecret=s}", SECRET); await q.wait_for_timeout(300)
         await q.evaluate("FP.app.state.stTab='negocio';FP.app.render()"); await q.wait_for_timeout(200)
         await q.click('#st-negocio [data-action="bc-seed"]'); await q.wait_for_timeout(300)
         await q.fill('#bc-form [data-path="business.name"]', 'Farmacia Secreta XYZ'); await q.press('#bc-form [data-path="business.name"]', 'Tab'); await q.wait_for_timeout(300)

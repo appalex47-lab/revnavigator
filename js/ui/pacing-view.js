@@ -155,7 +155,7 @@
     const confNote = conf ? ` <strong>Confianza del cierre: ${esc(conf.label)}.</strong> ${conf.factors.map((x) => `${esc(x.label)}: ${esc(x.levelLabel.toLowerCase())} (${esc(x.detail)})`).join('; ')}. Mide qué tan sólida es la base de la estimación, no la probabilidad de acertar.${calNote}` : '';
     $('fc-kpis').innerHTML = `
       <div class="subhead"><h3 class="panel__title">Total digital · ${esc(C().metrics[k].label)}</h3>
-        <span class="btn-row">${pacePill(a.pacingStatus && k === 'revenue' ? a.pacingStatus : FP.gap.pacingStatus(td.compliance, run.settings.pacingThresholds))}
+        <span class="btn-row">${pacePill(FP.gap.pacingStatus(td.compliance, run.settings.pacingThresholds))}
           <button type="button" class="btn btn--small" data-action="dx-from-forecast">Diagnosticar gap</button></span></div>
       <div class="metric-grid metric-grid--3">
         ${card(additive ? 'Meta del año' : 'Plan del año', cellVal(k, a.plan[k], R.plan), '', 'plan')}

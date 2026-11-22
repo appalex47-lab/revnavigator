@@ -1,0 +1,10 @@
+[
+  { "id": "Y1", "texto": "Mejorar las ventas", "reglas": ["A2"] },
+  { "id": "Y2", "texto": "Corregir el checkout porque provocó la caída", "reglas": ["A3"] },
+  { "id": "Y3", "texto": "Asignar al responsable de Ecommerce la revisión", "reglas": ["A4"] },
+  { "id": "Y4", "texto": "Recuperar $722 mil con la conversión", "reglas": ["A5"] },
+  { "id": "Y5", "texto": "Revisar el ROAS de las campañas de App", "reglas": ["A1"] },
+  { "id": "Y6", "texto": "Abrir el detalle de Ecommerce, comparar el cumplimiento de cada canal contra su plan y revisar también todas las alertas del resto del negocio", "reglas": ["A6"] },
+  { "id": "Y7", "texto": "Aumentar el presupuesto de App", "reglas": ["A7"], "basis": "hipotesis" },
+  { "id": "Y8", "texto": "Tomar acciones sobre la utilidad de Ecommerce", "reglas": ["A1", "A2"] }
+]

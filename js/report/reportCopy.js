@@ -26,14 +26,17 @@
   const money = (v) => RB().fmt('smoneyC', v), moneyC = (v) => RB().fmt('moneyC', v), pct = (v) => RB().fmt('pct', v);
   const periodOf = (rep) => { const c = page(rep, 'cover'); const f = c && (c.facts || []).find((x) => x.id === 'period'); return f && f.value ? String(f.value) : null; };
 
-  /** Cumplimiento (real a la fecha / plan comparable) → frase. Umbrales: ±2 % «en línea», −10 % «se aleja». */
-  function standing(c) {
+  /** Cumplimiento (real a la fecha / plan comparable) → frase. El estado (arriba / en línea / debajo) sale de la regla central FP.gap.pacingStatus con los umbrales EFECTIVOS del reporte (`th`,
+   *  de report.context.pacingThresholds; sin ellos, la configuración); «se aleja» es un nivel de severidad del texto (FP.config.reports.farFromPlanBelow). P-11: ya no hay una escala propia. */
+  function standing(c, th) {
     if (!fin(c)) return null;
-    if (c >= 1.02) return { key: 'above', text: 'supera el plan' };
-    if (c >= 0.98) return { key: 'on', text: 'va en línea con el plan' };
-    if (c >= 0.90) return { key: 'below', text: 'va por debajo del plan' };
+    const st = FP.gap.pacingStatus(c, th || undefined);
+    if (st === 'above') return { key: 'above', text: 'supera el plan' };
+    if (st === 'on_plan') return { key: 'on', text: 'va en línea con el plan' };
+    if (c >= FP.config.reports.farFromPlanBelow) return { key: 'below', text: 'va por debajo del plan' };
     return { key: 'far', text: 'se aleja del plan' };
   }
+  const thOf = (rep) => (rep && rep.context && rep.context.pacingThresholds) || undefined;
 
   /** «el canal» / «la categoría»: nombra la dimensión de una entidad para que un titular no mezcle canales, categorías y factores. */
   const FEM = new Set(['categoría', 'subcategoría', 'ciudad', 'sucursal', 'entidad']);
@@ -41,14 +44,14 @@
 
   const RULES = {
     summary(p, rep) {
-      const st = standing(kpi(page(rep, 'pacing'), 'compliance')); if (!st) return null;
+      const st = standing(kpi(page(rep, 'pacing'), 'compliance'), thOf(rep)); if (!st) return null;
       const per = periodOf(rep), sel = page(rep, 'pacing') && page(rep, 'pacing').selection;
       const subj = sel ? 'La selección' : (per ? perSubj(per) : 'El período');
       const ent = p.focus && p.focus.entity ? withDim(p.focus.level, cut(p.focus.entity, 32)) : null;
       return `${subj} ${st.text}${ent ? `; la atención está en ${ent}` : ''}`;
     },
     pacing(p, rep) {
-      const c = kpi(p, 'compliance'), st = standing(c); if (!st) return null;
+      const c = kpi(p, 'compliance'), st = standing(c, thOf(rep)); if (!st) return null;
       const per = periodOf(rep), sel = p.selection;
       const subj = sel ? 'La selección' : (per ? perSubj(per) : 'El período');
       const verb = st.key === 'above' ? 'supera el' : st.key === 'on' ? 'llega al' : st.key === 'below' ? 'queda por debajo del' : 'queda lejos del';
@@ -144,7 +147,7 @@
       return `Faltan ${moneyC(rem)} en ${RB().fmt('int', days)} ${days === 1 ? 'día' : 'días'}${fin(daily) ? `: se requieren ${moneyC(daily)} por día` : ''}`;
     },
     closing(p, rep) {
-      const st = standing(kpi(page(rep, 'pacing'), 'compliance')), per = periodOf(rep);
+      const st = standing(kpi(page(rep, 'pacing'), 'compliance'), thOf(rep)), per = periodOf(rep);
       const blk = (n) => (p.blocks || []).find((b) => b.title === n) || {};
       const down = blk('Qué resta').list && blk('Qué resta').list[0];
       if (!st) return null;

@@ -1,0 +1,126 @@
+{
+ "version": 1,
+ "subfase": "3.5",
+ "nota": "Generado por tools/audit/prototipo-generar.js. No editar a mano. Datos simulados.",
+ "situaciones": [
+  {
+   "id": "alta",
+   "titulo": "Confiabilidad alta · el negocio va por debajo del plan",
+   "z1Level": "Alta",
+   "z3Level": "Alta",
+   "z3Header": "3 de 6",
+   "z3Mode": "completo",
+   "z4Header": "3 de 5",
+   "z4Mode": "completo",
+   "z4Cards": [
+    "a:f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "a:f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "a:f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "a:f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "a:f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Cards": [
+    "f:total|total|-|sessions|2026-09|plan|recovery_traffic",
+    "f:total|total|-|revenue|2026-09|plan|forecast_close",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|recovery_cr",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ]
+  },
+  {
+   "id": "media",
+   "titulo": "Confiabilidad media · crece, con avisos de datos",
+   "z1Level": "Media",
+   "z3Level": "Media",
+   "z3Header": "3 de 4",
+   "z3Mode": "completo",
+   "z4Header": "3 de 4",
+   "z4Mode": "completo",
+   "z4Cards": [
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:avisos",
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:incompleta",
+    "a:f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "a:f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Cards": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|dataQuality|2026-09|plan|data:avisos",
+    "f:total|total|-|dataQuality|2026-09|plan|data:incompleta",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ]
+  },
+  {
+   "id": "baja",
+   "titulo": "Confiabilidad baja · lectura preliminar",
+   "z1Level": "Baja",
+   "z3Level": "Baja",
+   "z3Header": "3 de 4",
+   "z3Mode": "solo_observado",
+   "z4Header": "3 de 4",
+   "z4Mode": "datos_primero",
+   "z4Cards": [
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:errores",
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:incompleta",
+    "a:f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "a:f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce"
+   ],
+   "z3Cards": [
+    "f:total|total|-|dataQuality|2026-09|plan|data:errores",
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:channel|ecommerce|-|revenue|2026-09|plan|channel_lag:ecommerce",
+    "f:total|total|-|dataQuality|2026-09|plan|data:incompleta"
+   ]
+  },
+  {
+   "id": "insuficiente",
+   "titulo": "Confiabilidad insuficiente · falta información",
+   "z1Level": "Insuficiente",
+   "z3Level": "Insuficiente",
+   "z3Header": "1 de 1",
+   "z3Mode": "solo_datos",
+   "z4Header": "1 de 1",
+   "z4Mode": "solo_datos",
+   "z4Cards": [
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:cobertura"
+   ],
+   "z3Cards": [
+    "f:total|total|-|dataQuality|2026-09|plan|data:cobertura"
+   ]
+  },
+  {
+   "id": "sinactividad",
+   "titulo": "Sin actividad · no se puede verificar nada",
+   "z1Level": "Insuficiente",
+   "z3Level": "Insuficiente",
+   "z3Header": "1 de 1",
+   "z3Mode": "solo_datos",
+   "z4Header": "1 de 1",
+   "z4Mode": "solo_datos",
+   "z4Cards": [
+    "a:f:total|total|-|dataQuality|2026-09|plan|data:sin_actividad"
+   ],
+   "z3Cards": [
+    "f:total|total|-|dataQuality|2026-09|plan|data:sin_actividad"
+   ]
+  },
+  {
+   "id": "enorden",
+   "titulo": "Todo en orden · sin elementos que destacar",
+   "z1Level": "Alta",
+   "z3Level": "Alta",
+   "z3Header": "2 de 2",
+   "z3Mode": "completo",
+   "z4Header": "2 de 2",
+   "z4Mode": "completo",
+   "z4Cards": [
+    "a:f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "a:f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ],
+   "z3Cards": [
+    "f:total|total|-|revenue|2026-09|plan|pacing_gap",
+    "f:total|total|-|conversionRate|2026-09|plan|driver:cr"
+   ]
+  }
+ ]
+}

@@ -2,7 +2,7 @@
  * settings-view.js — Configuración de RevNavigator.
  * Reúne en un solo lugar lo que se configura una vez y vale para toda la app:
  *   · Estado de la herramienta (año, meta, canales, datos y motor: el detalle de las píldoras del encabezado) · Modo de uso · Análisis con IA (Cohere) · Almacenamiento · Negocio (Business Setup, más abajo en la misma vista).
- * No hay lógica nueva: cada control conserva su acción de siempre (ux-mode, dx-key, dx-remember, dx-model, storage-tests, storage-retry, bc-*).
+ * No hay lógica nueva: cada control conserva su acción de siempre (ux-mode, dx-model, storage-tests, storage-retry, bc-*).
  * Configuración de planeación NO está aquí: sigue en Planear porque afecta al plan, no a la herramienta.
  */
 (function (root) {
@@ -24,7 +24,7 @@
     { id: 'cuenta', label: 'Cuenta y nube', hint: 'Sesión, equipo y copia en la nube', sections: ['st-nube'] },
     { id: 'ia', label: 'Inteligencia artificial', hint: 'Conexión con Cohere y control de lo que se envía', sections: ['st-ia', 'st-ia-log', 'st-ia-aprendido', 'st-ia-privacidad'] },
     { id: 'datos', label: 'Datos', hint: 'Fuentes, equivalencias y almacenamiento', sections: ['st-fuentes', 'st-equivalencias', 'st-almacenamiento'] },
-    { id: 'herramienta', label: 'Herramienta', hint: 'Estado, modo de uso y otras preferencias', sections: ['st-estado', 'st-modo', 'st-otras'] },
+    { id: 'herramienta', label: 'Herramienta', hint: 'Estado, modo de uso y otras preferencias', sections: ['st-estado', 'st-modo', 'st-margen', 'st-otras'] },
     { id: 'negocio', label: 'Negocio', hint: 'Contexto del negocio (Business Setup)', sections: ['st-negocio'] }
   ];
   const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
@@ -35,11 +35,12 @@
       case 'st-estado': { const st = state.selfTest; return `Año ${state.year} · motor ${!st ? (state.selfTestError ? 'no se pudo ejecutar' : 'sin ejecutar') : st.passed === st.total ? 'operativo' : 'con fallas'}`; }
       case 'st-modo': { const m = (FP.guidanceConfig.MODES || []).find((x) => x[0] === state.ux.mode); return m ? esc(m[1]) : ''; }
       case 'st-nube': { const c = state.cloud || {}; return c.last ? `Última copia: ${c.last.keys} bloques${c.last.verified ? ' · verificada' : ''}` : (c.session ? `Equipo ${esc(c.session.teamName || '')} · ${esc(c.session.email || '')}` : 'Sin sesión'); }
+      case 'st-margen': { const a = FP.economics.availability(state.settings.economics); return a.status === 'disponible' ? `Margen ${a.marginPct} % · contribución bruta estimada activa` : a.status === 'desactivado' ? `Margen ${a.marginPct} % guardado · desactivado` : 'Sin configurar (opcional)'; }
       case 'st-otras': return plural(ELSEWHERE.length, 'preferencia', 'preferencias');
       case 'st-fuentes': { const b = FP.dataSources.build(state); return `${b.summary.activeSources} de ${b.summary.liveSources} fuentes con datos`; }
       case 'st-equivalencias': return plural(FP.aliases.rules().length, 'equivalencia', 'equivalencias');
       case 'st-almacenamiento': return 'Dónde se guardan tus datos';
-      case 'st-ia': return `${FP.cohereProxy && FP.cohereProxy.available() ? 'Servidor del equipo' : ai.apiKey ? 'API key en uso' : 'Sin API key'} · IA ${state.settings.enableAI === false ? 'desactivada' : 'activada'}`;
+      case 'st-ia': return `${FP.cohereProxy && FP.cohereProxy.available() ? 'Servidor del equipo' : 'Requiere sesión'} · IA ${state.settings.enableAI === false ? 'desactivada' : 'activada'}`;
       case 'st-ia-log': return plural(FP.aiAudit.count(), 'consulta en esta sesión', 'consultas en esta sesión');
       case 'st-ia-aprendido': return plural(Object.keys(FP.importer.learnedMappings()).length, 'columna aprendida', 'columnas aprendidas');
       case 'st-ia-privacidad': return plural((state.settings.piiColumns || []).length, 'columna marcada a mano', 'columnas marcadas a mano');
@@ -117,6 +118,22 @@
         <textarea id="pii-text" class="alias-text" rows="4" spellcheck="false">${esc(piiList)}</textarea></div>
         <div class="btn-row"><button type="button" class="btn btn--primary" data-action="pii-save">Guardar columnas protegidas</button></div></div>${accEnd()}`;
     return logPanel + learnPanel + piiPanel;
+  }
+
+  /** Margen bruto promedio general (OPCIONAL): activa una segunda lectura, «contribución bruta estimada». Sin margen todo el análisis de ventas funciona igual. */
+  function marginPanel(state) {
+    const esc = FP.ui.helpers.esc, E = FP.economics, set = E.normalizeSetting(state.settings.economics), a = E.availability(state.settings.economics);
+    const when = a.updatedAt ? ` Actualizado ${esc(String(a.updatedAt).slice(0, 10))}${a.source ? ` · origen: ${esc(a.source === 'manual' ? 'captura manual' : a.source)}` : ''}.` : '';
+    return `${accStart(state, 'st-margen', 'Margen comercial (opcional)', 'Si lo capturas, la herramienta agrega la contribución bruta estimada junto al impacto en ventas. No es necesario para usar RevNavigator.')}
+      <div class="panel__body stack">
+        <p class="field__hint" id="margin-help">${esc(E.MARGIN_HELP)}</p>
+        <div class="field"><label for="margin-pct" class="field__hint">Margen bruto promedio sobre venta (%)</label>
+          <input id="margin-pct" type="text" inputmode="decimal" autocomplete="off" aria-describedby="margin-help" placeholder="Ej. 25" value="${set.grossMarginPct === null ? '' : esc(String(set.grossMarginPct))}"></div>
+        <div class="field"><label class="field__hint"><input type="checkbox" data-action="margin-toggle" ${set.marginEnabled ? 'checked' : ''}> Usar el margen para estimar la contribución bruta</label></div>
+        <p class="note ${a.status === 'disponible' ? 'note--ok' : ''}" id="margin-status" role="status" data-margin-status="${esc(a.status)}">${esc(a.message)}${when} Es una estimación con un margen promedio general, no el margen real de cada producto.</p>
+        <div class="btn-row"><button type="button" class="btn btn--primary" data-action="margin-save">Guardar margen</button>
+          <button type="button" class="btn" data-action="margin-clear" ${set.grossMarginPct === null ? 'disabled title="No hay margen configurado que quitar"' : ''}>Quitar margen</button></div>
+      </div>${accEnd()}`;
   }
 
   /** Equivalencias de nombres: tabla editable + lo que la app no reconoció o ve duplicado (solo sugiere; el usuario decide). */
@@ -222,7 +239,8 @@
           ${c.busy && c.progress ? FP.ui.loader.html({ id: 'cloud-progress', title: { upload: 'Subiendo la copia a la nube', restore: 'Restaurando desde la nube', delete: 'Borrando la copia de la nube', 'gc-plan': 'Revisando la nube', 'gc-run': 'Limpiando la nube' }[c.op] || 'Trabajando con la nube', label: c.progress.label, pct: c.progress.pct, t0: c.t0, hint: 'No cierres ni recargues la página hasta que termine.' }) : ''}
           ${gcPreview(c, dis)}
           <div class="field field--check"><label><input type="checkbox" data-action="cloud-auto-toggle" ${c.auto && c.auto.on ? 'checked' : ''} ${s ? '' : 'disabled'} ${dis}> Sincronizar automáticamente metas, supuestos y ajustes</label>
-            <span class="field__hint">Solo lo liviano (metas, supuestos, versiones, equivalencias, enlaces de Sheets, negocio). Los datos pesados siguen subiéndose a mano. Si dos equipos cambian lo mismo, gana el cambio más reciente. No incluye preferencias por dispositivo ni la API key de Cohere.${s ? '' : ' Requiere una sesión: sube una copia primero.'}</span>
+            <span class="field__hint">Solo lo liviano (metas, supuestos, versiones, equivalencias, enlaces de Sheets, negocio). Los datos pesados siguen subiéndose a mano. Si dos personas cambian lo mismo sin verse, no se sobrescribe nada: la app te pide elegir cuál conservar. No incluye preferencias por dispositivo ni la API key de Cohere.${s ? '' : ' Requiere una sesión: sube una copia primero.'}</span>
+            ${((c.conflicts || []).filter((x) => x.key !== 'reportPrefs')).map((x) => `<div class="note note--warning" role="alert" data-sync-conflict="${esc(x.key)}"><strong>«${esc(x.key)}» cambió en otro lugar.</strong> Tu copia y la del equipo son distintas; no se sobrescribió nada. <div class="btn-row"><button type="button" class="btn btn--small" data-action="rp-conflict" data-key="${esc(x.key)}" data-choice="mine">Conservar la mía</button><button type="button" class="btn btn--small" data-action="rp-conflict" data-key="${esc(x.key)}" data-choice="theirs">Usar la del equipo</button></div></div>`).join('')}
             <div id="cloud-auto-progress"></div>
             <span class="field__hint" id="cloud-auto-status">${esc(c.auto && c.auto.on ? (c.auto.error ? `No se pudo sincronizar: ${c.auto.error}` : c.auto.last ? `Última sincronización: ${new Date(c.auto.last).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : 'Encendida: se sincroniza cuando cambies algo.') : 'Apagada: tus metas y ajustes solo se guardan en este navegador.')}</span></div>
           ${account}
@@ -253,6 +271,7 @@
       ${accStart(state, 'st-modo', 'Modo de uso', 'Cuánto detalle y ayuda se muestra en cada vista. Aprendiz explica más y te guía paso a paso; Analista muestra el detalle completo.')}
         <div class="panel__body">${H().segmented('ux-mode', FP.guidanceConfig.MODES, state.ux.mode)}</div>
       ${accEnd()}
+      ${marginPanel(state)}
       ${accStart(state, 'st-otras', 'Otras preferencias, en su vista', 'Siguen donde se usan: cambian el resultado de esa vista.')}
         <div class="panel__body panel__body--flush"><div class="table-wrap"><table class="table ds-table">
           <thead><tr><th scope="col">Qué</th><th scope="col">Para qué sirve</th><th scope="col">Dónde está</th></tr></thead>
@@ -264,20 +283,13 @@
     if (bEl) bEl.innerHTML = `
       <div class="st-pane" id="stp-cuenta" data-pane="cuenta" role="tabpanel" aria-labelledby="sttab-cuenta">${cloudPanel(state)}${usePanel()}</div>
       <div class="st-pane" id="stp-ia" data-pane="ia" role="tabpanel" aria-labelledby="sttab-ia">
-      ${accStart(state, 'st-ia', 'Conexión con Cohere (análisis con IA)', 'La usan Diagnóstico, Recovery Center, Narrativa y el mapeo semántico de importaciones. Todas comparten esta misma conexión de Cohere; no se crea otra API key. Cohere no calcula ni cambia cifras.')}
+      ${accStart(state, 'st-ia', 'Conexión con Cohere (análisis con IA)', 'La usan Diagnóstico, Recovery Center, Narrativa y el mapeo semántico de importaciones. Todas comparten esta misma conexión de Cohere, que pasa por el servidor del equipo; en el navegador no hay ninguna API key. Cohere no calcula ni cambia cifras.')}
         <div class="panel__body stack">
           ${FP.cohereProxy && FP.cohereProxy.available()
-            ? `<div class="note note--ok" data-ai-server><strong>La IA usa el servidor de tu equipo.</strong> Con tu sesión, Cohere se llama desde tu Supabase y la API key vive allá, no en este navegador. No necesitas pegar ninguna key.</div>
+            ? `<div class="note note--ok" data-ai-server><strong>La IA usa el servidor de tu equipo.</strong> Con tu sesión, Cohere se llama desde tu Supabase y la API key vive allá, no en este navegador. No hay ninguna key que pegar.</div>
                <div class="btn-row"><button type="button" class="btn btn--small" data-action="dx-proxy-test" ${ai.proxyTest && ai.proxyTest.busy ? 'disabled' : ''}>${ai.proxyTest && ai.proxyTest.busy ? 'Probando…' : 'Probar la conexión del servidor'}</button></div>
-               ${ai.proxyTest && ai.proxyTest.msg ? `<p class="note ${ai.proxyTest.ok ? 'note--ok' : 'note--warning'}" id="dx-proxy-msg" role="status">${esc(ai.proxyTest.msg)}</p>` : ''}
-               <p class="field__hint">La key de abajo es solo un respaldo para cuando no inicies sesión o el servidor no esté disponible.</p>`
-            : '<p class="field__hint" data-ai-local>Sin sesión de equipo: la IA usa la API key pegada aquí. Al iniciar sesión pasará al servidor del equipo y podrás quitarla de este navegador.</p>'}
-          <div class="field"><label for="dx-key-input" class="field__hint">API key de Cohere (respaldo)</label>
-            <input id="dx-key-input" type="password" autocomplete="off" value="${esc(ai.apiKey || '')}" data-action="dx-key" placeholder="Pega tu API key"></div>
-          <div class="field field--check"><label><input type="checkbox" data-action="dx-remember" ${ai.rememberKey ? 'checked' : ''}> Recordar la key en este navegador</label>
-            <span class="field__hint">Se guarda en localStorage de este navegador y nunca se exporta ni se sube a la nube. Cualquiera con acceso a este navegador podría verla.</span></div>
-          <div class="note note--warning"><strong>Límite de seguridad.</strong> Esta app corre completa en tu navegador: una API key guardada aquí <em>no es un secreto seguro</em>. Cualquier extensión, script del mismo sitio o persona con acceso a este equipo puede leerla; ocultarla o codificarla no lo evita. Úsala solo en equipos personales, no la recuerdes en equipos compartidos y crea en Cohere una key propia con límite de gasto que puedas revocar. Con sesión de equipo la app usa el servidor intermedio (proxy) y esta key no hace falta.</div>
-          <div class="btn-row"><button type="button" class="btn btn--small" data-action="dx-key-clear" ${ai.apiKey ? '' : 'disabled'}>Quitar la key de este navegador</button></div>
+               ${ai.proxyTest && ai.proxyTest.msg ? `<p class="note ${ai.proxyTest.ok ? 'note--ok' : 'note--warning'}" id="dx-proxy-msg" role="status">${esc(ai.proxyTest.msg)}</p>` : ''}`
+            : '<div class="note note--warning" data-ai-local><strong>La IA necesita sesión de equipo.</strong> Cohere solo se llama desde el servidor del equipo (la API key vive allá): este navegador no guarda ni envía ninguna key. Inicia sesión para usar la IA; sin sesión, todo lo demás de la aplicación sigue funcionando.</div>'}
           <div class="field"><label for="dx-model" class="field__hint">Modelo</label>
             <input id="dx-model" type="text" value="${esc(ai.model)}" data-action="dx-model"></div>
         </div>
