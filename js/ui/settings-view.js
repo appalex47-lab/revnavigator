@@ -132,7 +132,7 @@
         <div class="field"><label class="field__hint"><input type="checkbox" data-action="margin-toggle" ${set.marginEnabled ? 'checked' : ''}> Usar el margen para estimar la contribución bruta</label></div>
         <p class="note ${a.status === 'disponible' ? 'note--ok' : ''}" id="margin-status" role="status" data-margin-status="${esc(a.status)}">${esc(a.message)}${when} Es una estimación con un margen promedio general, no el margen real de cada producto.</p>
         <div class="btn-row"><button type="button" class="btn btn--primary" data-action="margin-save">Guardar margen</button>
-          <button type="button" class="btn" data-action="margin-clear" ${set.grossMarginPct === null ? 'disabled' : ''}>Quitar margen</button></div>
+          <button type="button" class="btn" data-action="margin-clear" ${set.grossMarginPct === null ? 'disabled title="No hay margen configurado que quitar"' : ''}>Quitar margen</button></div>
       </div>${accEnd()}`;
   }
 

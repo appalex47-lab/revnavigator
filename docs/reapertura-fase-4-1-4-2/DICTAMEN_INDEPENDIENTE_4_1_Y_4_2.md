@@ -97,3 +97,8 @@ Los lotes de navegador terminan con código 0 aunque informen fallas (`batch_con
 
 ## 8. Decisión del usuario (2026-11-21)
 El usuario **acepta formalmente las Fases 4.1 y 4.2**, con la limitación de E-2 documentada ([`LIMITACION_E2_TRAFFIC_VOLUME.md`](../validacion-externa/LIMITACION_E2_TRAFFIC_VOLUME.md)) y los defectos abiertos listados en §2, §3 y §6. Esta aceptación no autoriza por sí misma commit, push, merge, PR, despliegue ni el inicio de 4.3; cada uno requiere instrucción expresa.
+
+## 9. Defectos cerrados después del dictamen (2026-11-22, autorizados por el usuario)
+- **CT-3 «Quitar margen»:** el botón deshabilitado explica por qué (`title`) en `js/ui/settings-view.js`. `batch_controles` pasa de FALLAS a OK; fallaba igual en HEAD, por lo que era preexistente.
+- **Código de salida del lanzador:** `tools/regression/run_batch.py` devuelve 1 si el log contiene una línea `✘` o `FALLAS:` distinta de 0/ninguna/[]. Validado sobre HEAD original (1), con la corrección (0) y sobre los 189 logs previos (solo `batch_controles` marcaba falla). Los 18 lotes que tocan la pantalla de ajustes pasan con código 0.
+- Siguen abiertos: la causa del cambio de origen de `traffic_volume` y el tratamiento en producto de los periodos afectados por E-2.
