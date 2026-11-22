@@ -1,0 +1,62 @@
+{
+  "id": "E-1",
+  "origen": "simulado",
+  "banner": "ORIGEN: SIMULADO (no cuenta como validación externa)",
+  "generado": "2026-11-13T04:11:13.097Z",
+  "archivo": "tools/validacion-externa/fixtures-simulados/productos.csv",
+  "sha256": "cff41fd7e5449d20eb0153ef19592010fef9d7b94120bb9aefe18f7121f4ae59",
+  "bytes": 2830152,
+  "estructura": {
+    "ok": true,
+    "errores": [],
+    "advertencias": [],
+    "estadisticas": {
+      "filas": 95192,
+      "productos": 60,
+      "periodos": [
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08"
+      ],
+      "candidatos": 60,
+      "negativas": 0
+    }
+  },
+  "aserciones": [
+    {
+      "nombre": "CSV tiene 85k+ filas",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "hay productos con >=6 periodos",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "entidad real tiene historia suficiente",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "forecast real disponible",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "forecast real conserva patrón",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "backtest real calculado",
+      "resultado": "PASS"
+    },
+    {
+      "nombre": "periodos futuros son posteriores",
+      "resultado": "PASS"
+    }
+  ],
+  "entidad": "Producto 42 HISTORY 8 PATTERN growth_sustained START 2026-08 DURATION 1 FORECAST 2026-09,2026-10,2026-11",
+  "veredicto": "APROBADA"
+}

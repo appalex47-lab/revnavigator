@@ -1,0 +1,203 @@
+{
+  "id": "E-2",
+  "origen": "simulado",
+  "banner": "ORIGEN: SIMULADO (no cuenta como validación externa)",
+  "generado": "2026-11-13T04:11:13.457Z",
+  "periodo": {
+    "from": "2026-09-01",
+    "to": "2026-09-30"
+  },
+  "toleranciaDeclarada": null,
+  "archivos": {
+    "diario": {
+      "ruta": "tools/validacion-externa/fixtures-simulados/diario-canal.csv",
+      "sha256": "9233d4eead4f3b7d2179727b1173a03a860727283fd6f2dc70965324d4700484"
+    },
+    "segmentos": {
+      "ruta": "tools/validacion-externa/fixtures-simulados/segmentos-ga4.csv",
+      "sha256": "559bfc9146b21970eead406b16270e58090c62c52a62f5508397429e94c700ba"
+    }
+  },
+  "estructura": {
+    "ok": true,
+    "errores": [],
+    "advertencias": [
+      "segmentos ecommerce/campaign: 30.0 % del tráfico «(not set)»",
+      "segmentos app/campaign: 30.0 % del tráfico «(not set)»"
+    ],
+    "estadisticas": {
+      "filasDiario": 120,
+      "filasSegmentos": 600
+    }
+  },
+  "conciliacion": {
+    "advertencias": [
+      {
+        "channel": "app",
+        "code": "suma_entre_dimensiones_excede_el_total",
+        "detail": "la suma de 3 dimensiones es 3.00 × el total diario: las dimensiones NO son particiones sumables del universo (un visitante cuenta en cada una); no sumarlas."
+      },
+      {
+        "channel": "ecommerce",
+        "code": "suma_entre_dimensiones_excede_el_total",
+        "detail": "la suma de 3 dimensiones es 3.00 × el total diario: las dimensiones NO son particiones sumables del universo (un visitante cuenta en cada una); no sumarlas."
+      }
+    ],
+    "combinedTotal": null,
+    "filas": [
+      {
+        "canal": "app",
+        "dimension": "campaign",
+        "totalDiario": 240074,
+        "totalSegmentos": 240074,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "app",
+        "dimension": "device",
+        "totalDiario": 240074,
+        "totalSegmentos": 240074,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "app",
+        "dimension": "source",
+        "totalDiario": 240074,
+        "totalSegmentos": 240074,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "campaign",
+        "totalDiario": 594589,
+        "totalSegmentos": 594589,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "device",
+        "totalDiario": 594589,
+        "totalSegmentos": 594589,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "source",
+        "totalDiario": 594589,
+        "totalSegmentos": 594589,
+        "diferencia": 0,
+        "pct": 0,
+        "estado": "sin_diferencia_observada",
+        "diasDiario": 30,
+        "diasSegmentos": 30,
+        "nota": null
+      },
+      {
+        "canal": "llamadas",
+        "dimension": null,
+        "totalDiario": 8923,
+        "totalSegmentos": null,
+        "diferencia": null,
+        "pct": null,
+        "estado": "datos_faltantes",
+        "diasDiario": 30,
+        "diasSegmentos": 0,
+        "nota": "sin segmentos para este canal (p. ej. WhatsApp/Llamadas: GA4 no los mide)"
+      },
+      {
+        "canal": "whatsapp",
+        "dimension": null,
+        "totalDiario": 17971,
+        "totalSegmentos": null,
+        "diferencia": null,
+        "pct": null,
+        "estado": "datos_faltantes",
+        "diasDiario": 30,
+        "diasSegmentos": 0,
+        "nota": "sin segmentos para este canal (p. ej. WhatsApp/Llamadas: GA4 no los mide)"
+      }
+    ],
+    "porDia": [
+      {
+        "canal": "app",
+        "dimension": "campaign",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      },
+      {
+        "canal": "app",
+        "dimension": "device",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      },
+      {
+        "canal": "app",
+        "dimension": "source",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "campaign",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "device",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      },
+      {
+        "canal": "ecommerce",
+        "dimension": "source",
+        "dias": 30,
+        "diasConDiferencia": 0,
+        "mediana": 0,
+        "p95": 0,
+        "max": 0
+      }
+    ]
+  },
+  "veredicto": "CONCILIACIÓN EJECUTADA (tolerancia no fijada por el paquete)"
+}
