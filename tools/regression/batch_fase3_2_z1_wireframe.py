@@ -36,7 +36,10 @@ async def main():
             if r['estado'] == 'Por desarrollar':
                 spec = r.get('especificacion', '').split(' · ')[0]
                 chk(f'F32.2 {r["id"]} (Por desarrollar) {r["elemento"][:44]}: sin fuentes FP.* y con su especificación fuera de js/', not r['motores'] and (R / spec).exists() and not spec.startswith('js/'), spec)
-        chk('F32.3 nada del diseño de Z1 está implementado en js/ (ni el clasificador de estado, ni la especificación de Z1, ni su validador)', not any(t in js_all for t in ['CCZ1', 'classifyBusinessState', 'checkVerdictText', 'composeZ1']))
+        # Reapertura 4.1/4.2: el evaluador de Z1 y businessState están en js/commandCenter/ (FP.z1 generado desde la especificación) y SÍ se cargan: los consume FP.reliability →
+        # FP.attentionContract → vistas de Inicio. Ningún módulo de la aplicación fuera de js/commandCenter define ni recalcula Z1, y ninguna vista lo invoca directamente.
+        js_app42 = '\n'.join(f.read_text() for f in (R / 'js').rglob('*.js') if 'commandCenter' not in f.parts); idx42 = (R / 'index.html').read_text()
+        chk('F32.3 (reapertura) Z1 está en js/commandCenter y conectado SOLO a través de reliability/attentionContract: ninguna vista fuera de js/commandCenter define Z1 ni lo invoca (FP.z1/FP.businessState/classifyBusinessState/checkVerdictText/composeZ1), y index.html carga z1.js y businessState.js', not any(t in js_app42 for t in ['CCZ1', 'classifyBusinessState', 'checkVerdictText', 'composeZ1', 'FP.z1', 'FP.businessState']) and 'commandCenter/z1.js' in idx42 and 'commandCenter/businessState.js' in idx42 and 'commandCenter/attentionContract.js' in idx42)
         # --- el Home ACTUAL tiene el problema que Z1 corrige ---
         h = await q.evaluate("""(()=>{const v=document.querySelector('[data-home-verdict] h2'), t=document.querySelector('[data-home-trust]'); const a=window.__att&&window.__att.r;
           return {verdict: v?v.innerText:null, trustOpen: t?t.open:null, blocking: a?a.findings.filter(f=>f.severity==='blocking').map(f=>f.title):[], money:(v?v.innerText:'').match(/\\$[\\d,]+/g)||[]}})()""")

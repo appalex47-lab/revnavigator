@@ -3,7 +3,7 @@
    Cifras esperadas calculadas AQUÍ con una implementación independiente. */
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 const ctx = { console }; vm.createContext(ctx);
-['js/config/config.js', 'js/calculations/metrics.js', 'js/diagnostics/attribution.js', 'js/analytics/trafficConversionEngine.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+['js/config/config.js', 'js/calculations/metrics.js', 'js/diagnostics/attribution.js', 'js/commandCenter/sampleSufficiency.js', 'js/analytics/trafficConversionEngine.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const TE = ctx.FP.trafficConversionEngine;
 const near = (a, b, m) => assert.ok(Math.abs(a - b) < 0.5, `${m}: ${a} ≠ ${b}`);
 const row = (label, b, c) => ({ key: label, label, baseline: b && { traffic: b[0], orders: b[1], revenue: b[2], has: { traffic: true, orders: true, revenue: true } }, current: c && { traffic: c[0], orders: c[1], revenue: c[2], has: { traffic: true, orders: true, revenue: true } } });

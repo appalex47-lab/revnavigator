@@ -1,8 +1,9 @@
 // Presentación ejecutiva (PDF): títulos con conclusión generados desde las cifras.  node tools/test-report-copy.js
 const fs = require('fs'), vm = require('vm');
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, RegExp }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-ctx.FP = { config: { currency: 'MXN', confidenceLabels: { excellent: 'Excelente', sufficient: 'Suficiente', limited: 'Limitada', insufficient: 'Insuficiente' } } };
-['js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/reportCopy.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+const realCfg = (() => { const c2 = vm.createContext({}); c2.window = c2; vm.runInContext(fs.readFileSync('js/config/config.js', 'utf8'), c2); const C = c2.FP.config; return JSON.parse(JSON.stringify({ forecast: { pacingThresholds: C.forecast.pacingThresholds }, reports: { farFromPlanBelow: C.reports.farFromPlanBelow }, diagnostics: { segmentMinVolume: C.diagnostics.segmentMinVolume } })); })();   // P-11/P-16: umbrales de la configuración REAL (fuente única), sin copiar valores
+ctx.FP = { config: { ...realCfg, currency: 'MXN', confidenceLabels: { excellent: 'Excelente', sufficient: 'Suficiente', limited: 'Limitada', insufficient: 'Insuficiente' } } };
+['js/calculations/metrics.js', 'js/calculations/gap.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/reportCopy.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const RC = ctx.FP.reportCopy; let bad = 0;
 const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 300) : '')); if (!c) bad++; };
 const inc = (id, o = {}) => ({ id, status: 'included', ...o });

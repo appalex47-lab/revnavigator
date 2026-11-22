@@ -1,5 +1,5 @@
 // Pruebas de trafficConversionEngine.  node tools/test-traffic-conversion.js
-const path = require('path'); global.FP = {}; ['config/config.js', 'calculations/metrics.js', 'diagnostics/attribution.js', 'analytics/trafficConversionEngine.js'].forEach((f) => require(path.join(__dirname, '../js/' + f)));
+const path = require('path'); global.FP = {}; ['config/config.js', 'calculations/metrics.js', 'diagnostics/attribution.js', 'commandCenter/sampleSufficiency.js', 'analytics/trafficConversionEngine.js'].forEach((f) => require(path.join(__dirname, '../js/' + f)));
 let ok = 0, bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d) : '')); c ? ok++ : bad++; };
 const E = FP.trafficConversionEngine, has = { traffic: true, orders: true, revenue: true };
 const m = (traffic, orders, revenue) => ({ traffic, orders, revenue, has });

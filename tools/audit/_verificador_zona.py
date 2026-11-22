@@ -20,7 +20,7 @@ def chk(name, cond, detail=''):
     if cond: ok += 1
     else: bad.append(name)
 norm = lambda s: str(s).replace(' ', ' ')
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok, NUEVOS
 def _pend(s): return bool(s.startswith('COMPLETADA CON LIMITACIONES DOCUMENTADAS') and 'no aceptada' in s and 'ACEPTADA' not in s.replace('no aceptada', ''))
 def _acc(s): return bool(s.startswith('ACEPTADA CON LIMITACIONES DOCUMENTADAS') and 'aceptación formal' in s and 'no aceptada' not in s)
 def _doc_ok(est_state, d): return (_acc(est_state) and d.startswith('ACEPTADA CON LIMITACIONES DOCUMENTADAS') and 'aceptación formal' in d and 'no aceptada' not in d) or (_pend(est_state) and d.startswith('COMPLETADA CON LIMITACIONES DOCUMENTADAS') and 'no aceptada' in d)
@@ -31,7 +31,7 @@ chg = [k for k, h in base['documentos_aceptados'].items() if not hash_ok(D / k, 
 chk('A1 ningún documento aceptado (los 13 de fases anteriores y los de 3.2) cambió desde la aceptación de 3.2 (por hash)', not chg and len(base['documentos_aceptados']) >= 20, chg)
 sp = [k for k, h in base['especificacion_aceptada'].items() if not hash_ok(HERE / k, k, h)]
 chk('A2 la especificación aceptada de Z1 y los contratos de Fase 2 no cambiaron (por hash)', not sp and len(base['especificacion_aceptada']) == 5, sp)
-cc = [k for k, h in base['codigo_aplicacion'].items() if not (R / k).exists() or sha(R / k) != h]; newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion']]
+cc = [k for k, h in base['codigo_aplicacion'].items() if not hash_ok(R / k, k, h)]; newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion'] and str(f.relative_to(R)) not in NUEVOS]
 chk('A3 ningún archivo del código de la aplicación (js, css, index.html) cambió ni apareció (249 archivos, por hash)', not cc and not newjs and len(base['codigo_aplicacion']) == 249, (cc + newjs)[:4])
 # ---------- B · artefactos generados ----------
 tmp = pathlib.Path(tempfile.mkdtemp()); (tmp / 'docs/command-center/generated').mkdir(parents=True); (tmp / 'docs/command-center/wireframes').mkdir(parents=True)

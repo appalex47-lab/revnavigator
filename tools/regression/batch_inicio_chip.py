@@ -43,8 +43,11 @@ async def main():
             r = await q.evaluate("""()=>{const f=FP.homeView.periodFigures(FP.app.state);const g=f&&f.p&&f.p.toDate&&f.p.toDate.revenue?f.p.toDate.revenue.gapPct:null;
               const head=[...document.querySelectorAll('main:not([hidden]) .ux-head, main:not([hidden]) [data-own-head], #ux-context')].map(e=>e.innerText).join(' ');
               const m=document.body.innerText.match(/Venta acumulada ([\d.]+) % (por debajo|por encima) del plan/);
-              return {g,label:f&&f.label,chip:m?[m[1],m[2]]:null}}""")
-            ok = r['g'] is None or (r['chip'] and abs(float(r['chip'][0]) - abs(r['g']) * 100) < 0.06 and (r['chip'][1] == ('por debajo' if r['g'] < 0 else 'por encima')))
+              const th=f&&f.run&&f.run.settings?f.run.settings.pacingThresholds:undefined;const st=g===null?null:FP.gap.pacingStatus(1+g,th);const line=/Venta acumulada en línea con el plan/.test(document.body.innerText);
+              return {g,st,line,label:f&&f.label,chip:m?[m[1],m[2]]:null}}""")
+            # P-01 (Fase 4.1): el chip usa la MISMA regla que Pacing (FP.gap.pacingStatus con run.settings.pacingThresholds): dentro de la banda «en plan» dice «en línea con el plan»;
+            # fuera de ella, el % y el sentido coinciden con la brecha del periodo que se ve.
+            ok = r['g'] is None or (r['line'] if r['st'] == 'on_plan' else (r['chip'] and abs(float(r['chip'][0]) - abs(r['g']) * 100) < 0.06 and (r['chip'][1] == ('por debajo' if r['g'] < 0 else 'por encima'))))
             chk(f'C1 [{ch}/{pt}] el chip de Inicio coincide con la brecha del periodo que se ve ({r})', ok, r)
         chk('C2 sin errores de página', not errs, errs)
         await b.close()

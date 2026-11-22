@@ -9,3 +9,6 @@ def hash_ok(path, key, base_hash):
     if cur == base_hash: return True
     m = MODS.get(key)
     return bool(m and m['hash_base'] == base_hash and m['hash_nuevo'] == cur)
+
+_N = _F.parent / 'ADICIONES_AUTORIZADAS_FASE_4_1.json'
+NUEVOS = set(json.loads(_N.read_text())['archivos']) if _N.exists() else set()   # archivos NUEVOS de js/ autorizados por la Fase 4.1 (contratos sin cablear)

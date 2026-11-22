@@ -22,12 +22,12 @@ norm = lambda s: str(s).replace(' ', ' ')
 wf_ids = set(re.findall(r'data-wf="([^"]+)"', wf)); wf_m = set(re.findall(r'data-wf-m="([^"]+)"', wf))
 
 # ---------- A · lo aceptado y el código de la aplicación no cambiaron ----------
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok, NUEVOS
 sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 chg = [k for k, h in base['documentos_aceptados'].items() if not hash_ok(D / k, k, h)]
 chk('A1 ningún documento aceptado de fases anteriores cambió desde el inicio de 3.2 (13 documentos, por hash)', not chg and len(base['documentos_aceptados']) == 13, chg)
-cc = [k for k, h in base['codigo_aplicacion'].items() if not (R / k).exists() or sha(R / k) != h]
-newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion']]
+cc = [k for k, h in base['codigo_aplicacion'].items() if not hash_ok(R / k, k, h)]
+newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion'] and str(f.relative_to(R)) not in NUEVOS]
 chk('A2 ningún archivo del código de la aplicación (js, css, index.html) cambió ni apareció durante 3.2 (249 archivos, por hash)', not cc and not newjs and len(base['codigo_aplicacion']) == 249, (cc + newjs)[:4])
 
 # ---------- B · los artefactos generados no están desactualizados ni editados a mano ----------

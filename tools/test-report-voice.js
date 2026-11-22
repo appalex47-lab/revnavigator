@@ -3,7 +3,7 @@
 const fs = require('fs'), vm = require('vm'), os = require('os'), path = require('path'), cp = require('child_process');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 500) : '')); if (!c) bad++; };
 const ctx = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, Error }; ctx.globalThis = ctx; ctx.window = undefined; vm.createContext(ctx);
-['js/config/config.js', 'js/report/reportBuilder.js', 'js/report/voice.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
+['js/config/config.js', 'js/calculations/metrics.js', 'js/calculations/gap.js', 'js/report/reportBuilder.js', 'js/report/voice.js'].forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const V = ctx.FP.reportVoice;
 
 /* ---- frases (con las cifras del ejemplo de septiembre) ---- */

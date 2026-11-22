@@ -32,8 +32,10 @@ async def main():
             else:
                 spec = r.get('especificacion', '').split(' · ')[0]
                 chk(f'F31.2 {r["id"]} (Por desarrollar) {r["elemento"][:44]}: no hay implementación en js/ y la especificación existe', spec and (R / spec).exists() and not r['motores'], spec)
-        js_all = '\n'.join(f.read_text() for f in (R / 'js').rglob('*.js'))
-        chk('F31.3 «Por desarrollar»: classifyBusinessState y mergeFindings/cc.finding no existen en js/ (solo en tools/audit)', 'classifyBusinessState' not in js_all and 'mergeFindings' not in js_all and "'cc.finding'" not in js_all)
+        # Fase 4.1 (P-05): los contratos portados viven SOLO en js/commandCenter/ (preparados, no consumidos). Ningún otro módulo de la aplicación los define ni los usa,
+        # (classifyBusinessState se porta después a js/commandCenter/businessState.js en 4.2, sin consumidores).
+        js_app = '\n'.join(f.read_text() for f in (R / 'js').rglob('*.js') if 'commandCenter' not in f.parts)
+        chk('F31.3 «Por desarrollar» → preparado en 4.1/4.2: classifyBusinessState, mergeFindings y cc.finding NO existen en la aplicación fuera de js/commandCenter/ (contratos portados, aún sin consumidores en vistas)', 'classifyBusinessState' not in js_app and 'mergeFindings' not in js_app and "'cc.finding'" not in js_app)
         # ---- 2. hechos de la auditoría ----
         used = lambda pat: [f for f, s in SRC.items() if re.search(pat, s)]
         for name, pat in [('temporalEngine', r'temporalEngine'), ('trendEngine', r'trendEngine'), ('patternEngine', r'patternEngine'), ('shareMixEngine', r'shareMixEngine'), ('forecastConfidence', r'forecastConfidence'),

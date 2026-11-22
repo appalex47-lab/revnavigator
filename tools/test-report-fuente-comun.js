@@ -4,7 +4,7 @@
 const fs = require('fs'), vm = require('vm');
 let bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 400) : '')); if (!c) bad++; };
 const mkctx = () => { const c = { console, Math, Number, Object, Array, Date, JSON, Intl, String, Map, Set, Error }; c.globalThis = c; c.window = undefined; vm.createContext(c); return c; };
-const LOAD = ['js/config/config.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/directivo.js', 'js/report/composer.js', 'js/report/voice.js'];
+const LOAD = ['js/config/config.js', 'js/calculations/metrics.js', 'js/calculations/gap.js', 'js/calendar/calendar.js', 'js/forecast/methodAdvisor.js', 'js/report/reportBuilder.js', 'js/report/profiles.js', 'js/report/blocks.js', 'js/report/catalog.js', 'js/report/operativo.js', 'js/report/oportunidades.js', 'js/report/gerencial.js', 'js/report/directivo.js', 'js/report/composer.js', 'js/report/voice.js'];
 const ctx = mkctx(); LOAD.forEach((f) => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx));
 const FP = ctx.FP, O = FP.reportOperativo, G = FP.reportGerencial, D = FP.reportDirectivo, CH = FP.config.channels.map((c) => c.id);
 const rev = (a, p) => ({ revenue: { actual: a, plan: p, gap: a - p, gapPct: a / p - 1, compliance: a / p } });

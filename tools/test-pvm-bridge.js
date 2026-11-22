@@ -1,6 +1,6 @@
 // Pruebas unitarias de pvmEngine y planBridgeEngine (identidades exactas).  node tools/test-pvm-bridge.js
 const path = require('path'); global.FP = {};
-require(path.join(__dirname, '../js/analytics/pvmEngine.js')); require(path.join(__dirname, '../js/analytics/planBridgeEngine.js'));
+require(path.join(__dirname, '../js/calculations/metrics.js')); require(path.join(__dirname, '../js/analytics/pvmEngine.js')); require(path.join(__dirname, '../js/analytics/planBridgeEngine.js'));
 let ok = 0, bad = 0; const t = (n, c, d) => { console.log((c ? '✔ ' : '✘ ') + n + (!c && d !== undefined ? ' — ' + JSON.stringify(d) : '')); c ? ok++ : bad++; };
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 // Caso conocido: A sube volumen sin cambiar precio; B sube precio sin volumen.

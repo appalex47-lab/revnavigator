@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+/* Reapertura 4.1/4.2 · P-04 — las dos tolerancias de conciliación (0.005 de Z1 y $0.01 de D-02) quedan DEFINIDAS en una sola configuración, con su semántica distinta, y ligadas por prueba:
+ * el literal de la especificación aceptada de Z1 debe ser igual a FP.config.diagnostics.reconciliation.representationMXN y el catálogo lee decisionMXN (sin literales propios). Datos SIMULADOS.
+ * node tools/test-reapertura-conciliacion.js */
+const fs = require('fs'), path = require('path'), R = path.join(__dirname, '..');
+global.window = global; global.FP = {}; ['config/config.js', 'calculations/metrics.js', 'commandCenter/metricCatalog.js'].forEach((f) => require(path.join(R, 'js', f)));
+const Z1 = require('./audit/z1-lectura-ejecutiva.js'), S1 = require('./audit/z1-escenarios.js'), base = S1.SCENARIOS[1].input, ACT = base.revenue.actualToDate;
+let bad = 0, n = 0; const t = (name, c, d) => { n++; console.log((c ? '✔ ' : '✘ ') + name + (!c && d !== undefined ? ' — ' + JSON.stringify(d).slice(0, 300) : '')); if (!c) bad++; };
+const src = (f) => fs.readFileSync(path.join(R, f), 'utf8'), strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+const cfg = FP.config.diagnostics.reconciliation, MC = FP.metricCatalog;
+const z1 = (d) => Z1.build({ ...base, activity: { sessions: 20000, orders: 900, revenue: ACT + d } }).data.reconciliation.status;
+const d02 = (d) => MC.reconcile({ value: ACT + d, universe: { period: 'p', channel: 'c', scope: 's', source: 'x' } }, { value: ACT, universe: { period: 'p', channel: 'c', scope: 's', source: 'x' } }).status;
+t('A1 una sola configuración define ambas tolerancias con semántica distinta: representationMXN = 0.005 (ruido de representación) y decisionMXN = 0.01 (umbral de decisión D-02)', cfg.representationMXN === 0.005 && cfg.decisionMXN === 0.01 && /representationMXN/.test(src('js/config/config.js')) && /SUPERIOR a este valor/.test(src('js/config/config.js')));
+const lit = /Math\.abs\(recDiff\)\s*>=\s*([0-9.]+)\s*\?\s*'pendiente'/.exec(src('tools/audit/z1-lectura-ejecutiva.js'));
+t('A2 CANDADO: el literal de la especificación aceptada de Z1 (`|Δ| ≥ x → pendiente`) es EXACTAMENTE representationMXN de la configuración; si alguno cambia sin el otro, esta prueba falla', !!lit && Number(lit[1]) === cfg.representationMXN, lit && lit[1]);
+t('A3 el catálogo no tiene literales de tolerancia (0.01/0.005): su umbral de decisión sale de FP.config.diagnostics.reconciliation.decisionMXN (y falla con mensaje claro sin configuración ni opts.tolerance)', !/\b0\.0(1|05)\b/.test(strip(src('js/commandCenter/metricCatalog.js'))) && (() => { const saved = FP.config; FP.config = {}; try { MC.reconcile({ value: 1, universe: {} }, { value: 1, universe: {} }); return false; } catch (e) { return /decisionMXN/.test(e.message); } finally { FP.config = saved; } })());
+t('A4 cambiar decisionMXN en la configuración cambia el resultado del catálogo (no hay otra copia): con 0.05 una diferencia de 0.02 deja de estar pendiente', (() => { const saved = FP.config, c2 = JSON.parse(JSON.stringify(saved)); c2.diagnostics.reconciliation.decisionMXN = 0.05; FP.config = c2; try { return d02(0.02) === 'sin_diferencia_observada' && d02(0.06) === 'pendiente_de_conciliacion'; } finally { FP.config = saved; } })());
+/* semántica por banda (documentada y probada) */
+const bands = [[0, 'sin_diferencia_observada', 'sin_diferencia_observada'], [0.004, 'sin_diferencia_observada', 'sin_diferencia_observada'], [0.0073, 'pendiente', 'sin_diferencia_observada'], [0.01, 'pendiente', 'sin_diferencia_observada'], [0.0101, 'pendiente', 'pendiente_de_conciliacion'], [5, 'pendiente', 'pendiente_de_conciliacion']];
+t('B1 matriz por banda de diferencia (Z1 | D-02): 0 y 0.004 → ambas sin diferencia; 0.0073 y 0.01 → Z1 pendiente, D-02 sin diferencia; > 0.01 → ambas pendiente. Es la semántica DOCUMENTADA de dos propósitos', bands.every(([d, e1, e2]) => z1(d) === e1 && d02(d) === e2), bands.map(([d]) => [d, z1(d), d02(d)]));
+t('B2 consistencia entre capas: lo que D-02 declara pendiente, Z1 también (D-02 ⊂ Z1): Z1 nunca deja como «sin diferencia» algo que D-02 exige conciliar', [0.0101, 0.02, 1, 100, 12345.67].every((d) => d02(d) === 'pendiente_de_conciliacion' && z1(d) === 'pendiente'));
+t('B3 ninguna capa declara «conciliada»: formal=false siempre y Z1 mantiene tolerance:null (no inventa umbral de negocio)', MC.reconcile({ value: 1, universe: {} }, { value: 1, universe: {} }).formal === false && Z1.build({ ...base, activity: { sessions: 20000, orders: 900, revenue: ACT + 5 } }).data.reconciliation.tolerance === null);
+console.log(`\n${n - bad} bien, ${bad} mal`); process.exit(bad ? 1 : 0);

@@ -12,7 +12,7 @@ def chk(name, cond, detail=''):
     print(('✔ ' if cond else '✘ ') + name + ('' if cond else f' — {detail}'))
     if cond: ok += 1
     else: bad.append(name)
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parent)); from _autorizadas import hash_ok, NUEVOS
 def _pend(s): return bool(s.startswith('COMPLETADA CON LIMITACIONES DOCUMENTADAS') and 'no aceptada' in s and 'ACEPTADA' not in s.replace('no aceptada', ''))
 def _acc(s): return bool(s.startswith('ACEPTADA CON LIMITACIONES DOCUMENTADAS') and 'aceptación formal' in s and 'no aceptada' not in s)
 def _doc_ok(est_state, d): return (_acc(est_state) and d.startswith('ACEPTADA CON LIMITACIONES DOCUMENTADAS') and 'aceptación formal' in d and 'no aceptada' not in d) or (_pend(est_state) and d.startswith('COMPLETADA CON LIMITACIONES DOCUMENTADAS') and 'no aceptada' in d)
@@ -20,7 +20,7 @@ sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 chg = [k for k, h in base['documentos_aceptados'].items() if not hash_ok(D / k, k, h)]
 chk('A1 ningún documento aceptado (fases 1 y 2, 3.1 y 3.2) cambió (por hash)', not chg and len(base['documentos_aceptados']) >= 20, chg)
 sp = [k for k, h in base['especificacion_aceptada'].items() if not hash_ok(HERE / k, k, h)]; chk('A2 la especificación aceptada de Z1 y los contratos de Fase 2 no cambiaron (por hash)', not sp, sp)
-cc = [k for k, h in base['codigo_aplicacion'].items() if not (R / k).exists() or sha(R / k) != h]; newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion']]
+cc = [k for k, h in base['codigo_aplicacion'].items() if not hash_ok(R / k, k, h)]; newjs = [str(f.relative_to(R)) for f in list((R / 'js').rglob('*.js')) + list((R / 'css').rglob('*.css')) if str(f.relative_to(R)) not in base['codigo_aplicacion'] and str(f.relative_to(R)) not in NUEVOS]
 chk('A3 ningún archivo del código de la aplicación cambió ni apareció (249 archivos, por hash)', not cc and not newjs and len(base['codigo_aplicacion']) == 249, (cc + newjs)[:4])
 tmp = pathlib.Path(tempfile.mkdtemp()); (tmp / 'docs/command-center/generated').mkdir(parents=True)
 subprocess.run(['node', str(HERE / 'tools/audit/prototipo-generar.js')], env={**os.environ, 'CC35_OUT': str(tmp)}, check=True, capture_output=True)
